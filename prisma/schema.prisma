@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum Role {
+  RESIDENT
+  OFFICIAL
+  HEALTH_WORKER
+}
+
+enum BlotterStatus {
+  OPEN
+  RESOLVED
+}
+
+enum TransactionType {
+  IN
+  OUT
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  RELEASED
+}
+
+// ==========================================
+// MODELS
+// ==========================================
+
+model User {
+  id    String     @id @default(cuid())
+  name  String
+  email String     @unique
+  password String
+  role  Role       @default(RESIDENT)
+  createdAt DateTime @default(now())
+
+  // One-to-One relations depending on the user's role
+  resident Resident?
+  official Official?
+
+  // Relations for Health Workers
+  medicalRecordsChecked MedicalRecord[] @relation("CheckedByHealthWorker")
+}
+
+model Resident {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName        String
+  lastName         String
+  middleName       String?
+  birthDate        DateTime
+  gender           String
+  civilStatus      String
+
+  address          String
+  contactNumber    String?
+  occupation       String?
+  citizenship       String
+
+  isVoter          Boolean  @default(false)
+  is4PsBeneficiary Boolean  @default(false)
+
+  createdAt        DateTime @default(now())
+
+  // Relationships
+  pets                  Pet[]
+  blottersFiled         Blotter[]              @relation("Complainant")
+  itemsReceived         InventoryTransaction[] @relation("DistributedTo")
+  documentRequests      DocumentRequest[]      @relation("RequestedByResident")
+  medicalRecords        MedicalRecord[]        @relation("Patient")
+}
+
+model Official {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  position   String
+  termStart  DateTime
+  termEnd    DateTime?
+
+  // Relationships
+  announcements    Announcement[]    @relation("CreatedByOfficial")
+  blottersHandled  Blotter[]         @relation("HandledByOfficial")
+  requestsApproved DocumentRequest[] @relation("ApprovedByOfficial")
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+
+  createdById String
+  createdBy   Official @relation("CreatedByOfficial", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Pet {
+  id              String   @id @default(cuid())
+  ownerId         String
+  owner           Resident @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name            String
+  type            String
+  breed           String?
+  color           String?
+  vaccinationDate DateTime?
+
+  createdAt       DateTime @default(now())
+}
+
+model Blotter {
+  id            String        @id @default(cuid())
+
+  complainantId String
+  complainant   Resident      @relation("Complainant", fields: [complainantId], references: [id])
+
+  respondentName String
+
+  incident      String        @db.Text
+  location      String
+  date          DateTime
+
+  status        BlotterStatus @default(OPEN)
+
+  handledById   String?
+  handledBy     Official?     @relation("HandledByOfficial", fields: [handledById], references: [id])
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model InventoryItem {
+  id        String                 @id @default(cuid())
+  name      String
+  category  String
+  quantity  Int                    @default(0)
+  unit      String
+
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  // History of IN/OUT for this item
+  transactions InventoryTransaction[]
+}
+
+model InventoryTransaction {
+  id            String          @id @default(cuid())
+
+  itemId        String
+  item          InventoryItem   @relation(fields: [itemId], references: [id])
+
+  quantity      Int
+  type          TransactionType
+
+  // Optional: Only used if it's distributed OUT to a specific resident
+  distributedToId String?
+  distributedTo   Resident?     @relation("DistributedTo", fields: [distributedToId], references: [id])
+
+  date          DateTime        @default(now())
+}
+
+model DocumentRequest {
+  id         String        @id @default(cuid())
+
+  residentId String
+  resident   Resident      @relation("RequestedByResident", fields: [residentId], references: [id])
+
+  type       String
+  purpose    String
+
+  status     RequestStatus @default(PENDING)
+
+  approvedById String?
+  approvedBy    Official?   @relation("ApprovedByOfficial", fields: [approvedById], references: [id])
+
+  requestedAt DateTime     @default(now())
+  releasedAt  DateTime?
+}
+
+model MedicalRecord {
+  id          String   @id @default(cuid())
+
+  patientId   String
+  patient     Resident @relation("Patient", fields: [patientId], references: [id], onDelete: Cascade)
+
+  symptoms    String   @db.Text
+  diagnosis   String   @db.Text
+  treatment   String   @db.Text
+  prescription String?  @db.Text
+
+  checkedById String
+  checkedBy   User     @relation("CheckedByHealthWorker", fields: [checkedById], references: [id])
+
+  date        DateTime @default(now())
+}
