@@ -1,0 +1,127 @@
+'use client'
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  Home,
+  BookOpen,
+  Megaphone,
+  Vote,
+  PawPrint,
+  AlertTriangle,
+  Menu,
+  X,
+  ChevronDown,
+} from 'lucide-react';
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+}
+
+const AdminSidebar = () => {
+  const [isOpen, setIsOpen] = useState(true);
+  const pathname = usePathname();
+
+  const navItems: NavItem[] = [
+    { label: 'Dashboard', href: '/admin', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { label: 'Barangay Officials', href: '/admin/officials', icon: <Users className="w-5 h-5" /> },
+    { label: 'Documents', href: '/admin/documents', icon: <FileText className="w-5 h-5" /> },
+    { label: 'Resident', href: '/admin/resident', icon: <Home className="w-5 h-5" /> },
+    { label: 'Blotter', href: '/admin/blotter', icon: <BookOpen className="w-5 h-5" /> },
+    { label: 'Announcement', href: '/admin/announcement', icon: <Megaphone className="w-5 h-5" /> },
+    { label: 'Voters', href: '/admin/voters', icon: <Vote className="w-5 h-5" /> },
+    { label: 'Pet Registration', href: '/admin/pets', icon: <PawPrint className="w-5 h-5" /> },
+    { label: 'Crisis Inventory', href: '/admin/crisis-inventory', icon: <AlertTriangle className="w-5 h-5" /> },
+  ];
+
+  const isActive = (href: string) => {
+    if (href === '/admin') {
+      return pathname === '/admin' || pathname === '/admin/';
+    }
+    return pathname.startsWith(href);
+  };
+
+  return (
+    <>
+      {/* Mobile Toggle Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg"
+      >
+        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed left-0 top-0 h-screen bg-slate-900 text-white transition-all duration-300 z-40 flex flex-col ${
+          isOpen ? 'w-50' : '-translate-x-full md:translate-x-0 md:w-20'
+        }`}
+      >
+        {/* Logo Section */}
+        <div className="h-20 border-b border-slate-700 flex items-center justify-center md:justify-start  gap-3 px-6">
+          {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-lg">S</span>
+          </div> */}
+          {isOpen && (
+            <div className=" sm:block">
+              <p className="font-bold text-white text-sm">Sampaloc IV</p>
+              <p className="text-xs text-slate-400">Admin Panel</p>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="flex-1 px-4 py-6 overflow-y-auto space-y-2">
+          {navItems.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={`group flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-xs transition-all duration-200 ${
+                isActive(item.href)
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-blue-400'
+              }`}
+              title={!isOpen ? item.label : ''}
+            >
+              <span className="flex-shrink-0">{item.icon}</span>
+              {isOpen && <span className="truncate">{item.label}</span>}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Footer Section */}
+        <div className="border-t border-slate-700 p-4">
+          <button className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-red-400 font-medium transition-all duration-200 ${
+            !isOpen ? 'justify-center' : ''
+          }`}>
+            <span className="flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </span>
+            {isOpen && <span>Logout</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 md:hidden z-30"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Spacer for Desktop */}
+      <div className={`hidden md:block transition-all duration-300 ${isOpen ? 'w-50' : 'w-20'}`} />
+    </>
+  );
+};
+
+export default AdminSidebar;

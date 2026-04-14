@@ -50,7 +50,9 @@ model User {
   role  Role       @default(RESIDENT)
   createdAt DateTime @default(now())
 
-  // One-to-One relations depending on the user's role
+  // One-to-One relations depending on the user's role:
+  // Only one of `resident` or `official` should be non-null for a given user.
+  // Health workers are represented by the `User` model directly (no separate model).
   resident Resident?
   official Official?
 
@@ -76,7 +78,7 @@ model Resident {
   citizenship       String
 
   isVoter          Boolean  @default(false)
-  is4PsBeneficiary Boolean  @default(false)
+  
 
   createdAt        DateTime @default(now())
 
