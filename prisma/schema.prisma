@@ -109,6 +109,7 @@ model Announcement {
   id        String   @id @default(cuid())
   title     String
   content   String   @db.Text
+  image String?
 
   createdById String
   createdBy   Official @relation("CreatedByOfficial", fields: [createdById], references: [id])

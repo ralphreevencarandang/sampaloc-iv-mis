@@ -62,6 +62,10 @@ const CreateResidentModal = ({ isOpen, onClose }: ModalProps) => {
               </select>
             </div>
             <div className="flex flex-col gap-2">
+              <label htmlFor="citizenship" className="text-sm font-medium text-slate-700">Citizenship</label>
+              <input id="citizenship" type="text" placeholder="Enter citizenship" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+            </div>
+            <div className="flex flex-col gap-2">
               <label htmlFor="unit" className="text-sm font-medium text-slate-700">Unit/Block</label>
               <input id="unit" type="text" placeholder="Enter unit/block" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
             </div>
