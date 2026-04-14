@@ -17,7 +17,7 @@ const officials = [
 
 const ResidentOfficials = () => {
   return (
-      <section className="w-full py-20 bg-white">
+      <section id='officials' className="w-full py-20 bg-white">
       <div className="max-container padding-x">
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center gap-2 mb-3">

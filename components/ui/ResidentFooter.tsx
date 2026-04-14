@@ -17,7 +17,7 @@ const ResidentFooter = () => {
           {/* Brand & Paragraph */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-8 w-8 text-blue-500" />
+              {/* <ShieldCheck className="h-8 w-8 text-blue-500" /> */}
               <span className="text-xl font-bold text-white">Sampaloc<span className="text-blue-500"> IV</span></span>
             </div>
             <p className="text-sm leading-relaxed text-slate-400">

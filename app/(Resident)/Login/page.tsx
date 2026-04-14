@@ -14,12 +14,15 @@ const page = () => {
     console.log("Logging in with:", { email, password });
   };
   return (
-<main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+<main className="py-10">
+
+  <div className=" max-container min-h-screen flex items-center justify-center bg-gray-50 padding-x py-12">
+
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100 ">
         
         {/* Branding/Logo Section */}
         <div className="text-center">
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-4">    
             {/* Replace with your actual Barangay Logo */}
             <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
               MSI
@@ -35,7 +38,7 @@ const page = () => {
 
         {/* Form Section */}
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="rounded-md  space-y-4">
             <div>
               <label htmlFor="email-address" className="block text-sm font-medium text-gray-700 mb-1">
                 Email Address
@@ -98,12 +101,27 @@ const page = () => {
           </div>
         </form>
 
+        <div className="     pt-6">
+          <div className="text-center mb-3">
+            <p className="text-sm text-gray-600">
+              Don't have an account?
+            </p>
+          </div>
+          <Link
+            href="/register"
+            className="block w-full py-3 px-4 text-center font-semibold text-blue-600 bg-blue-50 border-2 border-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            Create Account
+          </Link>
+        </div>
+
         <div className="text-center mt-4">
           <Link href="/" className="text-sm text-gray-500 hover:underline">
             ← Back to Home
           </Link>
         </div>
       </div>
+  </div>
     </main>  )
 }
 

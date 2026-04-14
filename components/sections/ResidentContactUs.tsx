@@ -5,7 +5,7 @@ import {
 
 const ResidentContactUs = () => {
   return (
-     <section className="w-full py-20 bg-slate-50 border-t border-gray-100">
+     <section id='contact' className="w-full py-20 bg-slate-50 border-t border-gray-100">
       <div className="max-container padding-x">
           <div className="flex flex-col lg:flex-row gap-12">
 

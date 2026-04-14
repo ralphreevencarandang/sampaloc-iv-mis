@@ -46,7 +46,7 @@ const ResidentAnnouncement = () => {
     setCurrentSlide((prev) => (prev === 0 ? announcements.length - 1 : prev - 1));
   };
   return (
-      <section className="max-container w-full py-16 bg-slate-50 border-t border-gray-100 relative ">
+      <section id='announcements' className="max-container w-full py-16 bg-slate-50 border-t border-gray-100 relative ">
       <div className="padding-x">
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">

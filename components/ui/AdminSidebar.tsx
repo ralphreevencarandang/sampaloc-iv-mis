@@ -100,12 +100,12 @@ const AdminSidebar = () => {
                         : 'text-slate-300 hover:bg-slate-800 hover:text-blue-400'
                     }`}
                   >
-                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="shrink-0">{item.icon}</span>
                     {isOpen && (
                       <>
                         <span className="truncate flex-1 text-left">{item.label}</span>
                         <ChevronDown
-                          className={`w-4 h-4 transition-transform duration-200 flex-shrink-0 ${
+                          className={`w-4 h-4 transition-transform duration-200 shrink-0 ${
                             expandedMenu === 'documents' ? 'rotate-180' : ''
                           }`}
                         />
@@ -143,7 +143,7 @@ const AdminSidebar = () => {
                   }`}
                   title={!isOpen ? item.label : ''}
                 >
-                  <span className="flex-shrink-0">{item.icon}</span>
+                  <span className="shrink-0">{item.icon}</span>
                   {isOpen && <span className="truncate">{item.label}</span>}
                 </Link>
               )}
@@ -156,7 +156,7 @@ const AdminSidebar = () => {
           <button className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-red-400 font-medium transition-all duration-200 ${
             !isOpen ? 'justify-center' : ''
           }`}>
-            <span className="flex-shrink-0">
+            <span className="shrink-0">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>

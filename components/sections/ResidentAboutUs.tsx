@@ -15,7 +15,7 @@ const ResidentAboutUs = () => {
   const nextImg = () => setCurrentImg((prev) => (prev === aboutImages.length - 1 ? 0 : prev + 1));
   const prevImg = () => setCurrentImg((prev) => (prev === 0 ? aboutImages.length - 1 : prev - 1));
   return (
-     <section className="w-full py-20 bg-slate-50 border-t border-gray-100">
+     <section id='aboutUs' className="w-full py-20 bg-slate-50 border-t border-gray-100">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
         <div className="flex flex-col lg:flex-row gap-12 items-center">
           

@@ -38,6 +38,12 @@ enum RequestStatus {
   RELEASED
 }
 
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
 // ==========================================
 // MODELS
 // ==========================================
@@ -79,6 +85,9 @@ model Resident {
 
   isVoter          Boolean  @default(false)
   
+ 
+  validIDImage     String?
+  status           VerificationStatus @default(PENDING)
 
   createdAt        DateTime @default(now())
 
