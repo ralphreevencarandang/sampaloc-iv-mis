@@ -1,12 +1,25 @@
 import Image from "next/image";
-
+import ResidentHero from "@/components/sections/ResidentHero";
+import ResidentNavbar from "@/components/ui/ResidentNavbar";
+import ResidentAnnouncement from "@/components/sections/ResidentAnnouncement";
+import ResidentOfficials from "@/components/sections/ResidentOfficials";
+import ResidentAboutUs from "@/components/sections/ResidentAboutUs";
+import ResidentServices from "@/components/sections/ResidentServices";
+import ResidentContactUs from "@/components/sections/ResidentContactUs";
+import ResidentFooter from "@/components/ui/ResidentFooter";
 export default function Home() {
   return (
     <section>
-      <div>
-        <h1 className="text-4xl font-bold text-center mt-10">Welcome to Sampaloc IV MIS</h1>
-        <p className="text-center mt-4 text-lg">Your one-stop solution for managing barangay data and operations.</p>
-      </div>
+      <ResidentNavbar />
+      <ResidentHero/>
+      <ResidentAnnouncement />
+      <ResidentOfficials />
+      <ResidentAboutUs />
+      <ResidentServices />
+      <ResidentContactUs />
+      <ResidentFooter />
+
+
     </section>
   );
 }
