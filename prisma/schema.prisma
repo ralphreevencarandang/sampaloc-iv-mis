@@ -78,7 +78,11 @@ model Resident {
   gender           String
   civilStatus      String
 
-  address          String
+  street           String
+  houseNumber      String
+
+
+
   contactNumber    String?
   occupation       String?
   citizenship       String
