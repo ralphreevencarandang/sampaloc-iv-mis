@@ -1,10 +1,90 @@
-'use client'
+"use client";
 
-import React, { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, Settings, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
+import { useResidentAuth } from "@/components/providers/resident-auth-provider";
+import { logoutResidentAction } from "@/server/actions/auth.actions";
+import { useMutation } from "@tanstack/react-query";
+
+function ResidentProfileMenu({
+  residentInitial,
+  onLogout,
+  isLoggingOut,
+}: {
+  residentInitial: string;
+  onLogout: () => void;
+  isLoggingOut: boolean;
+}) {
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        profileMenuRef.current &&
+        event.target instanceof Node &&
+        !profileMenuRef.current.contains(event.target)
+      ) {
+        setIsProfileMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={profileMenuRef}>
+      <button
+        type="button"
+        onClick={() => setIsProfileMenuOpen((current) => !current)}
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-md shadow-blue-600/30 transition-all duration-300 hover:bg-blue-700"
+      >
+        {residentInitial}
+      </button>
+
+      {isProfileMenuOpen && (
+        <div className="absolute right-0 mt-3 w-48 rounded-xl border border-gray-100 bg-white p-2 shadow-xl">
+          <button
+            type="button"
+            onClick={() => setIsProfileMenuOpen(false)}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <Settings className="h-4 w-4" />
+            Settings
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsProfileMenuOpen(false);
+              onLogout();
+            }}
+            disabled={isLoggingOut}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+          >
+            <LogOut className="h-4 w-4" />
+            {isLoggingOut ? "Signing Out..." : "Sign Out"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const ResidentNavbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated, resident, signOut } = useResidentAuth();
+
+  const logoutMutation = useMutation({
+    mutationFn: logoutResidentAction,
+    onSuccess: () => {
+      signOut();
+      router.refresh();
+    },
+  });
 
   const navLinks = [
     { label: "Home", href: "#" },
@@ -15,70 +95,83 @@ const ResidentNavbar = () => {
     { label: "Contact", href: "#contact" },
   ];
 
+  const residentInitial = resident?.firstName?.charAt(0).toUpperCase() ?? "R";
+
   return (
-    <nav className="w-full bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+    <nav className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white shadow-sm">
       <div className="max-container padding-x">
-        <div className="flex items-center justify-between h-16 md:h-20">
-          
-          {/* Logo */}
-          <div className="shrink-0 flex items-center gap-2">
-            {/* <div className="w-10 h-10 bg-linear-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">S</span>
-            </div> */}
-            <div className="">
-              <p className="font-bold text-slate-900 text-lg">Sampaloc IV</p>
-              <p className="text-xs text-slate-500 -mt-1">Dasmariñas City</p>
+        <div className="flex h-16 items-center justify-between md:h-20">
+          <div className="flex shrink-0 items-center gap-2">
+            <div>
+              <p className="text-lg font-bold text-slate-900">Sampaloc IV</p>
+              <p className="-mt-1 text-xs text-slate-500">Dasmarinas City</p>
             </div>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden items-center gap-1 md:flex">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="px-4 py-2 text-slate-600 font-medium hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-300"
+                className="rounded-lg px-4 py-2 font-medium text-slate-600 transition-all duration-300 hover:bg-blue-50 hover:text-blue-600"
               >
                 {link.label}
               </a>
             ))}
           </div>
 
-          {/* Desktop Login Button */}
-          <div className="hidden md:flex items-center">
-            <Link   href="/login" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md shadow-blue-600/30 hover:shadow-lg hover:shadow-blue-600/40 transition-all duration-300 hover:-translate-y-0.5">
-              Login
-            
-            </Link>
-           
+          <div className="hidden items-center md:flex">
+            {isAuthenticated ? (
+              <ResidentProfileMenu
+                residentInitial={residentInitial}
+                onLogout={() => logoutMutation.mutate()}
+                isLoggingOut={logoutMutation.isPending}
+              />
+            ) : (
+              <Link
+                href="/login"
+                className="rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white shadow-md shadow-blue-600/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/40"
+              >
+                Login
+              </Link>
+            )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-3">
-            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition-all duration-300">
-              Login
-            </button>
+          <div className="flex items-center gap-3 md:hidden">
+            {isAuthenticated ? (
+              <ResidentProfileMenu
+                residentInitial={residentInitial}
+                onLogout={() => logoutMutation.mutate()}
+                isLoggingOut={logoutMutation.isPending}
+              />
+            ) : (
+              <Link
+                href="/login"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:bg-blue-700"
+              >
+                Login
+              </Link>
+            )}
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              className="rounded-lg p-2 transition-colors hover:bg-slate-100"
             >
               {isOpen ? (
-                <X className="w-6 h-6 text-slate-600" />
+                <X className="h-6 w-6 text-slate-600" />
               ) : (
-                <Menu className="w-6 h-6 text-slate-600" />
+                <Menu className="h-6 w-6 text-slate-600" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Mobile Navigation Menu */}
         {isOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="animate-in slide-in-from-top-2 space-y-2 border-t border-gray-100 bg-white px-4 py-4 duration-200 fade-in md:hidden">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="block px-4 py-3 text-slate-600 font-medium hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-300"
+                className="block rounded-lg px-4 py-3 font-medium text-slate-600 transition-all duration-300 hover:bg-blue-50 hover:text-blue-600"
               >
                 {link.label}
               </a>

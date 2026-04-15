@@ -1,128 +1,163 @@
 "use client";
 
-import React, { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
-import Image from "next/image";
-const page = () => {
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { useResidentAuth } from "@/components/providers/resident-auth-provider";
+import { loginResidentAction } from "@/server/actions/auth.actions";
+import { getZodFieldErrors, residentLoginSchema } from "@/validations/auth.validation";
 
-    const [email, setEmail] = useState("");
+export default function LoginPage() {
+  const router = useRouter();
+  const { isAuthenticated, signIn } = useResidentAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Add your authentication logic here
-    console.log("Logging in with:", { email, password });
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, router]);
+
+  const loginMutation = useMutation({
+    mutationFn: loginResidentAction,
+    onSuccess: (result) => {
+      if (!result.success) {
+        setErrors(result.fieldErrors ?? { submit: result.message });
+        return;
+      }
+
+      if (result.resident) {
+        signIn(result.resident);
+      }
+
+      setErrors({});
+      router.push("/");
+      router.refresh();
+    },
+    onError: () => {
+      setErrors({
+        submit: "An unexpected error occurred while signing in.",
+      });
+    },
+  });
+
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const parsed = residentLoginSchema.safeParse({
+      email,
+      password,
+    });
+
+    if (!parsed.success) {
+      setErrors(getZodFieldErrors(parsed.error));
+      return;
+    }
+
+    setErrors({});
+    await loginMutation.mutateAsync(parsed.data);
   };
+
   return (
-<main className="py-10">
-
-  <div className=" max-container min-h-screen flex items-center justify-center bg-gray-50 padding-x py-12">
-
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100 ">
-        
-        {/* Branding/Logo Section */}
-        <div className="text-center">
-          <div className="flex justify-center mb-4">    
-            {/* Replace with your actual Barangay Logo */}
-            <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-              MSI
+    <main className="py-10">
+      <div className="max-container min-h-screen flex items-center justify-center bg-gray-50 padding-x py-12">
+        <div className="max-w-md w-full space-y-8 rounded-xl border border-gray-100 bg-white p-8 shadow-lg">
+          <div className="text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white">
+                MSI
+              </div>
             </div>
+            <h2 className="text-3xl font-extrabold text-gray-900">Barangay Portal</h2>
+            <p className="mt-2 text-sm text-gray-600">Please sign in to access your account</p>
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Barangay Portal
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Please sign in to access your account
-          </p>
-        </div>
 
-        {/* Form Section */}
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="rounded-md  space-y-4">
+          {errors.submit && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {errors.submit}
+            </div>
+          )}
+
+          <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+            <div className="space-y-4 rounded-md">
+              <div>
+                <label htmlFor="email-address" className="mb-1 block text-sm font-medium text-gray-700">
+                  Email Address
+                </label>
+                <input
+                  id="email-address"
+                  name="email"
+                  type="email"
+                  required
+                  className="relative block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                  placeholder="juan.delacruz@example.com"
+                  value={email}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    if (errors.email || errors.submit) {
+                      setErrors((current) => ({ ...current, email: "", submit: "" }));
+                    }
+                  }}
+                />
+                {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  className="relative block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                  placeholder="********"
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    if (errors.password || errors.submit) {
+                      setErrors((current) => ({ ...current, password: "", submit: "" }));
+                    }
+                  }}
+                />
+                {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
+              </div>
+            </div>
+
             <div>
-              <label htmlFor="email-address" className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                required
-                className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="juan.delacruz@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              <button
+                type="submit"
+                disabled={loginMutation.isPending}
+                className="group relative flex w-full justify-center rounded-lg border border-transparent bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loginMutation.isPending ? "Signing In..." : "Sign In"}
+              </button>
             </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
+          </form>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                Remember me
-              </label>
+          <div className="pt-6">
+            <div className="mb-3 text-center">
+              <p className="text-sm text-gray-600">Don&apos;t have an account?</p>
             </div>
-
-            <div className="text-sm">
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                Forgot your password?
-              </a>
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            <Link
+              href="/register"
+              className="block w-full rounded-lg border-2 border-blue-600 bg-blue-50 px-4 py-3 text-center font-semibold text-blue-600 transition-colors hover:bg-blue-100"
             >
-              Sign In
-            </button>
+              Create Account
+            </Link>
           </div>
-        </form>
 
-        <div className="     pt-6">
-          <div className="text-center mb-3">
-            <p className="text-sm text-gray-600">
-              Don't have an account?
-            </p>
+          <div className="mt-4 text-center">
+            <Link href="/" className="text-sm text-gray-500 hover:underline">
+              Back to Home
+            </Link>
           </div>
-          <Link
-            href="/register"
-            className="block w-full py-3 px-4 text-center font-semibold text-blue-600 bg-blue-50 border-2 border-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            Create Account
-          </Link>
-        </div>
-
-        <div className="text-center mt-4">
-          <Link href="/" className="text-sm text-gray-500 hover:underline">
-            ← Back to Home
-          </Link>
         </div>
       </div>
-  </div>
-    </main>  )
+    </main>
+  );
 }
-
-export default page

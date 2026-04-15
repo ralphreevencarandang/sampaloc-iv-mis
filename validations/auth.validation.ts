@@ -35,6 +35,13 @@ export type ResidentRegistrationInput = z.infer<
   typeof residentRegistrationSchema
 >;
 
+export const residentLoginSchema = z.object({
+  email: z.email("Enter a valid email address.").trim().toLowerCase(),
+  password: z.string().min(1, "Password is required."),
+});
+
+export type ResidentLoginInput = z.infer<typeof residentLoginSchema>;
+
 export function getZodFieldErrors(error: z.ZodError) {
   const fieldErrors = error.flatten().fieldErrors;
 
