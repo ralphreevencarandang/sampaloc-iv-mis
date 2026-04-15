@@ -16,8 +16,7 @@ datasource db {
 // ENUMS
 // ==========================================
 
-enum Role {
-  RESIDENT
+enum AdminRole {
   OFFICIAL
   HEALTH_WORKER
 }
@@ -48,43 +47,40 @@ enum VerificationStatus {
 // MODELS
 // ==========================================
 
-model User {
-  id    String     @id @default(cuid())
-  name  String
-  email String     @unique
-  password String
-  role  Role       @default(RESIDENT)
+model Admin {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      AdminRole
   createdAt DateTime @default(now())
 
-  // One-to-One relations depending on the user's role:
-  // Only one of `resident` or `official` should be non-null for a given user.
-  // Health workers are represented by the `User` model directly (no separate model).
-  resident Resident?
   official Official?
 
-  // Relations for Health Workers
   medicalRecordsChecked MedicalRecord[] @relation("CheckedByHealthWorker")
 }
 
 model Resident {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  verifyOtp         String?
+  verifyOtpExpireAt DateTime?
+  resetOtp          String?
+  resetOtpExpireAt  DateTime?
 
-  firstName        String
-  lastName         String
-  middleName       String?
-  birthDate        DateTime
-  gender           String
-  civilStatus      String
+  firstName         String
+  lastName          String
+  middleName        String?
+  birthDate         DateTime
+  gender            String
+  civilStatus       String
 
-  street           String
-  houseNumber      String
+  street            String
+  houseNumber       String
 
-
-
-  contactNumber    String?
-  occupation       String?
+  contactNumber     String?
+  occupation        String?
   citizenship       String
 
   isVoter          Boolean  @default(false)
@@ -105,8 +101,8 @@ model Resident {
 
 model Official {
   id         String   @id @default(cuid())
-  userId     String   @unique
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adminId    String   @unique
+  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   position   String
   termStart  DateTime
@@ -225,7 +221,7 @@ model MedicalRecord {
   prescription String?  @db.Text
 
   checkedById String
-  checkedBy   User     @relation("CheckedByHealthWorker", fields: [checkedById], references: [id])
+  checkedBy   Admin    @relation("CheckedByHealthWorker", fields: [checkedById], references: [id])
 
   date        DateTime @default(now())
 }

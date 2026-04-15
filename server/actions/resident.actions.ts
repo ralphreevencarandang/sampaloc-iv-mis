@@ -1,7 +1,8 @@
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { Role } from "@/app/generated/prisma/client";
+import { CloudinaryUploadError, uploadImageToCloudinary } from "@/lib/cloudinary";
 import prismaModule from "@/lib/prisma";
+import { validateValidIdImageFile } from "@/lib/valid-id-image";
 import {
   getZodFieldErrors,
   residentRegistrationSchema,
@@ -10,8 +11,6 @@ import {
 
 const scrypt = promisify(scryptCallback);
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
-
-export type RegisterResidentInput = ResidentRegistrationInput;
 
 export type RegisterResidentResult = {
   success: boolean;
@@ -32,21 +31,62 @@ type SanitizedResidentRegistration = Omit<
   contactNumber: string;
   occupation: string | null;
   citizenship: string;
-  validIDImageName: string;
+  validIDImageFile: File;
   birthDate: Date;
   password: string;
 };
 
-export function validateResidentRegistration(
-  input: RegisterResidentInput
-): {
+function getFormValue(formData: FormData, key: keyof ResidentRegistrationInput) {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : "";
+}
+
+export function validateResidentRegistration(formData: FormData): {
   data?: SanitizedResidentRegistration;
   fieldErrors?: Record<string, string>;
 } {
+  const validIDImageFile = formData.get("validIDImage");
+
+  if (!(validIDImageFile instanceof File) || validIDImageFile.size === 0) {
+    return {
+      fieldErrors: {
+        validIDImageName: "Valid ID image is required.",
+      },
+    };
+  }
+
+  const input: ResidentRegistrationInput = {
+    email: getFormValue(formData, "email"),
+    password: getFormValue(formData, "password"),
+    confirmPassword: getFormValue(formData, "confirmPassword"),
+    firstName: getFormValue(formData, "firstName"),
+    lastName: getFormValue(formData, "lastName"),
+    middleName: getFormValue(formData, "middleName"),
+    birthDate: getFormValue(formData, "birthDate"),
+    gender: getFormValue(formData, "gender"),
+    civilStatus: getFormValue(formData, "civilStatus"),
+    street: getFormValue(formData, "street"),
+    houseNumber: getFormValue(formData, "houseNumber"),
+    contactNumber: getFormValue(formData, "contactNumber"),
+    occupation: getFormValue(formData, "occupation"),
+    citizenship: getFormValue(formData, "citizenship"),
+    validIDImageName: validIDImageFile.name,
+  };
+
   const parsed = residentRegistrationSchema.safeParse(input);
 
   if (!parsed.success) {
     return { fieldErrors: getZodFieldErrors(parsed.error) };
+  }
+
+  const imageValidationError = validateValidIdImageFile(validIDImageFile);
+
+  if (imageValidationError) {
+    return {
+      fieldErrors: {
+        validIDImageName: imageValidationError,
+      },
+    };
   }
 
   const data = parsed.data;
@@ -66,7 +106,7 @@ export function validateResidentRegistration(
       contactNumber: data.contactNumber,
       occupation: data.occupation || null,
       citizenship: data.citizenship,
-      validIDImageName: data.validIDImageName,
+      validIDImageFile,
     },
   };
 }
@@ -95,10 +135,8 @@ export async function verifyPassword(password: string, hashedPassword: string) {
   return timingSafeEqual(derivedKey, storedKeyBuffer);
 }
 
-export async function createResidentAccount(
-  input: RegisterResidentInput
-): Promise<RegisterResidentResult> {
-  const { data, fieldErrors } = validateResidentRegistration(input);
+export async function createResidentAccount(formData: FormData): Promise<RegisterResidentResult> {
+  const { data, fieldErrors } = validateResidentRegistration(formData);
 
   if (!data) {
     return {
@@ -109,15 +147,15 @@ export async function createResidentAccount(
   }
 
   try {
-    const existingUser = await prisma.user.findUnique({
+    const existingResident = await prisma.resident.findUnique({
       where: { email: data.email },
       select: { id: true },
     });
 
-    if (existingUser) {
+    if (existingResident) {
       return {
         success: false,
-        message: "A user with that email already exists.",
+        message: "A resident with that email already exists.",
         fieldErrors: {
           email: "Email is already registered.",
         },
@@ -125,24 +163,15 @@ export async function createResidentAccount(
     }
 
     const hashedPassword = await hashPassword(data.password);
-    const fullName = [data.firstName, data.middleName, data.lastName]
-      .filter(Boolean)
-      .join(" ");
+    const uploadResult = await uploadImageToCloudinary(data.validIDImageFile, {
+      publicIdPrefix: data.email.replace(/[^a-z0-9]/gi, "-").toLowerCase(),
+    });
 
     await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          name: fullName,
-          email: data.email,
-          password: hashedPassword,
-          role: Role.RESIDENT,
-        },
-        select: { id: true },
-      });
-
       await tx.resident.create({
         data: {
-          userId: user.id,
+          email: data.email,
+          password: hashedPassword,
           firstName: data.firstName,
           lastName: data.lastName,
           middleName: data.middleName,
@@ -154,7 +183,7 @@ export async function createResidentAccount(
           contactNumber: data.contactNumber,
           occupation: data.occupation,
           citizenship: data.citizenship,
-          validIDImage: data.validIDImageName,
+          validIDImage: uploadResult.secure_url,
         },
       });
     });
@@ -164,11 +193,21 @@ export async function createResidentAccount(
       message: "Resident registration submitted successfully.",
     };
   } catch (error) {
+    if (error instanceof CloudinaryUploadError) {
+      return {
+        success: false,
+        message: "Please correct the highlighted fields.",
+        fieldErrors: {
+          validIDImageName: error.message,
+        },
+      };
+    }
+
     console.error("register resident failed", error);
 
     return {
       success: false,
-      message: `error: ${error instanceof Error ? error.message : "An unexpected error occurred."}`,
+      message: "An unexpected error occurred while submitting your registration.",
     };
   }
 }

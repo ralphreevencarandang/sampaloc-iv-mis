@@ -3,8 +3,12 @@
 import { useMutation } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { registerResidentAction } from "@/server/actions/auth.actions";
+import {
+  MAX_VALID_ID_IMAGE_SIZE_BYTES,
+  validateValidIdImageFile,
+} from "@/lib/valid-id-image";
 import {
   getZodFieldErrors,
   residentRegistrationSchema,
@@ -40,10 +44,33 @@ const initialFormState: RegisterFormState = {
 const civilStatuses = ["Single", "Married", "Widowed", "Divorced", "Separated"];
 const genders = ["Male", "Female", "Other"];
 
+function getSubmissionErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+
+  if (/body.?size.?limit|payload|request entity too large|413|too large/i.test(message)) {
+    return {
+      submit: "The selected image is too large to upload. Choose an image up to 5MB.",
+      validIDImageName: "Valid ID image size must be 5MB or less.",
+    };
+  }
+
+  return {
+    submit: "Registration failed. Please try again.",
+  };
+}
+
 export default function RegisterPage() {
   const [formData, setFormData] = useState<RegisterFormState>(initialFormState);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    return () => {
+      if (formData.validIDImagePreview) {
+        URL.revokeObjectURL(formData.validIDImagePreview);
+      }
+    };
+  }, [formData.validIDImagePreview]);
 
   const registerMutation = useMutation({
     mutationFn: registerResidentAction,
@@ -71,11 +98,9 @@ export default function RegisterPage() {
       setSuccessMessage(result.message);
       setFormData({ ...initialFormState });
     },
-    onError: () => {
+    onError: (error) => {
       setSuccessMessage("");
-      setErrors({
-        submit: "Registration failed. Please try again..",
-      });
+      setErrors(getSubmissionErrorMessage(error));
     },
   });
 
@@ -106,18 +131,15 @@ export default function RegisterPage() {
     }
 
     const nextErrors = { ...errors };
+    const imageValidationError = validateValidIdImageFile(file);
 
-    if (file.size > 5 * 1024 * 1024) {
-      nextErrors.validIDImageName = "Image size must be less than 5MB.";
+    if (imageValidationError) {
+      nextErrors.validIDImageName = imageValidationError;
       setErrors(nextErrors);
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      nextErrors.validIDImageName = "Please select a valid image file.";
-      setErrors(nextErrors);
-      return;
-    }
+    const previewUrl = URL.createObjectURL(file);
 
     setErrors((current) => ({
       ...current,
@@ -125,12 +147,18 @@ export default function RegisterPage() {
       submit: "",
     }));
 
-    setFormData((current) => ({
-      ...current,
-      validIDImage: file,
-      validIDImageName: file.name,
-      validIDImagePreview: URL.createObjectURL(file),
-    }));
+    setFormData((current) => {
+      if (current.validIDImagePreview) {
+        URL.revokeObjectURL(current.validIDImagePreview);
+      }
+
+      return {
+        ...current,
+        validIDImage: file,
+        validIDImageName: file.name,
+        validIDImagePreview: previewUrl,
+      };
+    });
   };
 
   const validateForm = () => {
@@ -169,23 +197,33 @@ export default function RegisterPage() {
       return;
     }
 
-    await registerMutation.mutateAsync({
-      email: formData.email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      middleName: formData.middleName,
-      birthDate: formData.birthDate,
-      gender: formData.gender,
-      civilStatus: formData.civilStatus,
-      street: formData.street,
-      houseNumber: formData.houseNumber,
-      contactNumber: formData.contactNumber,
-      occupation: formData.occupation,
-      citizenship: formData.citizenship,
-      validIDImageName: formData.validIDImageName,
-    });
+    if (!formData.validIDImage) {
+      setErrors((current) => ({
+        ...current,
+        validIDImageName: "Valid ID image is required.",
+      }));
+      return;
+    }
+
+    const submission = new FormData();
+
+    submission.set("email", formData.email);
+    submission.set("password", formData.password);
+    submission.set("confirmPassword", formData.confirmPassword);
+    submission.set("firstName", formData.firstName);
+    submission.set("lastName", formData.lastName);
+    submission.set("middleName", formData.middleName);
+    submission.set("birthDate", formData.birthDate);
+    submission.set("gender", formData.gender);
+    submission.set("civilStatus", formData.civilStatus);
+    submission.set("street", formData.street);
+    submission.set("houseNumber", formData.houseNumber);
+    submission.set("contactNumber", formData.contactNumber);
+    submission.set("occupation", formData.occupation);
+    submission.set("citizenship", formData.citizenship);
+    submission.set("validIDImage", formData.validIDImage);
+
+    await registerMutation.mutateAsync(submission);
   };
 
   return (
@@ -477,7 +515,10 @@ export default function RegisterPage() {
                   <p className="text-sm font-medium text-gray-600">
                     Click to select an image file for your valid ID
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    JPG, PNG, or WebP up to {Math.floor(MAX_VALID_ID_IMAGE_SIZE_BYTES / (1024 * 1024))}
+                    MB
+                  </p>
                 </div>
               </label>
               {errors.validIDImageName && (
@@ -513,6 +554,9 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => {
+                if (formData.validIDImagePreview) {
+                  URL.revokeObjectURL(formData.validIDImagePreview);
+                }
                 setFormData({ ...initialFormState });
                 setErrors({});
                 setSuccessMessage("");
