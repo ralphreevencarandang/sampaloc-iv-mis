@@ -19,7 +19,7 @@ export type RegisterResidentResult = {
 };
 
 type SanitizedResidentRegistration = Omit<
-  RegisterResidentInput,
+  ResidentRegistrationInput,
   "password" | "confirmPassword" | "middleName" | "birthDate" | "occupation"
 > & {
   email: string;
@@ -213,3 +213,4 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
     };
   }
 }
+

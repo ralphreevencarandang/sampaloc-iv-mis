@@ -142,6 +142,7 @@ model Pet {
 
 model Blotter {
   id            String        @id @default(cuid())
+  blotterImage String?
 
   complainantId String
   complainant   Resident      @relation("Complainant", fields: [complainantId], references: [id])

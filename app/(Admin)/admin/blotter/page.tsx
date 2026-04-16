@@ -1,30 +1,10 @@
-'use client'
+"use client"
 
 import React, { useState, useMemo } from 'react'
-import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import CreateBlotterModal from '@/components/ui/Admin/CreateBlotterModal'
-
-interface Blotter {
-  id: number
-  complainant: string
-  respondentName: string
-  incident: string
-  location: string
-  date: string
-  status: 'Open' | 'Resolved'
-  handledBy?: string
-}
-
-const mockBlotters: Blotter[] = [
-  { id: 1, complainant: 'Juan Dela Cruz', respondentName: 'Pedro Reyes', incident: 'Theft of personal property', location: 'Blk 1 L2 Sampaloc IV', date: '2026-04-10', status: 'Resolved', handledBy: 'Juan Dela Cruz' },
-  { id: 2, complainant: 'Maria Santos', respondentName: 'Unknown', incident: 'Noise disturbance at night', location: 'Blk 2 L5 Sampaloc IV', date: '2026-04-12', status: 'Open' },
-  { id: 3, complainant: 'Ana Garcia', respondentName: 'Carlos Bautista', incident: 'Property damage', location: 'Blk 3 L1 Sampaloc IV', date: '2026-04-08', status: 'Resolved', handledBy: 'Maria Santos' },
-  { id: 4, complainant: 'Luis Mendoza', respondentName: 'Unknown', incident: 'Verbal altercation with neighbor', location: 'Blk 1 L3 Sampaloc IV', date: '2026-04-11', status: 'Open' },
-  { id: 5, complainant: 'Rosa Lim', respondentName: 'Elena Castro', incident: 'Fence encroachment', location: 'Blk 2 L4 Sampaloc IV', date: '2026-04-09', status: 'Resolved', handledBy: 'Pedro Reyes' },
-  { id: 6, complainant: 'Carlos Bautista', respondentName: 'Unknown', incident: 'Suspicious activity', location: 'Blk 3 L2 Sampaloc IV', date: '2026-04-13', status: 'Open' },
-  { id: 7, complainant: 'Elena Castro', respondentName: 'Juan Dela Cruz', incident: 'Physical assault', location: 'Blk 1 L4 Sampaloc IV', date: '2026-04-07', status: 'Resolved', handledBy: 'Juan Dela Cruz' },
-  { id: 8, complainant: 'Mark Villanueva', respondentName: 'Unknown', incident: 'Animal loose causing danger', location: 'Blk 2 L1 Sampaloc IV', date: '2026-04-14', status: 'Open' },
-]
+import { getBlotters } from '@/server/actions/blotter.actions'
 
 const ITEMS_PER_PAGE = 10
 
@@ -33,14 +13,19 @@ export default function BlotterPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  const { data: blotters = [], isLoading, error } = useQuery({
+    queryKey: ['blotters'],
+    queryFn: getBlotters
+  })
+
   const filteredBlotters = useMemo(() => {
-    return mockBlotters.filter(blotter =>
+    return blotters.filter(blotter =>
       blotter.complainant.toLowerCase().includes(searchTerm.toLowerCase()) ||
       blotter.respondentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       blotter.incident.toLowerCase().includes(searchTerm.toLowerCase()) ||
       blotter.location.toLowerCase().includes(searchTerm.toLowerCase())
     )
-  }, [searchTerm])
+  }, [searchTerm, blotters])
 
   const totalPages = Math.ceil(filteredBlotters.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -59,7 +44,6 @@ export default function BlotterPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Blotter</h1>
@@ -74,7 +58,6 @@ export default function BlotterPage() {
         </button>
       </div>
 
-      {/* Search Bar */}
       <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
         <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-lg border border-gray-200">
           <Search className="w-5 h-5 text-slate-400" />
@@ -91,7 +74,6 @@ export default function BlotterPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -108,7 +90,25 @@ export default function BlotterPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedBlotters.length > 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                       <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                       <p className="text-slate-600 font-medium">Loading blotters...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                       <AlertCircle className="w-8 h-8 text-red-500" />
+                       <p className="text-slate-600 font-medium">Error loading blotters. Please try again.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedBlotters.length > 0 ? (
                 paginatedBlotters.map((blotter) => (
                   <tr key={blotter.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">{blotter.complainant}</td>
@@ -124,9 +124,11 @@ export default function BlotterPage() {
                     <td className="px-6 py-4 text-sm text-slate-600">{blotter.handledBy || '-'}</td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="View">
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        {blotter.blotterImage && (
+                          <a href={blotter.blotterImage} target="_blank" rel="noreferrer" className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="View Image">
+                            <Eye className="w-4 h-4" />
+                          </a>
+                        )}
                         <button className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -148,8 +150,7 @@ export default function BlotterPage() {
           </table>
         </div>
 
-        {/* Pagination */}
-        {filteredBlotters.length > 0 && (
+        {!isLoading && filteredBlotters.length > 0 && (
           <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-slate-50">
             <div className="text-sm text-slate-600">
               Showing <span className="font-semibold">{startIndex + 1}</span> to{' '}
@@ -191,7 +192,6 @@ export default function BlotterPage() {
         )}
       </div>
 
-      {/* Add Blotter Modal */}
       <CreateBlotterModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   )
