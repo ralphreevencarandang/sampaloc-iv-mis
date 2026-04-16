@@ -43,7 +43,7 @@ const initialFormState: RegisterFormState = {
 };
 
 const civilStatuses = ["Single", "Married", "Widowed", "Divorced", "Separated"];
-const genders = ["Male", "Female", "Other"];
+const genders = ["Male", "Female"];
 
 function getSubmissionErrorMessage(error: unknown): Record<string, string> {
   const message = error instanceof Error ? error.message : "";
