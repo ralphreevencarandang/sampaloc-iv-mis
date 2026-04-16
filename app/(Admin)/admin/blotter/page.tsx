@@ -4,18 +4,33 @@ import React, { useState, useMemo } from 'react'
 import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import CreateBlotterModal from '@/components/ui/Admin/CreateBlotterModal'
-import { getBlotters } from '@/server/actions/blotter.actions'
+import axios from '@/lib/axios'
 
 const ITEMS_PER_PAGE = 10
+
+interface BlotterData {
+  id: string
+  complainant: string
+  respondentName: string
+  incident: string
+  location: string
+  date: string
+  status: string
+  handledBy?: string
+  blotterImage: string | null
+}
 
 export default function BlotterPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const { data: blotters = [], isLoading, error } = useQuery({
+  const { data: blotters = [], isLoading, error } = useQuery<BlotterData[]>({
     queryKey: ['blotters'],
-    queryFn: getBlotters
+    queryFn: async () => {
+      const response = await axios.get('/blotter')
+      return response.data
+    }
   })
 
   const filteredBlotters = useMemo(() => {

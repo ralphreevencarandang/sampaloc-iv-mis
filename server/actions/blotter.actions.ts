@@ -6,37 +6,6 @@ import { blotterSchema, getBlotterFieldErrors } from "@/validations/blotter.vali
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
-export async function getBlotters() {
-  try {
-    const blotters = await prisma.blotter.findMany({
-      include: {
-        complainant: true,
-        handledBy: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    return blotters.map((b) => ({
-      id: b.id,
-      complainant: [b.complainant.firstName, b.complainant.lastName].filter(Boolean).join(" "),
-      respondentName: b.respondentName,
-      incident: b.incident,
-      location: b.location,
-      date: b.date.toISOString(),
-      status: b.status === "OPEN" ? "Open" : "Resolved",
-      handledBy: b.handledBy
-        ? [b.handledBy.firstName, b.handledBy.lastName].filter(Boolean).join(" ")
-        : undefined,
-      blotterImage: b.blotterImage,
-    }));
-  } catch (error) {
-    console.error("Failed to fetch blotters", error);
-    throw new Error("Failed to fetch blotters");
-  }
-}
-
 export type CreateBlotterResult = {
   success: boolean;
   message: string;

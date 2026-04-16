@@ -20,7 +20,7 @@ export type RegisterResidentResult = {
 
 type SanitizedResidentRegistration = Omit<
   ResidentRegistrationInput,
-  "password" | "confirmPassword" | "middleName" | "birthDate" | "occupation"
+  "password" | "confirmPassword" | "middleName" | "birthDate" | "occupation" | "validIDImageName"
 > & {
   email: string;
   firstName: string;
