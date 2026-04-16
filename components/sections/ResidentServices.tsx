@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {  FileText, 
   FileSignature, CheckCircle2, Dog, AlertTriangle 
 } from 'lucide-react';
+import Link from 'next/link';
 
 const ResidentServices = () => {
 
@@ -44,9 +45,11 @@ const ResidentServices = () => {
                 </li>
               ))}
             </ul>
-            <button className="w-full py-3.5 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-colors">
-              Request Now
-            </button>
+            <Link href="/request-documents">
+              <button className="w-full py-3.5 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-colors">
+                Request Now
+              </button>
+            </Link>
           </div>
 
           {/* Service Card 2: Pet Registration */}
@@ -58,9 +61,11 @@ const ResidentServices = () => {
             <p className="text-slate-600 leading-relaxed mb-8 flex-1">
               Register your pets to keep our community safe and ensure they are properly documented and vaccinated. Help us maintain a pet-friendly and responsible neighborhood.
             </p>
-            <button className="w-full py-3.5 bg-white border-2 border-amber-600 text-amber-600 font-bold rounded-xl hover:bg-amber-600 hover:text-white transition-colors">
-              Register Pet
-            </button>
+            <Link href="/pet-registration">
+              <button className="w-full py-3.5 bg-white border-2 border-amber-600 text-amber-600 font-bold rounded-xl hover:bg-amber-600 hover:text-white transition-colors">
+                Register Pet
+              </button>
+            </Link>
           </div>
 
           {/* Service Card 3: Blotter */}
@@ -72,9 +77,11 @@ const ResidentServices = () => {
             <p className="text-slate-600 leading-relaxed mb-8 flex-1">
               Report an incident or file a formal complaint. Our barangay officials are ready to mediate, assist in resolving disputes, and ensure the safety of our residents.
             </p>
-            <button className="w-full py-3.5 bg-white border-2 border-red-600 text-red-600 font-bold rounded-xl hover:bg-red-600 hover:text-white transition-colors">
-              File Report
-            </button>
+            <Link href="/blotter">
+              <button className="w-full py-3.5 bg-white border-2 border-red-600 text-red-600 font-bold rounded-xl hover:bg-red-600 hover:text-white transition-colors">
+                File Report
+              </button>
+            </Link>
           </div>
 
         </div>

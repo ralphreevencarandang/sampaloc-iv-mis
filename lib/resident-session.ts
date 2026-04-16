@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import type { AuthenticatedResident } from "@/lib/resident-auth";
 import prismaModule from "@/lib/prisma";
 
@@ -137,4 +138,14 @@ export async function getCurrentResidentFromSession(): Promise<AuthenticatedResi
     lastName: resident.lastName,
     status: resident.status,
   };
+}
+
+export async function requireResidentSession() {
+  const resident = await getCurrentResidentFromSession();
+
+  if (!resident) {
+    redirect("/login");
+  }
+
+  return resident;
 }
