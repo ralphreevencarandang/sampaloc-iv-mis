@@ -7,6 +7,7 @@ export type OfficialRecord = {
   id: string;
   name: string;
   email: string;
+  officialProfile: string | null;
   position: string;
   termStart: string;
   termEnd: string | null;
@@ -18,6 +19,7 @@ type OfficialEntity = {
   firstName: string;
   lastName: string;
   email: string;
+  officialProfile: string | null;
   position: string;
   termStart: Date;
   termEnd: Date | null;
@@ -35,6 +37,7 @@ function mapOfficialRecord(
     id: official.id,
     name: buildOfficialName(official.firstName, official.lastName),
     email: official.email,
+    officialProfile: official.officialProfile ?? null,
     position: official.position,
     termStart: official.termStart.toISOString(),
     termEnd: official.termEnd?.toISOString() ?? null,
@@ -50,6 +53,7 @@ export async function fetchOfficialsFromDb(): Promise<OfficialRecord[]> {
       firstName: true,
       lastName: true,
       email: true,
+      officialProfile: true,
       isActive: true,
       position: true,
       termStart: true,

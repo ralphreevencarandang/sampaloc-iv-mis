@@ -2,9 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import React from "react";
+import Image from "next/image";
+import React, { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { Upload, X } from "lucide-react";
 import { createOfficial } from "@/server/actions/official.actions";
+import { MAX_VALID_ID_IMAGE_SIZE_BYTES, validateValidIdImageFile } from "@/lib/valid-id-image";
 import type { OfficialRecord } from "@/server/officials/officials";
 import { officialSchema, type OfficialFormInput } from "@/validations/official.validation";
 import { ModalProps } from "./CreateResidentModal"; 
@@ -23,6 +26,7 @@ const positionOptions = [
   "Barangay Kagawad - Agriculture",
   "Barangay Kagawad - Finance",
   "SK Chairperson",
+  "SK Kagawad",
   "Barangay Secretary",
 ];
 
@@ -32,6 +36,7 @@ const defaultValues: OfficialFormInput = {
   email: "",
   status: "Active",
   position: "",
+  officialProfileName: "",
   termStart: "",
   termEnd: "",
 };
@@ -41,16 +46,30 @@ const CreateOfficialModal = ({
   onClose,
   onOfficialCreated,
 }: CreateOfficialModalProps) => {
+  const [profilePreview, setProfilePreview] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const {
     register,
     handleSubmit,
     reset,
     setError,
+    setValue,
+    clearErrors,
     formState: { errors },
   } = useForm<OfficialFormInput>({
     resolver: zodResolver(officialSchema),
     defaultValues,
   });
+
+  useEffect(() => {
+    return () => {
+      if (profilePreview) {
+        URL.revokeObjectURL(profilePreview);
+      }
+    };
+  }, [profilePreview]);
 
   const createOfficialMutation = useMutation({
     mutationFn: createOfficial,
@@ -76,10 +95,21 @@ const CreateOfficialModal = ({
         onOfficialCreated(result.official);
       }
 
-      reset(defaultValues);
-      onClose();
+      handleClose();
     },
-    onError: () => {
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "";
+
+      if (/body.?size.?limit|payload|request entity too large|413|too large/i.test(message)) {
+        setError("officialProfileName", {
+          type: "server",
+          message: `Official profile image size must be ${Math.floor(
+            MAX_VALID_ID_IMAGE_SIZE_BYTES / (1024 * 1024)
+          )}MB or less.`,
+        });
+        return;
+      }
+
       setError("root", {
         type: "server",
         message: "An unexpected error occurred while creating the official.",
@@ -88,12 +118,84 @@ const CreateOfficialModal = ({
   });
 
   const onSubmit = async (data: OfficialFormInput) => {
-    await createOfficialMutation.mutateAsync(data);
+    const submission = new FormData();
+
+    submission.set("firstName", data.firstName);
+    submission.set("lastName", data.lastName);
+    submission.set("email", data.email);
+    submission.set("status", data.status);
+    submission.set("position", data.position);
+    submission.set("termStart", data.termStart);
+    submission.set("termEnd", data.termEnd);
+
+    if (selectedProfile) {
+      submission.set("officialProfile", selectedProfile);
+    }
+
+    await createOfficialMutation.mutateAsync(submission);
   };
 
   const handleClose = () => {
+    if (profilePreview) {
+      URL.revokeObjectURL(profilePreview);
+    }
+
+    setProfilePreview(null);
+    setSelectedProfile(null);
     reset(defaultValues);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
     onClose();
+  };
+
+  const handleProfileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const validationError = validateValidIdImageFile(file);
+
+    if (validationError) {
+      setSelectedProfile(null);
+      setValue("officialProfileName", "", { shouldValidate: true });
+      setError("officialProfileName", {
+        type: "manual",
+        message: validationError.replace("Valid ID", "Official profile image"),
+      });
+      return;
+    }
+
+    clearErrors("officialProfileName");
+    setValue("officialProfileName", file.name, { shouldValidate: true });
+    setSelectedProfile(file);
+
+    setProfilePreview((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+
+      return URL.createObjectURL(file);
+    });
+  };
+
+  const handleRemoveProfile = () => {
+    if (profilePreview) {
+      URL.revokeObjectURL(profilePreview);
+    }
+
+    setProfilePreview(null);
+    setSelectedProfile(null);
+    setValue("officialProfileName", "", { shouldValidate: true });
+    clearErrors("officialProfileName");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   if (!isOpen) return null;
@@ -156,7 +258,56 @@ const CreateOfficialModal = ({
               {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
             </div>
 
-            
+            <div className="flex flex-col gap-2 md:col-span-2">
+              <label htmlFor="officialProfile" className="text-sm font-medium text-slate-700">
+                Official Profile Image
+              </label>
+              <input type="hidden" {...register("officialProfileName")} />
+              <input
+                id="officialProfile"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleProfileChange}
+                className="hidden"
+              />
+              <label
+                htmlFor="officialProfile"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 px-4 py-3 transition-all hover:border-blue-500 hover:bg-blue-50"
+              >
+                <Upload className="h-5 w-5 text-slate-400" />
+                <span className="text-sm font-medium text-slate-600">
+                  {selectedProfile ? selectedProfile.name : "Click to upload profile image"}
+                </span>
+              </label>
+              {errors.officialProfileName && (
+                <p className="text-sm text-red-500">{errors.officialProfileName.message}</p>
+              )}
+            </div>
+
+            {profilePreview && (
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className="text-sm font-medium text-slate-700">Profile Preview</label>
+                <div className="relative inline-block overflow-hidden rounded-lg bg-slate-50">
+                  <Image
+                    src={profilePreview}
+                    alt="Official profile preview"
+                    width={240}
+                    height={240}
+                    unoptimized
+                    className="h-40 w-40 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveProfile}
+                    className="absolute right-2 top-2 rounded-full bg-red-600 p-1 text-white transition-colors hover:bg-red-700"
+                    title="Remove profile image"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <label htmlFor="status" className="text-sm font-medium text-slate-700">

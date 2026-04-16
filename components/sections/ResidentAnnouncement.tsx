@@ -4,26 +4,21 @@ import Image from 'next/image'
 import React, { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, ChevronLeft, ChevronRight, Calendar, Megaphone } from 'lucide-react'
+import axios from 'axios'
+import apiClient from '@/lib/axios'
 import type { AnnouncementRecord } from '@/server/announcements/announcements'
 
-type AnnouncementsApiError = {
-  message?: string
-}
-
 async function fetchAnnouncements(): Promise<AnnouncementRecord[]> {
-  const response = await fetch('/api/announcements', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
+  try {
+    const response = await apiClient.get<AnnouncementRecord[]>('/announcements')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError<{ message?: string }>(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to fetch announcements.')
+    }
 
-  if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as AnnouncementsApiError | null
-    throw new Error(error?.message ?? 'Failed to fetch announcements.')
+    throw error
   }
-
-  return (await response.json()) as AnnouncementRecord[]
 }
 
 function getOfficialName(announcement: AnnouncementRecord) {

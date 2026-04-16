@@ -98,9 +98,10 @@ model Resident {
 
 model Official {
   id         String   @id @default(cuid())
+  officialProfile      String?
   firstName  String
   lastName   String
-  middleName String?
+  middleName String
   email      String   @unique
   isActive   Boolean  @default(true)
   position   String

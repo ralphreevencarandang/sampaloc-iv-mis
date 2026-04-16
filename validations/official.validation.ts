@@ -12,6 +12,11 @@ export const officialSchema = z
     email: z.email("Enter a valid email address.").trim().toLowerCase(),
     status: officialStatusSchema,
     position: requiredString("Position"),
+    officialProfileName: z
+      .string()
+      .trim()
+      .max(255, "Profile image name must be 255 characters or less.")
+      .optional(),
     termStart: z
       .string()
       .min(1, "Term start is required.")

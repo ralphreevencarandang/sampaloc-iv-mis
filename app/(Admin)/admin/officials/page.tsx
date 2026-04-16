@@ -1,32 +1,28 @@
 'use client'
 
+import Image from 'next/image'
 import React, { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import axios from 'axios'
 import CreateOfficialModal from '@/components/ui/Admin/CreateOfficialModal'
+import apiClient from '@/lib/axios'
 import type { OfficialRecord } from '@/server/officials/officials'
 
 const ITEMS_PER_PAGE = 10
 const OFFICIALS_QUERY_KEY = ['officials']
 
-type OfficialsApiError = {
-  message?: string
-}
-
 async function fetchOfficials(): Promise<OfficialRecord[]> {
-  const response = await fetch('/api/officials', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
+  try {
+    const response = await apiClient.get<OfficialRecord[]>('/officials')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError<{ message?: string }>(error)) {
+      throw new Error(error.response?.data?.message ?? 'Failed to fetch officials.')
+    }
 
-  if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as OfficialsApiError | null
-    throw new Error(error?.message ?? 'Failed to fetch officials.')
+    throw error
   }
-
-  return (await response.json()) as OfficialRecord[]
 }
 
 export default function OfficialsPage() {
@@ -116,6 +112,7 @@ export default function OfficialsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-gray-100">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Profile</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Name</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Email</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Position</th>
@@ -128,13 +125,13 @@ export default function OfficialsPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <p className="text-slate-600 font-medium">Loading officials...</p>
                   </td>
                 </tr>
               ) : isError ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <p className="text-sm font-medium text-red-600">
                       {error instanceof Error ? error.message : 'Failed to load officials.'}
                     </p>
@@ -143,6 +140,21 @@ export default function OfficialsPage() {
               ) : paginatedOfficials.length > 0 ? (
                 paginatedOfficials.map((official) => (
                   <tr key={official.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      {official.officialProfile ? (
+                        <Image
+                          src={official.officialProfile}
+                          alt={official.name}
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-500">
+                          {official.name.charAt(0)}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">{official.name}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{official.email}</td>
                     <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate" title={official.position}>{official.position}</td>
@@ -170,7 +182,7 @@ export default function OfficialsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <p className="text-slate-600 font-medium">No officials found</p>
                   </td>
                 </tr>
