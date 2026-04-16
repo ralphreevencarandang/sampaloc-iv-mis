@@ -1,11 +1,17 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import AdminSidebar from '@/components/ui/AdminSidebar';
+import { getCurrentAdminFromSession } from '@/lib/admin-session';
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  if (!(await getCurrentAdminFromSession())) {
+    redirect('/AdminLogin');
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       <AdminSidebar />

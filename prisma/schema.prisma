@@ -18,6 +18,7 @@ datasource db {
 
 enum AdminRole {
   HEALTH_WORKER
+  ADMIN
 }
 
 enum BlotterStatus {

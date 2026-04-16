@@ -1,6 +1,7 @@
 'use server'
 
-import { VerificationStatus } from "@/app/generated/prisma/enums";
+import { AdminRole, VerificationStatus } from "@/app/generated/prisma/enums";
+import bcrypt from "bcryptjs";
 import prismaModule from "@/lib/prisma";
 import type { AuthenticatedResident } from "@/lib/resident-auth";
 import {
@@ -8,12 +9,19 @@ import {
   createResidentSession,
   getCurrentResidentFromSession,
 } from "@/lib/resident-session";
-import { createResidentAccount } from "@/server/actions/resident.actions";
-import { verifyPassword } from "@/server/actions/resident.actions";
+import {
+  clearAdminSession,
+  createAdminSession,
+  getCurrentAdminFromSession,
+} from "@/lib/admin-session";
+import type { AuthenticatedAdmin } from "@/lib/admin-auth";
+import { createResidentAccount, verifyPassword } from "@/server/actions/resident.actions";
 import {
   getZodFieldErrors,
   residentLoginSchema,
+  adminLoginSchema,
   type ResidentLoginInput,
+  type AdminLoginInput,
 } from "@/validations/auth.validation";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
@@ -119,4 +127,87 @@ export async function logoutResidentAction() {
 
 export async function getCurrentResidentAction() {
   return getCurrentResidentFromSession();
+}
+
+export type AdminLoginResult = {
+  success: boolean;
+  message: string;
+  admin?: AuthenticatedAdmin;
+  fieldErrors?: Record<string, string>;
+};
+
+export async function loginAdminAction(
+  input: AdminLoginInput
+): Promise<AdminLoginResult> {
+  const parsed = adminLoginSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please correct the highlighted fields.",
+      fieldErrors: getZodFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const admin = await prisma.admin.findUnique({
+      where: { email: parsed.data.email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        name: true,
+        role: true,
+      },
+    });
+
+    if (!admin || !(await bcrypt.compare(parsed.data.password, admin.password))) {
+      return {
+        success: false,
+        message: "Invalid email or password.",
+        fieldErrors: {
+          email: "Invalid email or password.",
+        },
+      };
+    }
+
+    if (admin.role !== AdminRole.ADMIN) {
+      return {
+        success: false,
+        message: "Access denied. Insufficient permissions.",
+      };
+    }
+
+    await createAdminSession(admin.id);
+
+    return {
+      success: true,
+      message: "Login successful.",
+      admin: {
+        id: admin.id,
+        email: admin.email,
+        name: admin.name,
+        role: admin.role,
+      },
+    };
+  } catch (error) {
+    console.error("admin login failed", error);
+
+    return {
+      success: false,
+      message: "An unexpected error occurred while signing in.",
+    };
+  }
+}
+
+export async function logoutAdminAction() {
+  await clearAdminSession();
+
+  return {
+    success: true,
+  };
+}
+
+export async function getCurrentAdminAction() {
+  return getCurrentAdminFromSession();
 }

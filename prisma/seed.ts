@@ -1,12 +1,12 @@
-import { PrismaClient, Prisma } from "../app/generated/prisma/client";
+import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-// Note: we assume the user provided valid adapter initialization below.
-// If not, @prisma/adapter-pg typically expects a pg.Pool instance instead of an object.
-const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
-} as any);
+if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required for seeding.");
+}
+
+const adapter = new PrismaPg(process.env.DATABASE_URL);
 const prisma = new PrismaClient({
     adapter,
 });
@@ -124,6 +124,33 @@ async function main() {
         });
     }
     console.log(`Seeded ${residentsData.length} residents successfully.`);
+
+    console.log("Seeding Admin User...");
+    const adminPassword = await bcrypt.hash("adminPassword", 10);
+    await prisma.admin.upsert({
+        where: { email: "admin@samplociv.com" },
+        update: {},
+        create: {
+            name: "System Admin",
+            email: "admin@samplociv.com",
+            password: adminPassword,
+            role: "ADMIN",
+        },
+    });
+    console.log("Seeded admin user successfully.");
+
+    console.log("Seeding Health Worker User...");
+    await prisma.admin.upsert({
+        where: { email: "healthworker@sampalociv.com" },
+        update: {},
+        create: {
+            name: "Health Worker",
+            email: "healthworker@sampalociv.com",
+            password: adminPassword,
+            role: "HEALTH_WORKER",
+        },
+    });
+    console.log("Seeded health worker user successfully.");
 }
 main()
     .catch((e) => {

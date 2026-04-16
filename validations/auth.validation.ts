@@ -42,6 +42,13 @@ export const residentLoginSchema = z.object({
 
 export type ResidentLoginInput = z.infer<typeof residentLoginSchema>;
 
+export const adminLoginSchema = z.object({
+  email: z.email("Enter a valid email address.").trim().toLowerCase(),
+  password: z.string().min(1, "Password is required."),
+});
+
+export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
+
 export function getZodFieldErrors(error: z.ZodError) {
   const fieldErrors = error.flatten().fieldErrors;
 

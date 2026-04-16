@@ -4,6 +4,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { ResidentAuthProvider } from "@/components/providers/resident-auth-provider";
 import { getCurrentResidentFromSession } from "@/lib/resident-session";
 import "./globals.css";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,8 @@ export default async function RootLayout({
         <QueryProvider>
           <ResidentAuthProvider initialResident={currentResident}>{children}</ResidentAuthProvider>
         </QueryProvider>
+        <Toaster />
+
       </body>
     </html>
   );

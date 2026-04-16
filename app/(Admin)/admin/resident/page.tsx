@@ -94,13 +94,15 @@ export default function ResidentPage() {
           <h1 className="text-3xl font-bold text-slate-900">Residents</h1>
           <p className="text-slate-600 mt-1">Manage barangay residents and their information</p>
         </div>
-        <button
+
+        {/* Create Resident Button */}
+        {/* <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md shadow-blue-600/30 transition-all duration-300 hover:-translate-y-0.5 w-fit"
         >
           <Plus className="w-5 h-5" />
           Add Resident
-        </button>
+        </button> */}
       </div>
 
       {/* Search Bar */}

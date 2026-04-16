@@ -1,5 +1,4 @@
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "crypto";
-import { promisify } from "util";
+import bcrypt from "bcryptjs";
 import { CloudinaryUploadError, uploadImageToCloudinary } from "@/lib/cloudinary";
 import prismaModule from "@/lib/prisma";
 import { validateValidIdImageFile } from "@/lib/valid-id-image";
@@ -9,7 +8,6 @@ import {
   type ResidentRegistrationInput,
 } from "@/validations/resident.validation";
 
-const scrypt = promisify(scryptCallback);
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
 export type RegisterResidentResult = {
@@ -112,27 +110,11 @@ export function validateResidentRegistration(formData: FormData): {
 }
 
 export async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
-
-  return `${salt}:${derivedKey.toString("hex")}`;
+  return bcrypt.hash(password, 10);
 }
 
 export async function verifyPassword(password: string, hashedPassword: string) {
-  const [salt, storedKey] = hashedPassword.split(":");
-
-  if (!salt || !storedKey) {
-    return false;
-  }
-
-  const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
-  const storedKeyBuffer = Buffer.from(storedKey, "hex");
-
-  if (derivedKey.length !== storedKeyBuffer.length) {
-    return false;
-  }
-
-  return timingSafeEqual(derivedKey, storedKeyBuffer);
+  return bcrypt.compare(password, hashedPassword);
 }
 
 export async function createResidentAccount(formData: FormData): Promise<RegisterResidentResult> {
@@ -213,4 +195,3 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
     };
   }
 }
-
