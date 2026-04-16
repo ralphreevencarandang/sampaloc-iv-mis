@@ -36,6 +36,7 @@ const initialFormState: RegisterFormState = {
   contactNumber: "",
   occupation: "",
   citizenship: "",
+  isVoter: "",
   validIDImageName: "",
   validIDImage: null,
   validIDImagePreview: "",
@@ -44,7 +45,7 @@ const initialFormState: RegisterFormState = {
 const civilStatuses = ["Single", "Married", "Widowed", "Divorced", "Separated"];
 const genders = ["Male", "Female", "Other"];
 
-function getSubmissionErrorMessage(error: unknown) {
+function getSubmissionErrorMessage(error: unknown): Record<string, string> {
   const message = error instanceof Error ? error.message : "";
 
   if (/body.?size.?limit|payload|request entity too large|413|too large/i.test(message)) {
@@ -177,6 +178,7 @@ export default function RegisterPage() {
       contactNumber: formData.contactNumber,
       occupation: formData.occupation,
       citizenship: formData.citizenship,
+      isVoter: formData.isVoter,
       validIDImageName: formData.validIDImageName,
     });
 
@@ -221,6 +223,7 @@ export default function RegisterPage() {
     submission.set("contactNumber", formData.contactNumber);
     submission.set("occupation", formData.occupation);
     submission.set("citizenship", formData.citizenship);
+    submission.set("isVoter", formData.isVoter);
     submission.set("validIDImage", formData.validIDImage);
 
     await registerMutation.mutateAsync(submission);
@@ -492,6 +495,25 @@ export default function RegisterPage() {
                 />
                 {errors.citizenship && (
                   <p className="mt-1 text-sm text-red-500">{errors.citizenship}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Eligible to Vote</label>
+                <select
+                  name="isVoter"
+                  value={formData.isVoter}
+                  onChange={handleInputChange}
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.isVoter ? "border-red-500" : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Select Option</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+                {errors.isVoter && (
+                  <p className="mt-1 text-sm text-red-500">{errors.isVoter}</p>
                 )}
               </div>
             </div>

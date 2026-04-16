@@ -25,6 +25,7 @@ export const residentRegistrationSchema = z
     occupation: z.string().trim().optional().default(""),
     citizenship: requiredString("Citizenship"),
     validIDImageName: requiredString("Valid ID image"),
+    isVoter: requiredString("Eligible to Vote"),
   })
   .refine((value) => value.password === value.confirmPassword, {
     message: "Passwords do not match.",

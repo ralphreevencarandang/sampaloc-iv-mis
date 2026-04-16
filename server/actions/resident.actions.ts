@@ -18,7 +18,7 @@ export type RegisterResidentResult = {
 
 type SanitizedResidentRegistration = Omit<
   ResidentRegistrationInput,
-  "password" | "confirmPassword" | "middleName" | "birthDate" | "occupation" | "validIDImageName"
+  "password" | "confirmPassword" | "middleName" | "birthDate" | "occupation" | "validIDImageName" | "isVoter"
 > & {
   email: string;
   firstName: string;
@@ -32,6 +32,7 @@ type SanitizedResidentRegistration = Omit<
   validIDImageFile: File;
   birthDate: Date;
   password: string;
+  isVoter: boolean;
 };
 
 function getFormValue(formData: FormData, key: keyof ResidentRegistrationInput) {
@@ -68,6 +69,7 @@ export function validateResidentRegistration(formData: FormData): {
     contactNumber: getFormValue(formData, "contactNumber"),
     occupation: getFormValue(formData, "occupation"),
     citizenship: getFormValue(formData, "citizenship"),
+    isVoter: getFormValue(formData, "isVoter"),
     validIDImageName: validIDImageFile.name,
   };
 
@@ -104,6 +106,7 @@ export function validateResidentRegistration(formData: FormData): {
       contactNumber: data.contactNumber,
       occupation: data.occupation || null,
       citizenship: data.citizenship,
+      isVoter: data.isVoter === "Yes",
       validIDImageFile,
     },
   };
@@ -167,6 +170,7 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
           contactNumber: data.contactNumber,
           occupation: data.occupation,
           citizenship: data.citizenship,
+          isVoter: data.isVoter,
           validIDImage: uploadResult.secure_url,
         },
       });
