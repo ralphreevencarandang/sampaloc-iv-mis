@@ -1,46 +1,57 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
 import CreateOfficialModal from '@/components/ui/Admin/CreateOfficialModal'
-
-interface Official {
-  id: number
-  name: string
-  email: string
-  position: string
-  termStart: string
-  termEnd: string
-  status: 'Active' | 'Inactive'
-}
-
-const mockOfficials: Official[] = [
-  { id: 1, name: 'Juan Dela Cruz', email: 'juan@barangay.gov', position: 'Barangay Captain', termStart: '2023-06-30', termEnd: '2028-06-30', status: 'Active' },
-  { id: 2, name: 'Maria Santos', email: 'maria@barangay.gov', position: 'Barangay Kagawad - Health', termStart: '2023-06-30', termEnd: '2028-06-30', status: 'Active' },
-  { id: 3, name: 'Pedro Reyes', email: 'pedro@barangay.gov', position: 'Barangay Kagawad - Peace & Order', termStart: '2023-06-30', termEnd: '2028-06-30', status: 'Active' },
-  { id: 4, name: 'Ana Garcia', email: 'ana@barangay.gov', position: 'Barangay Kagawad - Education', termStart: '2023-06-30', termEnd: '2028-06-30', status: 'Active' },
-  { id: 5, name: 'Luis Mendoza', email: 'luis@barangay.gov', position: 'Barangay Kagawad - Infrastructure', termStart: '2023-06-30', termEnd: '2028-06-30', status: 'Active' },
-  { id: 6, name: 'Rosa Lim', email: 'rosa@barangay.gov', position: 'Barangay Kagawad - Environment', termStart: '2023-06-30', termEnd: '2028-06-30', status: 'Active' },
-  { id: 7, name: 'Carlos Bautista', email: 'carlos@barangay.gov', position: 'Barangay Kagawad - Agriculture', termStart: '2023-06-30', termEnd: '2028-06-30', status: 'Active' },
-  { id: 8, name: 'Elena Castro', email: 'elena@barangay.gov', position: 'Barangay Kagawad - Finance', termStart: '2023-06-30', termEnd: '2028-06-30', status: 'Active' },
-  { id: 9, name: 'Mark Villanueva', email: 'mark@barangay.gov', position: 'SK Chairperson', termStart: '2023-06-30', termEnd: '2028-06-30', status: 'Active' },
-  { id: 10, name: 'Jose Fernando', email: 'jose@barangay.gov', position: 'Barangay Secretary', termStart: '2020-01-01', termEnd: '2028-06-30', status: 'Active' },
-]
+import type { OfficialRecord } from '@/server/officials/officials'
 
 const ITEMS_PER_PAGE = 10
+const OFFICIALS_QUERY_KEY = ['officials']
+
+type OfficialsApiError = {
+  message?: string
+}
+
+async function fetchOfficials(): Promise<OfficialRecord[]> {
+  const response = await fetch('/api/officials', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as OfficialsApiError | null
+    throw new Error(error?.message ?? 'Failed to fetch officials.')
+  }
+
+  return (await response.json()) as OfficialRecord[]
+}
 
 export default function OfficialsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const queryClient = useQueryClient()
+
+  const {
+    data: officials = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery<OfficialRecord[]>({
+    queryKey: OFFICIALS_QUERY_KEY,
+    queryFn: fetchOfficials,
+  })
 
   const filteredOfficials = useMemo(() => {
-    return mockOfficials.filter(official =>
+    return officials.filter(official =>
       official.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       official.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       official.position.toLowerCase().includes(searchTerm.toLowerCase())
     )
-  }, [searchTerm])
+  }, [officials, searchTerm])
 
   const totalPages = Math.ceil(filteredOfficials.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -55,6 +66,14 @@ export default function OfficialsPage() {
       default:
         return 'bg-slate-50 text-slate-700 border-slate-200'
     }
+  }
+
+  const handleOfficialCreated = (official: OfficialRecord) => {
+    queryClient.setQueryData<OfficialRecord[]>(OFFICIALS_QUERY_KEY, (current = []) => [
+      official,
+      ...current,
+    ])
+    setCurrentPage(1)
   }
 
   return (
@@ -107,7 +126,21 @@ export default function OfficialsPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedOfficials.length > 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <p className="text-slate-600 font-medium">Loading officials...</p>
+                  </td>
+                </tr>
+              ) : isError ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <p className="text-sm font-medium text-red-600">
+                      {error instanceof Error ? error.message : 'Failed to load officials.'}
+                    </p>
+                  </td>
+                </tr>
+              ) : paginatedOfficials.length > 0 ? (
                 paginatedOfficials.map((official) => (
                   <tr key={official.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">{official.name}</td>
@@ -190,7 +223,11 @@ export default function OfficialsPage() {
       </div>
 
       {/* Add Official Modal */}
-      <CreateOfficialModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <CreateOfficialModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onOfficialCreated={handleOfficialCreated}
+      />
     </div>
   )
 }

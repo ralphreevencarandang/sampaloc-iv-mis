@@ -1,76 +1,244 @@
-import React from 'react'
-import { ModalProps } from './CreateResidentModal'
+"use client";
 
-const CreateOfficialModal = ({ isOpen, onClose }: ModalProps) => {
-  if (!isOpen) return null
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import React from "react";
+import { useForm } from "react-hook-form";
+import { createOfficial } from "@/server/actions/official.actions";
+import type { OfficialRecord } from "@/server/officials/officials";
+import { officialSchema, type OfficialFormInput } from "@/validations/official.validation";
+import { ModalProps } from "./CreateResidentModal"; 
+
+type CreateOfficialModalProps = ModalProps & {
+  onOfficialCreated: (official: OfficialRecord) => void;
+};
+
+const positionOptions = [
+  "Barangay Captain",
+  "Barangay Kagawad - Health",
+  "Barangay Kagawad - Peace & Order",
+  "Barangay Kagawad - Education",
+  "Barangay Kagawad - Infrastructure",
+  "Barangay Kagawad - Environment",
+  "Barangay Kagawad - Agriculture",
+  "Barangay Kagawad - Finance",
+  "SK Chairperson",
+  "Barangay Secretary",
+];
+
+const defaultValues: OfficialFormInput = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  status: "Active",
+  position: "",
+  termStart: "",
+  termEnd: "",
+};
+
+const CreateOfficialModal = ({
+  isOpen,
+  onClose,
+  onOfficialCreated,
+}: CreateOfficialModalProps) => {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors },
+  } = useForm<OfficialFormInput>({
+    resolver: zodResolver(officialSchema),
+    defaultValues,
+  });
+
+  const createOfficialMutation = useMutation({
+    mutationFn: createOfficial,
+    onSuccess: (result) => {
+      if (!result.success) {
+        if (result.fieldErrors) {
+          Object.entries(result.fieldErrors).forEach(([field, message]) => {
+            setError(field as keyof OfficialFormInput, {
+              type: "server",
+              message,
+            });
+          });
+        } else {
+          setError("root", {
+            type: "server",
+            message: result.message,
+          });
+        }
+        return;
+      }
+
+      if (result.official) {
+        onOfficialCreated(result.official);
+      }
+
+      reset(defaultValues);
+      onClose();
+    },
+    onError: () => {
+      setError("root", {
+        type: "server",
+        message: "An unexpected error occurred while creating the official.",
+      });
+    },
+  });
+
+  const onSubmit = async (data: OfficialFormInput) => {
+    await createOfficialMutation.mutateAsync(data);
+  };
+
+  const handleClose = () => {
+    reset(defaultValues);
+    onClose();
+  };
+
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-xl">
-        <div className="sticky top-0 bg-white p-6 border-b border-gray-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-lg bg-white shadow-xl">
+        <div className="sticky top-0 border-b border-gray-100 bg-white p-6">
           <h2 className="text-2xl font-bold text-slate-900">Add New Official</h2>
-          <p className="text-slate-600 mt-1">Fill in the official information below</p>
+          <p className="mt-1 text-slate-600">Fill in the official information below</p>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); onClose(); }} className="space-y-4 flex-1 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 space-y-4 p-6">
+          {errors.root?.message && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {errors.root.message}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <label htmlFor="firstname" className="text-sm font-medium text-slate-700">First Name</label>
-              <input id="firstname" type="text" placeholder="Enter first name" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <label htmlFor="firstName" className="text-sm font-medium text-slate-700">
+                First Name
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                placeholder="Enter first name"
+                {...register("firstName")}
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+              />
+              {errors.firstName && <p className="text-sm text-red-500">{errors.firstName.message}</p>}
             </div>
+
             <div className="flex flex-col gap-2">
-              <label htmlFor="lastname" className="text-sm font-medium text-slate-700">Last Name</label>
-              <input id="lastname" type="text" placeholder="Enter last name" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <label htmlFor="lastName" className="text-sm font-medium text-slate-700">
+                Last Name
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                placeholder="Enter last name"
+                {...register("lastName")}
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+              />
+              {errors.lastName && <p className="text-sm text-red-500">{errors.lastName.message}</p>}
             </div>
+
             <div className="flex flex-col gap-2 md:col-span-2">
-              <label htmlFor="email" className="text-sm font-medium text-slate-700">Email</label>
-              <input id="email" type="email" placeholder="Enter email address" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <label htmlFor="email" className="text-sm font-medium text-slate-700">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter email address"
+                {...register("email")}
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+              />
+              {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
             </div>
+
+            
+
             <div className="flex flex-col gap-2 md:col-span-2">
-              <label htmlFor="position" className="text-sm font-medium text-slate-700">Position</label>
-              <select id="position" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700">
-                <option>Select Position</option>
-                <option>Barangay Captain</option>
-                <option>Barangay Kagawad - Health</option>
-                <option>Barangay Kagawad - Peace & Order</option>
-                <option>Barangay Kagawad - Education</option>
-                <option>Barangay Kagawad - Infrastructure</option>
-                <option>Barangay Kagawad - Environment</option>
-                <option>Barangay Kagawad - Agriculture</option>
-                <option>Barangay Kagawad - Finance</option>
-                <option>SK Chairperson</option>
-                <option>Barangay Secretary</option>
+              <label htmlFor="status" className="text-sm font-medium text-slate-700">
+                Status
+              </label>
+              <select
+                id="status"
+                {...register("status")}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">Select Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
               </select>
+              {errors.status && <p className="text-sm text-red-500">{errors.status.message}</p>}
             </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="termstart" className="text-sm font-medium text-slate-700">Term Start</label>
-              <input id="termstart" type="date" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+            <div className="flex flex-col gap-2 md:col-span-2">
+              <label htmlFor="position" className="text-sm font-medium text-slate-700">
+                Position
+              </label>
+              <select
+                id="position"
+                {...register("position")}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">Select Position</option>
+                {positionOptions.map((position) => (
+                  <option key={position} value={position}>
+                    {position}
+                  </option>
+                ))}
+              </select>
+              {errors.position && <p className="text-sm text-red-500">{errors.position.message}</p>}
             </div>
+
             <div className="flex flex-col gap-2">
-              <label htmlFor="termend" className="text-sm font-medium text-slate-700">Term End</label>
-              <input id="termend" type="date" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <label htmlFor="termStart" className="text-sm font-medium text-slate-700">
+                Term Start
+              </label>
+              <input
+                id="termStart"
+                type="date"
+                {...register("termStart")}
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+              />
+              {errors.termStart && <p className="text-sm text-red-500">{errors.termStart.message}</p>}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="termEnd" className="text-sm font-medium text-slate-700">
+                Term End
+              </label>
+              <input
+                id="termEnd"
+                type="date"
+                {...register("termEnd")}
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+              />
+              {errors.termEnd && <p className="text-sm text-red-500">{errors.termEnd.message}</p>}
             </div>
           </div>
 
-          <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-100 mt-auto flex gap-3">
+          <div className="sticky bottom-0 mt-auto flex gap-3 border-t border-gray-100 bg-white pt-4">
             <button
               type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-gray-200 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
+              onClick={handleClose}
+              className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 font-medium text-slate-700 transition-colors hover:bg-slate-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              disabled={createOfficialMutation.isPending}
+              className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Add Official
+              {createOfficialMutation.isPending ? "Adding..." : "Add Official"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default CreateOfficialModal
+export default CreateOfficialModal;

@@ -40,7 +40,7 @@ const AdminSidebar = () => {
 
   const navItems: NavItem[] = [
     { label: 'Dashboard', href: '/admin', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: 'Announcement', href: '/admin/announcement', icon: <Megaphone className="w-5 h-5" /> },
+    { label: 'Announcement', href: '/admin/announcements', icon: <Megaphone className="w-5 h-5" /> },
     { label: 'Barangay Officials', href: '/admin/officials', icon: <Users className="w-5 h-5" /> },
     { label: 'Resident', href: '/admin/resident', icon: <Home className="w-5 h-5" /> },
     { label: 'Voters', href: '/admin/voters', icon: <Vote className="w-5 h-5" /> },

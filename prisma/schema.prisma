@@ -17,7 +17,6 @@ datasource db {
 // ==========================================
 
 enum AdminRole {
-  OFFICIAL
   HEALTH_WORKER
 }
 
@@ -54,8 +53,6 @@ model Admin {
   password  String
   role      AdminRole
   createdAt DateTime @default(now())
-
-  official Official?
 
   medicalRecordsChecked MedicalRecord[] @relation("CheckedByHealthWorker")
 }
@@ -101,9 +98,11 @@ model Resident {
 
 model Official {
   id         String   @id @default(cuid())
-  adminId    String   @unique
-  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
-
+  firstName  String
+  lastName   String
+  middleName String?
+  email      String   @unique
+  isActive   Boolean  @default(true)
   position   String
   termStart  DateTime
   termEnd    DateTime?
@@ -208,7 +207,7 @@ model DocumentRequest {
   requestedAt DateTime     @default(now())
   releasedAt  DateTime?
 }
-
+  
 model MedicalRecord {
   id          String   @id @default(cuid())
 
