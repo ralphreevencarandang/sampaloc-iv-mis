@@ -4,7 +4,7 @@ import {
   getValidIdImageTypeErrorMessage,
   validateValidIdImageFile,
 } from "@/lib/valid-id-image";
-const CLOUDINARY_FOLDER = "residents/valid-id";
+const CLOUDINARY_FOLDER = "uploads";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -19,6 +19,24 @@ export class CloudinaryUploadError extends Error {
   }
 }
 
+type ImageUploadOptions = {
+  folder?: string;
+  publicIdPrefix?: string;
+  assetLabel?: string;
+};
+
+function getAssetLabel(assetLabel?: string) {
+  return assetLabel?.trim() || "Image";
+}
+
+function getUploadFailedMessage(assetLabel?: string) {
+  return `Uploading the ${getAssetLabel(assetLabel).toLowerCase()} failed.`;
+}
+
+function getMissingUrlMessage(assetLabel?: string) {
+  return `Cloudinary did not return a secure URL for the ${getAssetLabel(assetLabel).toLowerCase()}.`;
+}
+
 function ensureCloudinaryConfig() {
   if (
     !process.env.CLOUDINARY_CLOUD_NAME ||
@@ -29,15 +47,20 @@ function ensureCloudinaryConfig() {
   }
 }
 
-export function validateImageFile(file: File) {
+export function validateImageFile(file: File, assetLabel?: string) {
   const validationError = validateValidIdImageFile(file);
+  const label = getAssetLabel(assetLabel);
 
   if (validationError === getValidIdImageTypeErrorMessage()) {
-    throw new CloudinaryUploadError(validationError);
+    throw new CloudinaryUploadError(
+      validationError.replace("Valid ID", label)
+    );
   }
 
   if (validationError === getValidIdImageSizeErrorMessage()) {
-    throw new CloudinaryUploadError(validationError);
+    throw new CloudinaryUploadError(
+      validationError.replace("Valid ID image", label)
+    );
   }
 
   if (validationError) {
@@ -47,13 +70,10 @@ export function validateImageFile(file: File) {
 
 export async function uploadImageToCloudinary(
   file: File,
-  options?: {
-    folder?: string;
-    publicIdPrefix?: string;
-  }
+  options?: ImageUploadOptions
 ) {
   ensureCloudinaryConfig();
-  validateImageFile(file);
+  validateImageFile(file, options?.assetLabel);
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
@@ -71,12 +91,12 @@ export async function uploadImageToCloudinary(
       },
       (error?: UploadApiErrorResponse, result?: UploadApiResponse) => {
         if (error) {
-          reject(new CloudinaryUploadError("Uploading the valid ID failed."));
+          reject(new CloudinaryUploadError(getUploadFailedMessage(options?.assetLabel)));
           return;
         }
 
         if (!result?.secure_url) {
-          reject(new CloudinaryUploadError("Cloudinary did not return a secure image URL."));
+          reject(new CloudinaryUploadError(getMissingUrlMessage(options?.assetLabel)));
           return;
         }
 
@@ -85,7 +105,7 @@ export async function uploadImageToCloudinary(
     );
 
     upload.on("error", () => {
-      reject(new CloudinaryUploadError("Uploading the valid ID failed."));
+      reject(new CloudinaryUploadError(getUploadFailedMessage(options?.assetLabel)));
     });
 
     upload.end(buffer);

@@ -1,137 +1,173 @@
 'use client'
 
+import Image from 'next/image'
 import React, { useEffect, useState } from 'react'
-import { ArrowRight, ShieldCheck, Users, FileText, ChevronLeft, ChevronRight, Calendar, Megaphone } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query'
+import { ArrowRight, ChevronLeft, ChevronRight, Calendar, Megaphone } from 'lucide-react'
+import type { AnnouncementRecord } from '@/server/announcements/announcements'
 
-const announcements = [
-  {
-    id: 1,
-    title: "Barangay Assembly Meeting",
-    date: "April 20, 2026",
-    desc: "Join us for the quarterly barangay assembly to discuss upcoming community projects, budget allocations, and to hear your suggestions for our community's development.",
-    color: "from-blue-500 to-cyan-400"
-  },
-  {
-    id: 2,
-    title: "Free Medical & Dental Mission",
-    date: "April 25, 2026",
-    desc: "Free medical checkups, dental extraction, and distribution of essential medicines for all registered residents. Please proceed to the Barangay Hall covered court.",
-    color: "from-emerald-500 to-teal-400"
-  },
-  {
-    id: 3,
-    title: "Summer Sports League Registration",
-    date: "May 1, 2026",
-    desc: "Calling all youth! Registration for the Inter-Purok Basketball and Volleyball league is now open. Submit your requirements to the SK Council office.",
-    color: "from-orange-500 to-amber-400"
+type AnnouncementsApiError = {
+  message?: string
+}
+
+async function fetchAnnouncements(): Promise<AnnouncementRecord[]> {
+  const response = await fetch('/api/announcements', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as AnnouncementsApiError | null
+    throw new Error(error?.message ?? 'Failed to fetch announcements.')
   }
-];
+
+  return (await response.json()) as AnnouncementRecord[]
+}
+
+function getOfficialName(announcement: AnnouncementRecord) {
+  return `${announcement.createdBy.firstName} ${announcement.createdBy.lastName}`.trim()
+}
 
 const ResidentAnnouncement = () => {
-     const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const {
+    data: announcements = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery<AnnouncementRecord[]>({
+    queryKey: ['announcements'],
+    queryFn: fetchAnnouncements,
+  })
+  const activeSlide = currentSlide >= announcements.length ? 0 : currentSlide
 
-  // Auto-play functionality for the carousel
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev === announcements.length - 1 ? 0 : prev + 1));
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+    if (announcements.length <= 1) {
+      return
+    }
+
+    const timer = window.setInterval(() => {
+      setCurrentSlide((prev) => (prev === announcements.length - 1 ? 0 : prev + 1))
+    }, 5000)
+
+    return () => window.clearInterval(timer)
+  }, [announcements.length])
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev === announcements.length - 1 ? 0 : prev + 1));
-  };
+    setCurrentSlide((prev) => (prev >= announcements.length - 1 ? 0 : prev + 1))
+  }
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev === 0 ? announcements.length - 1 : prev - 1));
-  };
+    setCurrentSlide((prev) => (prev <= 0 ? announcements.length - 1 : prev - 1))
+  }
+
   return (
-      <section id='announcements' className="max-container w-full py-16 bg-slate-50 border-t border-gray-100 relative ">
+    <section id="announcements" className="relative w-full border-t border-gray-100 bg-slate-50 py-16 max-container">
       <div className="padding-x">
-        
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+        <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="mb-2 flex items-center gap-2">
               <Megaphone className="h-5 w-5 text-blue-600" />
-              <h2 className="text-blue-600 font-bold tracking-wide uppercase text-sm">Barangay Board</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-blue-600">Barangay Board</h2>
             </div>
             <h3 className="text-3xl font-extrabold text-slate-900">Latest Announcements</h3>
           </div>
-          
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex gap-3">
-            <button 
-              onClick={prevSlide}
-              className="p-2 rounded-full border border-gray-200 bg-white text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <button 
-              onClick={nextSlide}
-              className="p-2 rounded-full border border-gray-200 bg-white text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
 
-        {/* Carousel Viewport */}
-        <div className="relative overflow-hidden rounded-2xl shadow-sm border border-gray-100 bg-white">
-          <div 
-            className="flex transition-transform duration-500 ease-in-out" 
-            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-          >
-            {announcements.map((announcement) => (
-              <div key={announcement.id} className="min-w-full flex flex-col md:flex-row">
-                
-                {/* Image/Graphic Side */}
-                <div className={`w-full md:w-2/5 h-48 md:h-auto bg-gradient-to-br ${announcement.color} p-8 flex items-center justify-center relative overflow-hidden`}>
-                  {/* Abstract design for "image" fallback */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full transform translate-x-10 -translate-y-10"></div>
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full transform -translate-x-5 translate-y-5"></div>
-                  <Megaphone className="w-20 h-20 text-white opacity-20 absolute" />
-                  
-                  <h4 className="text-2xl font-bold text-white z-10 text-center ">
-                    {announcement.title}
-                  </h4>
-                </div>
-                
-                {/* Text Content Side */}
-                <div className="w-full md:w-3/5 p-8 md:p-10 flex flex-col justify-center">
-                  <div className="flex items-center gap-2 text-sm text-blue-600 font-semibold mb-3">
-                    <Calendar className="w-4 h-4" />
-                    {announcement.date}
-                  </div>
-                  
-                  <h3 className="text-2xl font-bold text-slate-900 mb-4">{announcement.title}</h3>
-                  <p className="text-slate-600 mb-8 leading-relaxed">
-                    {announcement.desc}
-                  </p>
-                  
-                  <button className="mt-auto self-start text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1 group">
-                    Read full details 
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-
-              </div>
-            ))}
-          </div>
-
-          {/* Mobile Navigation Dots */}
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 md:hidden">
-            {announcements.map((_, index) => (
+          {announcements.length > 1 && (
+            <div className="hidden gap-3 md:flex">
               <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  currentSlide === index ? 'bg-blue-600 w-4' : 'bg-gray-300'
-                }`}
-              />
-            ))}
-          </div>
+                onClick={prevSlide}
+                className="rounded-full border border-gray-200 bg-white p-2 text-slate-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={nextSlide}
+                className="rounded-full border border-gray-200 bg-white p-2 text-slate-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </div>
+          )}
         </div>
 
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          {isLoading ? (
+            <div className="flex min-h-80 items-center justify-center p-8 text-slate-600">
+              Loading announcements...
+            </div>
+          ) : isError ? (
+            <div className="flex min-h-80 items-center justify-center p-8 text-center text-red-600">
+              {error instanceof Error ? error.message : 'Failed to load announcements.'}
+            </div>
+          ) : announcements.length > 0 ? (
+            <>
+              <div
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+              >
+                {announcements.map((announcement) => (
+                  <div key={announcement.id} className="flex min-w-full flex-col md:flex-row">
+                    <div className="relative h-56 w-full overflow-hidden bg-slate-200 md:h-auto md:w-2/5">
+                      {announcement.image ? (
+                        <Image
+                          src={announcement.image}
+                          alt={announcement.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 40vw"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full min-h-56 items-center justify-center bg-gradient-to-br from-blue-500 to-cyan-400 p-8">
+                          <Megaphone className="h-20 w-20 text-white/25" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex w-full flex-col justify-center p-8 md:w-3/5 md:p-10">
+                      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm font-semibold text-blue-600">
+                        <span className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {new Date(announcement.createdAt).toLocaleDateString()}
+                        </span>
+                        <span>{getOfficialName(announcement)}</span>
+                        <span>{announcement.createdBy.position}</span>
+                      </div>
+
+                      <h3 className="mb-4 text-2xl font-bold text-slate-900">{announcement.title}</h3>
+                      <p className="mb-8 whitespace-pre-line text-slate-600">{announcement.content}</p>
+
+                      <div className="mt-auto flex items-center gap-1 font-semibold text-blue-600">
+                        Announcement details
+                        <ArrowRight className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {announcements.length > 1 && (
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 md:hidden">
+                  {announcements.map((announcement, index) => (
+                    <button
+                      key={announcement.id}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`h-2 rounded-full transition-all ${
+                        activeSlide === index ? 'w-4 bg-blue-600' : 'w-2 bg-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex min-h-80 items-center justify-center p-8 text-slate-600">
+              No announcements available right now.
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )

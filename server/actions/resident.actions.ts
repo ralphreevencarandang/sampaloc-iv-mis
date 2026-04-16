@@ -164,6 +164,8 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
 
     const hashedPassword = await hashPassword(data.password);
     const uploadResult = await uploadImageToCloudinary(data.validIDImageFile, {
+      assetLabel: "Valid ID image",
+      folder: "residents/valid-id",
       publicIdPrefix: data.email.replace(/[^a-z0-9]/gi, "-").toLowerCase(),
     });
 
