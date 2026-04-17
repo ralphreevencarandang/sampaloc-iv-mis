@@ -234,7 +234,7 @@ export default function RegisterPage() {
       <div className="mx-auto max-w-4xl rounded-xl border border-gray-100 bg-white p-8 shadow-lg">
         <div className="mb-8 text-center">
           <div className="mb-4 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-600 text-2xl font-bold text-white">
               MSI
             </div>
           </div>
@@ -262,7 +262,7 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <section>
-            <h2 className="mb-4 border-b-2 border-blue-600 pb-2 text-lg font-semibold text-gray-900">
+            <h2 className="mb-4 border-b-2 border-primary-600 pb-2 text-lg font-semibold text-gray-900">
               Account Details
             </h2>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -273,7 +273,7 @@ export default function RegisterPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.email ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="juan.delacruz@example.com"
@@ -288,7 +288,7 @@ export default function RegisterPage() {
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.password ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="********"
@@ -303,7 +303,7 @@ export default function RegisterPage() {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.confirmPassword ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="********"
@@ -316,7 +316,7 @@ export default function RegisterPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 border-b-2 border-blue-600 pb-2 text-lg font-semibold text-gray-900">
+            <h2 className="mb-4 border-b-2 border-primary-600 pb-2 text-lg font-semibold text-gray-900">
               Personal Information
             </h2>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -327,7 +327,7 @@ export default function RegisterPage() {
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.firstName ? "border-red-500" : "border-gray-300"
                   }`}
                 />
@@ -341,7 +341,7 @@ export default function RegisterPage() {
                   name="middleName"
                   value={formData.middleName}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
 
@@ -352,7 +352,7 @@ export default function RegisterPage() {
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.lastName ? "border-red-500" : "border-gray-300"
                   }`}
                 />
@@ -366,7 +366,7 @@ export default function RegisterPage() {
                   name="birthDate"
                   value={formData.birthDate}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.birthDate ? "border-red-500" : "border-gray-300"
                   }`}
                 />
@@ -379,7 +379,7 @@ export default function RegisterPage() {
                   name="gender"
                   value={formData.gender}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.gender ? "border-red-500" : "border-gray-300"
                   }`}
                 >
@@ -399,7 +399,7 @@ export default function RegisterPage() {
                   name="civilStatus"
                   value={formData.civilStatus}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.civilStatus ? "border-red-500" : "border-gray-300"
                   }`}
                 >
@@ -418,7 +418,7 @@ export default function RegisterPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 border-b-2 border-blue-600 pb-2 text-lg font-semibold text-gray-900">
+            <h2 className="mb-4 border-b-2 border-primary-600 pb-2 text-lg font-semibold text-gray-900">
               Contact & Address
             </h2>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -429,7 +429,7 @@ export default function RegisterPage() {
                   name="street"
                   value={formData.street}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.street ? "border-red-500" : "border-gray-300"
                   }`}
                 />
@@ -443,7 +443,7 @@ export default function RegisterPage() {
                   name="houseNumber"
                   value={formData.houseNumber}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.houseNumber ? "border-red-500" : "border-gray-300"
                   }`}
                 />
@@ -459,7 +459,7 @@ export default function RegisterPage() {
                   name="contactNumber"
                   value={formData.contactNumber}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.contactNumber ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="+63 9XX XXX XXXX"
@@ -476,7 +476,7 @@ export default function RegisterPage() {
                   name="occupation"
                   value={formData.occupation}
                   onChange={handleInputChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="e.g., Teacher, Engineer"
                 />
               </div>
@@ -488,7 +488,7 @@ export default function RegisterPage() {
                   name="citizenship"
                   value={formData.citizenship}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.citizenship ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="Filipino"
@@ -504,7 +504,7 @@ export default function RegisterPage() {
                   name="isVoter"
                   value={formData.isVoter}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.isVoter ? "border-red-500" : "border-gray-300"
                   }`}
                 >
@@ -520,7 +520,7 @@ export default function RegisterPage() {
           </section>
 
           <section>
-            <h2 className="mb-4 border-b-2 border-blue-600 pb-2 text-lg font-semibold text-gray-900">
+            <h2 className="mb-4 border-b-2 border-primary-600 pb-2 text-lg font-semibold text-gray-900">
               Identity Verification
             </h2>
             <div>
@@ -549,7 +549,7 @@ export default function RegisterPage() {
             </div>
 
             {formData.validIDImagePreview && (
-              <div className="mt-6 rounded-lg bg-blue-50 p-4">
+              <div className="mt-6 rounded-lg bg-primary-50 p-4">
                 <p className="mb-3 text-sm font-medium text-gray-700">Valid ID Preview:</p>
                 <div className="max-w-md">
                   <Image
@@ -569,7 +569,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={registerMutation.isPending}
-              className="flex-1 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg bg-primary-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {registerMutation.isPending ? "Creating Account..." : "Create Account"}
             </button>
@@ -592,7 +592,7 @@ export default function RegisterPage() {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link href="/login" className="font-medium text-primary-600 hover:text-primary-500">
                 Sign In Here
               </Link>
             </p>

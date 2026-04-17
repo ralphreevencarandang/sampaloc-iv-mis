@@ -20,8 +20,8 @@ const ResidentServices = () => {
       <div className="max-container padding-x">
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center gap-2 mb-3">
-            <FileSignature className="h-5 w-5 text-blue-600" />
-            <h2 className="text-blue-600 font-bold tracking-wide uppercase text-sm">E-Services</h2>
+            <FileSignature className="h-5 w-5 text-primary-600" />
+            <h2 className="text-primary-600 font-bold tracking-wide uppercase text-sm">E-Services</h2>
           </div>
           <h3 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Barangay Services</h3>
           <p className="text-slate-600 max-w-2xl mx-auto text-lg">
@@ -33,20 +33,20 @@ const ResidentServices = () => {
           
           {/* Service Card 1: Request Documents */}
           <div className="bg-slate-50 rounded-3xl p-8 border border-gray-100 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+            <div className="w-16 h-16 bg-primary-100 text-primary-600 rounded-2xl flex items-center justify-center mb-6">
               <FileText className="w-8 h-8" />
             </div>
             <h4 className="text-2xl font-bold text-slate-900 mb-4">Request Documents</h4>
             <ul className="space-y-4 mb-8 flex-1">
               {documentTypes.map((doc, index) => (
                 <li key={index} className="flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-primary-500 shrink-0 mt-0.5" />
                   <span className="text-slate-700 font-medium">{doc}</span>
                 </li>
               ))}
             </ul>
             <Link href="/request-documents">
-              <button className="w-full py-3.5 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-colors">
+              <button className="w-full py-3.5 bg-white border-2 border-primary-600 text-primary-600 font-bold rounded-xl hover:bg-primary-600 hover:text-white transition-colors">
                 Request Now
               </button>
             </Link>

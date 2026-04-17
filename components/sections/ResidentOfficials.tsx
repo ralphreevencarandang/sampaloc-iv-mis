@@ -81,8 +81,8 @@ function OfficialSection({
       <div className="mb-16 text-center">
         {!isSK && (
           <div className="mb-3 inline-flex items-center justify-center gap-2">
-            <Users className="h-5 w-5 text-blue-600" />
-            <h2 className="text-sm font-bold uppercase tracking-wide text-blue-600">Leadership</h2>
+            <Users className="h-5 w-5 text-primary-600" />
+            <h2 className="text-sm font-bold uppercase tracking-wide text-primary-600">Leadership</h2>
           </div>
         )}
         <h3 className="mb-4 text-3xl font-extrabold text-slate-900 md:text-4xl">{title}</h3>
@@ -93,7 +93,7 @@ function OfficialSection({
         {head && (
           <div className="mb-8 flex justify-center sm:col-span-2 lg:col-span-3 xl:col-span-3">
             <div className="group w-full max-w-sm overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="relative h-32 bg-gradient-to-r from-blue-600 to-blue-400">
+              <div className="relative h-32 bg-gradient-to-r from-primary-600 to-primary-400">
                 <div
                   className="absolute inset-0 opacity-20"
                   style={{
@@ -107,7 +107,7 @@ function OfficialSection({
                   <OfficialAvatar official={head} size="large" />
                 </div>
                 <h4 className="mb-1 text-center text-xl font-bold text-slate-900">{head.name}</h4>
-                <p className="mb-3 text-center font-semibold text-blue-600">{head.position}</p>
+                <p className="mb-3 text-center font-semibold text-primary-600">{head.position}</p>
                 <div className="rounded-full border border-gray-100 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
                   Term: {getTermLabel(head)}
                 </div>
@@ -119,9 +119,9 @@ function OfficialSection({
         {others.map((official) => (
           <div
             key={official.id}
-            className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-lg"
+            className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary-100 hover:shadow-lg"
           >
-            <div className="relative h-20 border-b border-gray-100 bg-slate-50 transition-colors duration-300 group-hover:bg-blue-50">
+            <div className="relative h-20 border-b border-gray-100 bg-slate-50 transition-colors duration-300 group-hover:bg-primary-50">
               <div
                 className="absolute inset-0 opacity-10 transition-opacity group-hover:opacity-20"
                 style={{

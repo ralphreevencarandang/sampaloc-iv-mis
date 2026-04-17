@@ -7,6 +7,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useResidentAuth } from "@/components/providers/resident-auth-provider";
 import { logoutResidentAction } from "@/server/actions/auth.actions";
 import { useMutation } from "@tanstack/react-query";
+import Image from "next/image";
+import logo from "@/public/images/dasma-logo.png";
 
 function ResidentProfileMenu({
   residentInitial,
@@ -40,7 +42,7 @@ function ResidentProfileMenu({
       <button
         type="button"
         onClick={() => setIsProfileMenuOpen((current) => !current)}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-md shadow-blue-600/30 transition-all duration-300 hover:bg-blue-700"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-sm font-semibold text-white shadow-md shadow-primary-600/30 transition-all duration-300 hover:bg-primary-700"
       >
         {residentInitial}
       </button>
@@ -102,25 +104,29 @@ const ResidentNavbar = () => {
       <div className="max-container padding-x">
         <div className="flex h-16 items-center justify-between md:h-20">
           <div className="flex shrink-0 items-center gap-2">
-            <div>
+            <Link href="/" className="flex items-center gap-2">
+              <Image src={logo} alt="Logo" width={50} height={50} />
+              <div>
+
               <p className="text-lg font-bold text-slate-900">Sampaloc IV</p>
               <p className="-mt-1 text-xs text-slate-500">Dasmarinas City</p>
-            </div>
+              </div>
+            </Link>
           </div>
 
-          <div className="hidden items-center gap-1 md:flex">
+          <div className="hidden items-center gap-1 lg:flex">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="rounded-lg px-4 py-2 font-medium text-slate-600 transition-all duration-300 hover:bg-blue-50 hover:text-blue-600"
+                className="rounded-lg px-4 py-2 font-medium text-slate-600 transition-all duration-300 hover:bg-primary-50 hover:text-primary-600"
               >
                 {link.label}
               </a>
             ))}
           </div>
 
-          <div className="hidden items-center md:flex">
+          <div className="hidden items-center lg:flex">
             {isAuthenticated ? (
               <ResidentProfileMenu
                 residentInitial={residentInitial}
@@ -130,14 +136,14 @@ const ResidentNavbar = () => {
             ) : (
               <Link
                 href="/login"
-                className="rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white shadow-md shadow-blue-600/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/40"
+                className="rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-lg hover:shadow-primary-600/40"
               >
                 Login
               </Link>
             )}
           </div>
 
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-3 lg:hidden">
             {isAuthenticated ? (
               <ResidentProfileMenu
                 residentInitial={residentInitial}
@@ -147,7 +153,7 @@ const ResidentNavbar = () => {
             ) : (
               <Link
                 href="/login"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:bg-blue-700"
+                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:bg-primary-700"
               >
                 Login
               </Link>
@@ -166,12 +172,12 @@ const ResidentNavbar = () => {
         </div>
 
         {isOpen && (
-          <div className="animate-in slide-in-from-top-2 space-y-2 border-t border-gray-100 bg-white px-4 py-4 duration-200 fade-in md:hidden">
+          <div className="animate-in slide-in-from-top-2 space-y-2 border-t border-gray-100 bg-white px-4 py-4 duration-200 fade-in lg:hidden">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="block rounded-lg px-4 py-3 font-medium text-slate-600 transition-all duration-300 hover:bg-blue-50 hover:text-blue-600"
+                className="block rounded-lg px-4 py-3 font-medium text-slate-600 transition-all duration-300 hover:bg-primary-50 hover:text-primary-600"
               >
                 {link.label}
               </a>

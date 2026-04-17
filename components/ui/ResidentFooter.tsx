@@ -17,8 +17,8 @@ const ResidentFooter = () => {
           {/* Brand & Paragraph */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
-              {/* <ShieldCheck className="h-8 w-8 text-blue-500" /> */}
-              <span className="text-xl font-bold text-white">Sampaloc<span className="text-blue-500"> IV</span></span>
+              {/* <ShieldCheck className="h-8 w-8 text-primary-500" /> */}
+              <span className="text-xl font-bold text-white">Sampaloc<span className="text-primary-500"> IV</span></span>
             </div>
             <p className="text-sm leading-relaxed text-slate-400">
               We are dedicated to serving the residents of Brgy. Sampaloc IV with transparency, integrity, and efficiency. Together, we are building a safer and more progressive community.
@@ -29,11 +29,11 @@ const ResidentFooter = () => {
           <div className="flex flex-col gap-4">
             <h4 className="text-white font-bold uppercase tracking-wider text-sm">Quick Links</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Home</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">E-Services</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Announcements</a></li>
-              <li><a href="#" className="hover:text-blue-400 transition-colors">Officials</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Home</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">About Us</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">E-Services</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Announcements</a></li>
+              <li><a href="#" className="hover:text-primary-400 transition-colors">Officials</a></li>
             </ul>
           </div>
           
@@ -42,15 +42,15 @@ const ResidentFooter = () => {
             <h4 className="text-white font-bold uppercase tracking-wider text-sm">Contact Info</h4>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-blue-500 shrink-0" />
+                <MapPin className="w-5 h-5 text-primary-500 shrink-0" />
                 <span>Barangay Hall, Sampaloc IV<br/>Dasmariñas City, Cavite</span>
               </li>
               <li className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-blue-500 shrink-0" />
+                <Phone className="w-5 h-5 text-primary-500 shrink-0" />
                 <span>(046) 123-4567</span>
               </li>
               <li className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-blue-500 shrink-0" />
+                <Mail className="w-5 h-5 text-primary-500 shrink-0" />
                 <span>contact@sampaloc4.gov.ph</span>
               </li>
             </ul>
@@ -60,7 +60,7 @@ const ResidentFooter = () => {
           <div className="flex flex-col gap-4">
             <h4 className="text-white font-bold uppercase tracking-wider text-sm">Follow Us</h4>
             <div className="flex gap-4">
-              <a href="#" className="p-2.5 bg-slate-800 rounded-full hover:bg-blue-600 transition-colors text-white" aria-label="Facebook">
+              <a href="#" className="p-2.5 bg-slate-800 rounded-full hover:bg-primary-600 transition-colors text-white" aria-label="Facebook">
            
                 <Image src={FacebookIcon} alt="Facebook" className='w-4 h-4' />
 

@@ -6,8 +6,8 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-3 bg-blue-100 rounded-lg">
-          <LayoutDashboard className="w-6 h-6 text-blue-600" />
+        <div className="p-3 bg-primary-100 rounded-lg">
+          <LayoutDashboard className="w-6 h-6 text-primary-600" />
         </div>
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
@@ -34,9 +34,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* Welcome Card */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-8 text-white">
+      <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg p-8 text-white">
         <h2 className="text-2xl font-bold mb-2">Welcome Admin!</h2>
-        <p className="text-blue-50">
+        <p className="text-primary-50">
           Use the sidebar navigation to manage barangay officials, documents, residents, and other administrative tasks.
         </p>
       </div>

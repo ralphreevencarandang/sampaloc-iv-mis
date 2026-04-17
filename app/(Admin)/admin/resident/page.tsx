@@ -98,7 +98,7 @@ export default function ResidentPage() {
         {/* Create Resident Button */}
         {/* <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md shadow-blue-600/30 transition-all duration-300 hover:-translate-y-0.5 w-fit"
+          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 w-fit"
         >
           <Plus className="w-5 h-5" />
           Add Resident
@@ -164,7 +164,7 @@ export default function ResidentPage() {
                           <td className="px-6 py-4 text-sm text-slate-600">{resident.gender}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{resident.civilStatus}</td>
                           <td className="px-6 py-4 text-sm">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${resident.isVoter ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-50 text-slate-700 border border-slate-200'}`}>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${resident.isVoter ? 'bg-primary-50 text-primary-700 border border-primary-200' : 'bg-slate-50 text-slate-700 border border-slate-200'}`}>
                               {resident.isVoter ? 'Yes' : 'No'}
                             </span>
                           </td>
@@ -176,7 +176,7 @@ export default function ResidentPage() {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <button className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="View">
+                              <button className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View">
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
@@ -224,7 +224,7 @@ export default function ResidentPage() {
                         onClick={() => setCurrentPage(page)}
                         className={`w-10 h-10 rounded-lg font-medium transition-colors ${
                           currentPage === page
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-primary-600 text-white'
                             : 'border border-gray-200 text-slate-600 hover:bg-slate-100'
                         }`}
                       >

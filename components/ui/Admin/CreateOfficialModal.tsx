@@ -225,7 +225,7 @@ const CreateOfficialModal = ({
                 type="text"
                 placeholder="Enter first name"
                 {...register("firstName")}
-                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
               />
               {errors.firstName && <p className="text-sm text-red-500">{errors.firstName.message}</p>}
             </div>
@@ -239,7 +239,7 @@ const CreateOfficialModal = ({
                 type="text"
                 placeholder="Enter last name"
                 {...register("lastName")}
-                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
               />
               {errors.lastName && <p className="text-sm text-red-500">{errors.lastName.message}</p>}
             </div>
@@ -253,7 +253,7 @@ const CreateOfficialModal = ({
                 type="email"
                 placeholder="Enter email address"
                 {...register("email")}
-                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
               />
               {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
             </div>
@@ -273,7 +273,7 @@ const CreateOfficialModal = ({
               />
               <label
                 htmlFor="officialProfile"
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 px-4 py-3 transition-all hover:border-blue-500 hover:bg-blue-50"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 px-4 py-3 transition-all hover:border-primary-500 hover:bg-primary-50"
               >
                 <Upload className="h-5 w-5 text-slate-400" />
                 <span className="text-sm font-medium text-slate-600">
@@ -316,7 +316,7 @@ const CreateOfficialModal = ({
               <select
                 id="status"
                 {...register("status")}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-primary-500 focus:outline-none"
               >
                 <option value="">Select Status</option>
                 <option value="Active">Active</option>
@@ -331,7 +331,7 @@ const CreateOfficialModal = ({
               <select
                 id="position"
                 {...register("position")}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-primary-500 focus:outline-none"
               >
                 <option value="">Select Position</option>
                 {positionOptions.map((position) => (
@@ -351,7 +351,7 @@ const CreateOfficialModal = ({
                 id="termStart"
                 type="date"
                 {...register("termStart")}
-                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
               />
               {errors.termStart && <p className="text-sm text-red-500">{errors.termStart.message}</p>}
             </div>
@@ -364,7 +364,7 @@ const CreateOfficialModal = ({
                 id="termEnd"
                 type="date"
                 {...register("termEnd")}
-                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
               />
               {errors.termEnd && <p className="text-sm text-red-500">{errors.termEnd.message}</p>}
             </div>
@@ -381,7 +381,7 @@ const CreateOfficialModal = ({
             <button
               type="submit"
               disabled={createOfficialMutation.isPending}
-              className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {createOfficialMutation.isPending ? "Adding..." : "Add Official"}
             </button>

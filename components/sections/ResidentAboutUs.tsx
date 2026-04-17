@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight,  MapPin, Mail, Phone, Clock, ImageIcon } from 'lucide-react';
 
 const aboutImages = [
-  { id: 1, bg: "bg-blue-100", title: "Barangay Hall Facade" },
+  { id: 1, bg: "bg-primary-100", title: "Barangay Hall Facade" },
   { id: 2, bg: "bg-emerald-100", title: "Covered Court & Plaza" },
   { id: 3, bg: "bg-amber-100", title: "Health Center" }
 ];
@@ -23,8 +23,8 @@ const ResidentAboutUs = () => {
           <div className="w-full lg:w-1/2 flex flex-col gap-8">
             <div>
               <div className="inline-flex items-center gap-2 mb-2">
-                <MapPin className="h-5 w-5 text-blue-600" />
-                <h2 className="text-blue-600 font-bold tracking-wide uppercase text-sm">About Us</h2>
+                <MapPin className="h-5 w-5 text-primary-600" />
+                <h2 className="text-primary-600 font-bold tracking-wide uppercase text-sm">About Us</h2>
               </div>
               <h3 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Brgy. Sampaloc IV</h3>
               <p className="text-slate-600 text-lg leading-relaxed">
@@ -34,7 +34,7 @@ const ResidentAboutUs = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-2">
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
+                <div className="p-3 bg-primary-100 text-primary-600 rounded-xl">
                   <MapPin className="w-6 h-6" />
                 </div>
                 <div>
@@ -77,7 +77,7 @@ const ResidentAboutUs = () => {
 
           {/* Right Column: Image Carousel */}
           <div className="w-full lg:w-1/2">
-            <div className="relative rounded-3xl overflow-hidden shadow-xl shadow-blue-900/5 border border-gray-100 bg-white group">
+            <div className="relative rounded-3xl overflow-hidden shadow-xl shadow-primary-900/5 border border-gray-100 bg-white group">
               {/* Carousel Track */}
               <div 
                 className="flex transition-transform duration-500 ease-in-out h-[400px] lg:h-[450px]"
@@ -95,13 +95,13 @@ const ResidentAboutUs = () => {
               {/* Navigation Arrows */}
               <button 
                 onClick={prevImg}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/90 text-slate-800 hover:bg-white hover:text-blue-600 shadow-md transition-all opacity-0 group-hover:opacity-100"
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/90 text-slate-800 hover:bg-white hover:text-primary-600 shadow-md transition-all opacity-0 group-hover:opacity-100"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
               <button 
                 onClick={nextImg}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/90 text-slate-800 hover:bg-white hover:text-blue-600 shadow-md transition-all opacity-0 group-hover:opacity-100"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/90 text-slate-800 hover:bg-white hover:text-primary-600 shadow-md transition-all opacity-0 group-hover:opacity-100"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
@@ -113,7 +113,7 @@ const ResidentAboutUs = () => {
                     key={idx}
                     onClick={() => setCurrentImg(idx)}
                     className={`h-2.5 rounded-full transition-all ${
-                      currentImg === idx ? 'bg-blue-600 w-8' : 'bg-slate-400/50 hover:bg-slate-400 w-2.5'
+                      currentImg === idx ? 'bg-primary-600 w-8' : 'bg-slate-400/50 hover:bg-slate-400 w-2.5'
                     }`}
                   />
                 ))}

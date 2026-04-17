@@ -124,7 +124,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
               <select
                 id="complainantId"
                 {...register("complainantId")}
-                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 disabled:opacity-50"
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700 disabled:opacity-50"
               >
                 <option value="">Select Complainant</option>
                 {residents?.map((r) => (
@@ -145,7 +145,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
                 type="text"
                 placeholder="Respondent Name"
                 {...register("respondentName")}
-                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
               />
               {errors.respondentName && (
                 <span className="text-red-500 text-xs">{errors.respondentName.message}</span>
@@ -159,7 +159,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
                 type="text"
                 placeholder="Location"
                 {...register("location")}
-                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
               />
               {errors.location && (
                 <span className="text-red-500 text-xs">{errors.location.message}</span>
@@ -172,7 +172,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
                 id="date"
                 type="datetime-local"
                 {...register("date")}
-                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700"
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700"
               />
               {errors.date && (
                 <span className="text-red-500 text-xs">{errors.date.message}</span>
@@ -187,7 +187,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
               placeholder="Incident Description"
               rows={4}
               {...register("incident")}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
             />
             {errors.incident && (
               <span className="text-red-500 text-xs">{errors.incident.message}</span>
@@ -201,7 +201,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
               type="file"
               accept="image/*"
               onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
             />
             {errors.blotterImageName && (
               <span className="text-red-500 text-xs">{errors.blotterImageName.message}</span>
@@ -217,7 +217,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
               <select
                 id="status"
                 {...register("status")}
-                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700"
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700"
               >
                 <option value="OPEN">Open</option>
                 <option value="RESOLVED">Resolved</option>
@@ -231,7 +231,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
               <select
                 id="handledById"
                 {...register("handledById")}
-                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700"
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700"
               >
                 <option value="">Assign To Official (Optional)</option>
                 {officials?.map((off) => (
@@ -258,7 +258,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {mutation.isPending ? (
                 <>

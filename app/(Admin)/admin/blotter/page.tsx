@@ -66,7 +66,7 @@ export default function BlotterPage() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md shadow-blue-600/30 transition-all duration-300 hover:-translate-y-0.5 w-fit"
+          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 w-fit"
         >
           <Plus className="w-5 h-5" />
           Add Blotter
@@ -109,7 +109,7 @@ export default function BlotterPage() {
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
-                       <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                       <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
                        <p className="text-slate-600 font-medium">Loading blotters...</p>
                     </div>
                   </td>
@@ -140,7 +140,7 @@ export default function BlotterPage() {
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         {blotter.blotterImage && (
-                          <a href={blotter.blotterImage} target="_blank" rel="noreferrer" className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="View Image">
+                          <a href={blotter.blotterImage} target="_blank" rel="noreferrer" className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View Image">
                             <Eye className="w-4 h-4" />
                           </a>
                         )}
@@ -187,7 +187,7 @@ export default function BlotterPage() {
                     onClick={() => setCurrentPage(page)}
                     className={`w-10 h-10 rounded-lg font-medium transition-colors ${
                       currentPage === page
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-primary-600 text-white'
                         : 'border border-gray-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >

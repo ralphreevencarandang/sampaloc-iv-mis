@@ -83,7 +83,7 @@ export default function AnnouncementPage() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex w-fit items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white shadow-md shadow-blue-600/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-700"
+          className="flex w-fit items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-700"
         >
           <Plus className="h-5 w-5" />
           Add Announcement
@@ -199,7 +199,7 @@ export default function AnnouncementPage() {
                     onClick={() => setCurrentPage(page)}
                     className={`h-10 w-10 rounded-lg font-medium transition-colors ${
                       currentPage === page
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-primary-600 text-white'
                         : 'border border-gray-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >

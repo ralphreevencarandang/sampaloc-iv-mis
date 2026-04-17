@@ -52,11 +52,11 @@ export function AdminLoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-slate-50 to-blue-50 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-linear-to-br from-primary-50 via-slate-50 to-primary-50 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-600 to-blue-700 rounded-lg mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-primary-600 to-primary-700 rounded-lg mb-4">
             <LogIn className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900">Admin Portal</h1>
@@ -91,7 +91,7 @@ export function AdminLoginForm() {
                     }
                   }}
                   placeholder="admin@barangay.gov.ph"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900 placeholder-slate-500"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all text-slate-900 placeholder-slate-500"
                 />
               </div>
 
@@ -112,7 +112,7 @@ export function AdminLoginForm() {
                       }
                     }}
                     placeholder="••••••••"
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-slate-900 placeholder-slate-500"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all text-slate-900 placeholder-slate-500"
                   />
                   <button
                     type="button"
@@ -131,7 +131,7 @@ export function AdminLoginForm() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-2 focus:ring-primary-500 cursor-pointer"
                 />
                 <label htmlFor="rememberMe" className="ml-2 text-sm text-slate-600 cursor-pointer">
                   Remember me
@@ -142,7 +142,7 @@ export function AdminLoginForm() {
               <button
                 type="submit"
                 disabled={loginMutation.isPending}
-                className="w-full py-2.5 bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-6 flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-linear-to-r from-primary-600 to-primary-700 text-white font-semibold rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-6 flex items-center justify-center gap-2"
               >
                 {loginMutation.isPending ? (
                   <>
@@ -168,13 +168,13 @@ export function AdminLoginForm() {
             {/* Footer Links */}
             {/* <div className="space-y-3 text-center text-sm">
               <div>
-                <a href="#" className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+                <a href="#" className="text-primary-600 hover:text-primary-700 font-medium transition-colors">
                   Forgot password?
                 </a>
               </div>
               <div className="text-slate-600">
                 Don't have an account?{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
+                <a href="#" className="text-primary-600 hover:text-primary-700 font-medium transition-colors">
                   Contact administrator
                 </a>
               </div>

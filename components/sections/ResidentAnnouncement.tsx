@@ -64,8 +64,8 @@ const ResidentAnnouncement = () => {
         <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div>
             <div className="mb-2 flex items-center gap-2">
-              <Megaphone className="h-5 w-5 text-blue-600" />
-              <h2 className="text-sm font-bold uppercase tracking-wide text-blue-600">Barangay Board</h2>
+              <Megaphone className="h-5 w-5 text-primary-600" />
+              <h2 className="text-sm font-bold uppercase tracking-wide text-primary-600">Barangay Board</h2>
             </div>
             <h3 className="text-3xl font-extrabold text-slate-900">Latest Announcements</h3>
           </div>
@@ -74,13 +74,13 @@ const ResidentAnnouncement = () => {
             <div className="hidden gap-3 md:flex">
               <button
                 onClick={prevSlide}
-                className="rounded-full border border-gray-200 bg-white p-2 text-slate-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                className="rounded-full border border-gray-200 bg-white p-2 text-slate-600 transition-all hover:border-primary-200 hover:bg-primary-50 hover:text-primary-600"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
               <button
                 onClick={nextSlide}
-                className="rounded-full border border-gray-200 bg-white p-2 text-slate-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                className="rounded-full border border-gray-200 bg-white p-2 text-slate-600 transition-all hover:border-primary-200 hover:bg-primary-50 hover:text-primary-600"
               >
                 <ChevronRight className="h-6 w-6" />
               </button>
@@ -115,14 +115,14 @@ const ResidentAnnouncement = () => {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="flex h-full min-h-56 items-center justify-center bg-gradient-to-br from-blue-500 to-cyan-400 p-8">
+                        <div className="flex h-full min-h-56 items-center justify-center bg-gradient-to-br from-primary-500 to-cyan-400 p-8">
                           <Megaphone className="h-20 w-20 text-white/25" />
                         </div>
                       )}
                     </div>
 
                     <div className="flex w-full flex-col justify-center p-8 md:w-3/5 md:p-10">
-                      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm font-semibold text-blue-600">
+                      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm font-semibold text-primary-600">
                         <span className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           {new Date(announcement.createdAt).toLocaleDateString()}
@@ -134,7 +134,7 @@ const ResidentAnnouncement = () => {
                       <h3 className="mb-4 text-2xl font-bold text-slate-900">{announcement.title}</h3>
                       <p className="mb-8 whitespace-pre-line text-slate-600">{announcement.content}</p>
 
-                      <div className="mt-auto flex items-center gap-1 font-semibold text-blue-600">
+                      <div className="mt-auto flex items-center gap-1 font-semibold text-primary-600">
                         Announcement details
                         <ArrowRight className="h-4 w-4" />
                       </div>
@@ -150,7 +150,7 @@ const ResidentAnnouncement = () => {
                       key={announcement.id}
                       onClick={() => setCurrentSlide(index)}
                       className={`h-2 rounded-full transition-all ${
-                        activeSlide === index ? 'w-4 bg-blue-600' : 'w-2 bg-gray-300'
+                        activeSlide === index ? 'w-4 bg-primary-600' : 'w-2 bg-gray-300'
                       }`}
                     />
                   ))}

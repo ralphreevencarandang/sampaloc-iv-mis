@@ -75,7 +75,7 @@ const AdminSidebar = () => {
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-primary-600 text-white rounded-lg shadow-lg"
       >
         {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
@@ -88,7 +88,7 @@ const AdminSidebar = () => {
       >
         {/* Logo Section */}
         <div className="h-20 border-b border-slate-700 flex items-center justify-center md:justify-start  gap-3 px-6">
-          {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+          {/* <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-white font-bold text-lg">S</span>
           </div> */}
           {isOpen && (
@@ -109,8 +109,8 @@ const AdminSidebar = () => {
                     onClick={() => setExpandedMenu(expandedMenu === 'documents' ? null : 'documents')}
                     className={`group w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-xs transition-all duration-200 ${
                       isActive(item.href) || expandedMenu === 'documents'
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-blue-400'
+                        ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-primary-400'
                     }`}
                   >
                     <span className="shrink-0">{item.icon}</span>
@@ -135,8 +135,8 @@ const AdminSidebar = () => {
                           href={doc.href}
                           className={`flex items-center gap-3 px-4 py-2 rounded-lg text-xs transition-all duration-200 ${
                             pathname === doc.href
-                              ? 'bg-blue-500 text-white'
-                              : 'text-slate-300 hover:bg-slate-800 hover:text-blue-300'
+                              ? 'bg-primary-500 text-white'
+                              : 'text-slate-300 hover:bg-slate-800 hover:text-primary-300'
                           }`}
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -151,8 +151,8 @@ const AdminSidebar = () => {
                   href={item.href}
                   className={`group flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-xs transition-all duration-200 ${
                     isActive(item.href)
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-blue-400'
+                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-primary-400'
                   }`}
                   title={!isOpen ? item.label : ''}
                 >

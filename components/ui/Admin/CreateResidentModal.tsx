@@ -21,31 +21,31 @@ const CreateResidentModal = ({ isOpen, onClose }: ModalProps) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <label htmlFor="firstname" className="text-sm font-medium text-slate-700">First Name</label>
-              <input id="firstname" type="text" placeholder="Enter first name" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <input id="firstname" type="text" placeholder="Enter first name" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="middlename" className="text-sm font-medium text-slate-700">Middle Name</label>
-              <input id="middlename" type="text" placeholder="Enter middle name" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <input id="middlename" type="text" placeholder="Enter middle name" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="lastname" className="text-sm font-medium text-slate-700">Last Name</label>
-              <input id="lastname" type="text" placeholder="Enter last name" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <input id="lastname" type="text" placeholder="Enter last name" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="email" className="text-sm font-medium text-slate-700">Email</label>
-              <input id="email" type="email" placeholder="Enter email address" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <input id="email" type="email" placeholder="Enter email address" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="Phonenumber" className="text-sm font-medium text-slate-700">Phonenumber</label>
-              <input id="Phonenumber" type="text" placeholder="Enter phone number" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <input id="Phonenumber" type="text" placeholder="Enter phone number" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="dob" className="text-sm font-medium text-slate-700">Date of Birth</label>
-              <input id="dob" type="date" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <input id="dob" type="date" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="gender" className="text-sm font-medium text-slate-700">Gender</label>
-              <select id="gender" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700">
+              <select id="gender" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
                 <option>Select Gender</option>
                 <option>Male</option>
                 <option>Female</option>
@@ -53,7 +53,7 @@ const CreateResidentModal = ({ isOpen, onClose }: ModalProps) => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="civilstatus" className="text-sm font-medium text-slate-700">Civil Status</label>
-              <select id="civilstatus" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-700">
+              <select id="civilstatus" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
                 <option>Select Civil Status</option>
                 <option>Single</option>
                 <option>Married</option>
@@ -63,21 +63,21 @@ const CreateResidentModal = ({ isOpen, onClose }: ModalProps) => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="citizenship" className="text-sm font-medium text-slate-700">Citizenship</label>
-              <input id="citizenship" type="text" placeholder="Enter citizenship" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <input id="citizenship" type="text" placeholder="Enter citizenship" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="unit" className="text-sm font-medium text-slate-700">Unit/Block</label>
-              <input id="unit" type="text" placeholder="Enter unit/block" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <input id="unit" type="text" placeholder="Enter unit/block" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="street" className="text-sm font-medium text-slate-700">Street</label>
-              <input id="street" type="text" placeholder="Enter street" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500" />
+              <input id="street" type="text" placeholder="Enter street" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
             </div>
           </div>
 
           <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
             <label htmlFor="voter" className="flex items-center gap-3 cursor-pointer">
-              <input id="voter" type="checkbox" className="w-4 h-4 accent-blue-600" />
+              <input id="voter" type="checkbox" className="w-4 h-4 accent-primary-600" />
               <span className="text-sm font-medium text-slate-700">Registered Voter</span>
             </label>
           </div>
@@ -92,7 +92,7 @@ const CreateResidentModal = ({ isOpen, onClose }: ModalProps) => {
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              className="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
             >
               Add Resident
             </button>

@@ -85,7 +85,7 @@ export default function VotersPage() {
 
       {isLoading && (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-lg border border-gray-100 shadow-sm">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+          <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mb-4" />
           <p className="text-slate-500 font-medium">Loading voters data...</p>
         </div>
       )}
@@ -104,7 +104,7 @@ export default function VotersPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
               <p className="text-slate-600 text-sm font-medium">Total Voters</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{voters.length}</p>
+              <p className="text-3xl font-bold text-primary-600 mt-2">{voters.length}</p>
             </div>
             <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
               <p className="text-slate-600 text-sm font-medium">Male Voters</p>
@@ -145,7 +145,7 @@ export default function VotersPage() {
                         <td className="px-6 py-4 text-sm">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
                             voter.gender === 'Male' 
-                              ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                              ? 'bg-primary-50 text-primary-700 border-primary-200' 
                               : 'bg-pink-50 text-pink-700 border-pink-200'
                           }`}>
                             {voter.gender}
@@ -153,7 +153,7 @@ export default function VotersPage() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <button className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="View">
+                            <button className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View">
                               <Eye className="w-4 h-4" />
                             </button>
                           </div>
@@ -194,7 +194,7 @@ export default function VotersPage() {
                         onClick={() => setCurrentPage(page)}
                         className={`w-10 h-10 rounded-lg font-medium transition-colors ${
                           currentPage === page
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-primary-600 text-white'
                             : 'border border-gray-200 text-slate-600 hover:bg-slate-100'
                         }`}
                       >

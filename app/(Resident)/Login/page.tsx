@@ -67,7 +67,7 @@ export default function LoginPage() {
         <div className="max-w-md w-full space-y-8 rounded-xl border border-gray-100 bg-white p-8 shadow-lg">
           <div className="text-center">
             <div className="mb-4 flex justify-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-600 text-2xl font-bold text-white">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-600 text-2xl font-bold text-white">
                 MSI
               </div>
             </div>
@@ -92,7 +92,7 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   required
-                  className="relative block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                  className="relative block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
                   placeholder="juan.delacruz@example.com"
                   value={email}
                   onChange={(event) => {
@@ -114,7 +114,7 @@ export default function LoginPage() {
                   name="password"
                   type="password"
                   required
-                  className="relative block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                  className="relative block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
                   placeholder="********"
                   value={password}
                   onChange={(event) => {
@@ -132,7 +132,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loginMutation.isPending}
-                className="group relative flex w-full justify-center rounded-lg border border-transparent bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="group relative flex w-full justify-center rounded-lg border border-transparent bg-primary-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loginMutation.isPending ? "Signing In..." : "Sign In"}
               </button>
@@ -145,7 +145,7 @@ export default function LoginPage() {
             </div>
             <Link
               href="/register"
-              className="block w-full rounded-lg border-2 border-blue-600 bg-blue-50 px-4 py-3 text-center font-semibold text-blue-600 transition-colors hover:bg-blue-100"
+              className="block w-full rounded-lg border-2 border-primary-600 bg-primary-50 px-4 py-3 text-center font-semibold text-primary-600 transition-colors hover:bg-primary-100"
             >
               Create Account
             </Link>

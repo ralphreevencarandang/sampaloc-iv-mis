@@ -235,7 +235,7 @@ const CreateAnnouncementModal = ({
               id="createdById"
               {...register("createdById")}
               disabled={isLoadingOfficials || isOfficialsError}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100"
+              className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100"
             >
               <option value="">
                 {isLoadingOfficials ? "Loading officials..." : "Select Official"}
@@ -267,7 +267,7 @@ const CreateAnnouncementModal = ({
               type="text"
               placeholder="Enter announcement title"
               {...register("title")}
-              className="rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+              className="rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
             />
             {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
           </div>
@@ -281,7 +281,7 @@ const CreateAnnouncementModal = ({
               rows={5}
               placeholder="Enter announcement content"
               {...register("content")}
-              className="resize-none rounded-lg border border-gray-200 px-4 py-2 focus:border-blue-500 focus:outline-none"
+              className="resize-none rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
             />
             {errors.content && <p className="text-sm text-red-500">{errors.content.message}</p>}
           </div>
@@ -302,7 +302,7 @@ const CreateAnnouncementModal = ({
               />
               <label
                 htmlFor="image"
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 px-4 py-3 transition-all hover:border-blue-500 hover:bg-blue-50"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 px-4 py-3 transition-all hover:border-primary-500 hover:bg-primary-50"
               >
                 <Upload className="h-5 w-5 text-slate-400" />
                 <span className="text-sm font-medium text-slate-600">
@@ -348,7 +348,7 @@ const CreateAnnouncementModal = ({
             <button
               type="submit"
               disabled={createAnnouncementMutation.isPending}
-              className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {createAnnouncementMutation.isPending ? "Posting..." : "Post Announcement"}
             </button>
