@@ -3,29 +3,41 @@ import { z } from "zod";
 const requiredString = (label: string) =>
   z.string().trim().min(1, `${label} is required.`);
 
+const baseResidentFields = {
+  firstName: requiredString("First name"),
+  lastName: requiredString("Last name"),
+  middleName: z.string().trim().optional().default(""),
+  birthDate: z
+    .string()
+    .min(1, "Birth date is required.")
+    .refine((value) => !Number.isNaN(new Date(value).getTime()), {
+      message: "Birth date is invalid.",
+    }),
+  gender: requiredString("Gender"),
+  civilStatus: requiredString("Civil status"),
+  street: requiredString("Street"),
+  houseNumber: requiredString("House number"),
+  contactNumber: requiredString("Contact number"),
+  occupation: z.string().trim().optional().default(""),
+  citizenship: requiredString("Citizenship"),
+  isVoter: requiredString("Eligible to Vote"),
+};
+
+export const adminResidentUpdateSchema = z.object({
+  email: z.email("Enter a valid email address.").trim().toLowerCase(),
+  status: z.enum(["PENDING", "APPROVED", "DECLINED"]),
+  ...baseResidentFields,
+});
+
+export type AdminResidentUpdateInput = z.input<typeof adminResidentUpdateSchema>;
+
 export const residentRegistrationSchema = z
   .object({
     email: z.email("Enter a valid email address.").trim().toLowerCase(),
     password: z.string().min(8, "Password must be at least 8 characters."),
     confirmPassword: z.string().min(1, "Please confirm your password."),
-    firstName: requiredString("First name"),
-    lastName: requiredString("Last name"),
-    middleName: z.string().trim().optional().default(""),
-    birthDate: z
-      .string()
-      .min(1, "Birth date is required.")
-      .refine((value) => !Number.isNaN(new Date(value).getTime()), {
-        message: "Birth date is invalid.",
-      }),
-    gender: requiredString("Gender"),
-    civilStatus: requiredString("Civil status"),
-    street: requiredString("Street"),
-    houseNumber: requiredString("House number"),
-    contactNumber: requiredString("Contact number"),
-    occupation: z.string().trim().optional().default(""),
-    citizenship: requiredString("Citizenship"),
     validIDImageName: requiredString("Valid ID image"),
-    isVoter: requiredString("Eligible to Vote"),
+    ...baseResidentFields,
   })
   .refine((value) => value.password === value.confirmPassword, {
     message: "Passwords do not match.",

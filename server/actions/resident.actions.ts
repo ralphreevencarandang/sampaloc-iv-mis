@@ -1,3 +1,5 @@
+"use server";
+
 import bcrypt from "bcryptjs";
 import { CloudinaryUploadError, uploadImageToCloudinary } from "@/lib/cloudinary";
 import prismaModule from "@/lib/prisma";
@@ -6,6 +8,7 @@ import {
   getZodFieldErrors,
   residentRegistrationSchema,
   type ResidentRegistrationInput,
+  adminResidentUpdateSchema,
 } from "@/validations/resident.validation";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
@@ -35,12 +38,12 @@ type SanitizedResidentRegistration = Omit<
   isVoter: boolean;
 };
 
-function getFormValue(formData: FormData, key: keyof ResidentRegistrationInput) {
+function getFormValue(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
 }
 
-export function validateResidentRegistration(formData: FormData): {
+function validateResidentRegistration(formData: FormData): {
   data?: SanitizedResidentRegistration;
   fieldErrors?: Record<string, string>;
 } {
@@ -196,6 +199,75 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
     return {
       success: false,
       message: "An unexpected error occurred while submitting your registration.",
+    };
+  }
+}
+
+export type UpdateResidentResult = {
+  success: boolean;
+  message: string;
+  fieldErrors?: Record<string, string>;
+};
+
+export async function updateResidentAction(id: string, formData: FormData): Promise<UpdateResidentResult> {
+  const input = {
+    email: getFormValue(formData, "email"),
+    status: getFormValue(formData, "status"),
+    firstName: getFormValue(formData, "firstName"),
+    lastName: getFormValue(formData, "lastName"),
+    middleName: getFormValue(formData, "middleName"),
+    birthDate: getFormValue(formData, "birthDate"),
+    gender: getFormValue(formData, "gender"),
+    civilStatus: getFormValue(formData, "civilStatus"),
+    street: getFormValue(formData, "street"),
+    houseNumber: getFormValue(formData, "houseNumber"),
+    contactNumber: getFormValue(formData, "contactNumber"),
+    occupation: getFormValue(formData, "occupation"),
+    citizenship: getFormValue(formData, "citizenship"),
+    isVoter: getFormValue(formData, "isVoter"),
+  };
+
+  const parsed = adminResidentUpdateSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please correct the highlighted fields.",
+      fieldErrors: getZodFieldErrors(parsed.error),
+    };
+  }
+
+  const data = parsed.data;
+
+  try {
+    await prisma.resident.update({
+      where: { id },
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        middleName: data.middleName || null,
+        birthDate: new Date(data.birthDate),
+        gender: data.gender,
+        civilStatus: data.civilStatus,
+        street: data.street,
+        houseNumber: data.houseNumber,
+        contactNumber: data.contactNumber,
+        occupation: data.occupation || null,
+        citizenship: data.citizenship,
+        isVoter: data.isVoter === "Yes",
+        status: data.status,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Resident updated successfully.",
+    };
+  } catch (error) {
+    console.error("update resident failed", error);
+    return {
+      success: false,
+      message: "An unexpected error occurred while updating the resident.",
     };
   }
 }

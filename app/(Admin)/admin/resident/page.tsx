@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react'
 import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
-import CreateResidentModal from '@/components/ui/Admin/CreateResidentModal'
+import ResidentFormModal from '@/components/ui/Admin/ResidentFormModal'
 import { useQuery } from '@tanstack/react-query'
 import apiClient from '@/lib/axios'
-
+import Link from 'next/link'
 interface ResidentRecord {
   id: string
   email: string
@@ -35,6 +35,7 @@ export default function ResidentPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedResident, setSelectedResident] = useState<ResidentRecord | null>(null)
 
   const {
     data: residents = [],
@@ -176,10 +177,18 @@ export default function ResidentPage() {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <button className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View">
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
+                              <Link href={`/admin/resident/${resident.id}`} className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View">
+                              
+                                  <Eye className="w-4 h-4" />
+                             
+                              </Link>
+                              <button 
+                                onClick={() => {
+                                  setSelectedResident(resident)
+                                  setIsModalOpen(true)
+                                }}
+                                className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit"
+                              >
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Delete">
@@ -246,8 +255,15 @@ export default function ResidentPage() {
         )}
       </div>
 
-      {/* Add Resident Modal */}
-      <CreateResidentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* Resident Form Modal */}
+      <ResidentFormModal 
+        isOpen={isModalOpen} 
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedResident(null)
+        }} 
+        initialData={selectedResident} 
+      />
     </div>
   )
 }
