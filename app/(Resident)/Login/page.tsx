@@ -7,6 +7,8 @@ import React, { useEffect, useState } from "react";
 import { useResidentAuth } from "@/components/providers/resident-auth-provider";
 import { loginResidentAction } from "@/server/actions/auth.actions";
 import { getZodFieldErrors, residentLoginSchema } from "@/validations/auth.validation";
+import Image from "next/image";
+import logo from '@/public/images/dasma-logo.png'
 
 export default function LoginPage() {
   const router = useRouter();
@@ -67,9 +69,9 @@ export default function LoginPage() {
         <div className="max-w-md w-full space-y-8 rounded-xl border border-gray-100 bg-white p-8 shadow-lg">
           <div className="text-center">
             <div className="mb-4 flex justify-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-600 text-2xl font-bold text-white">
-                MSI
-              </div>
+              
+
+              <Image src={logo} alt="Logo" width={80} height={80} />
             </div>
             <h2 className="text-3xl font-extrabold text-gray-900">Barangay Portal</h2>
             <p className="mt-2 text-sm text-gray-600">Please sign in to access your account</p>

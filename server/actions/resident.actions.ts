@@ -284,6 +284,69 @@ export type DeleteResidentResult = {
   message: string;
 };
 
+export type ResidentArchiveResult = {
+  success: boolean;
+  message: string;
+  resident?: {
+    id: string;
+    isArchived: boolean;
+  };
+};
+
+async function setResidentArchiveStatusAction(
+  id: string,
+  isArchived: boolean
+): Promise<ResidentArchiveResult> {
+  try {
+    const existingResident = await prisma.resident.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existingResident) {
+      return {
+        success: false,
+        message: "Resident not found.",
+      };
+    }
+
+    await prisma.resident.update({
+      where: { id },
+      data: {
+        isArchived,
+      },
+    });
+
+    revalidatePath("/admin/resident");
+
+    return {
+      success: true,
+      message: isArchived ? "Resident archived successfully." : "Resident restored successfully.",
+      resident: {
+        id,
+        isArchived,
+      },
+    };
+  } catch (error) {
+    console.error("resident archive status update failed", error);
+
+    return {
+      success: false,
+      message: isArchived
+        ? "An unexpected error occurred while archiving the resident."
+        : "An unexpected error occurred while restoring the resident.",
+    };
+  }
+}
+
+export async function archiveResidentAction(id: string): Promise<ResidentArchiveResult> {
+  return setResidentArchiveStatusAction(id, true);
+}
+
+export async function unarchiveResidentAction(id: string): Promise<ResidentArchiveResult> {
+  return setResidentArchiveStatusAction(id, false);
+}
+
 export async function deleteResidentAction(id: string): Promise<DeleteResidentResult> {
   try {
     await prisma.$transaction([

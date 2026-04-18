@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const archived = searchParams.get("archived") === "true";
+
     const residents = await prisma.resident.findMany({
+      where: {
+        isArchived: archived,
+      },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -21,6 +27,7 @@ export async function GET() {
         citizenship: true,
         isVoter: true,
         precinctNumber: true,
+        isArchived: true,
         status: true,
       },
     });

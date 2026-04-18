@@ -33,6 +33,10 @@ export interface ModalProps {
   initialData?: ResidentRecord | null
 }
 
+function RequiredMark() {
+  return <span aria-hidden="true" className="ml-1 text-red-500">*</span>
+}
+
 const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
   const queryClient = useQueryClient()
   const [globalError, setGlobalError] = useState('')
@@ -170,7 +174,9 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <label htmlFor="firstName" className="text-sm font-medium text-slate-700">First Name</label>
+              <label htmlFor="firstName" className="text-sm font-medium text-slate-700">
+                First Name<RequiredMark />
+              </label>
               <input {...register('firstName')} id="firstName" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
               {errors.firstName && <span className="text-xs text-red-500">{errors.firstName.message}</span>}
             </div>
@@ -181,13 +187,17 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="lastName" className="text-sm font-medium text-slate-700">Last Name</label>
+              <label htmlFor="lastName" className="text-sm font-medium text-slate-700">
+                Last Name<RequiredMark />
+              </label>
               <input {...register('lastName')} id="lastName" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
               {errors.lastName && <span className="text-xs text-red-500">{errors.lastName.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="email" className="text-sm font-medium text-slate-700">Email</label>
+              <label htmlFor="email" className="text-sm font-medium text-slate-700">
+                Email<RequiredMark />
+              </label>
               <input
                 {...register('email')}
                 id="email"
@@ -199,7 +209,9 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="status" className="text-sm font-medium text-slate-700">Status</label>
+              <label htmlFor="status" className="text-sm font-medium text-slate-700">
+                Status<RequiredMark />
+              </label>
               <select
                 {...register('status')}
                 id="status"
@@ -213,19 +225,25 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="contactNumber" className="text-sm font-medium text-slate-700">Contact Number</label>
+              <label htmlFor="contactNumber" className="text-sm font-medium text-slate-700">
+                Contact Number<RequiredMark />
+              </label>
               <input {...register('contactNumber')} id="contactNumber" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
               {errors.contactNumber && <span className="text-xs text-red-500">{errors.contactNumber.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="birthDate" className="text-sm font-medium text-slate-700">Date of Birth</label>
+              <label htmlFor="birthDate" className="text-sm font-medium text-slate-700">
+                Date of Birth<RequiredMark />
+              </label>
               <input {...register('birthDate')} id="birthDate" type="date" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
               {errors.birthDate && <span className="text-xs text-red-500">{errors.birthDate.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="gender" className="text-sm font-medium text-slate-700">Gender</label>
+              <label htmlFor="gender" className="text-sm font-medium text-slate-700">
+                Gender<RequiredMark />
+              </label>
               <select {...register('gender')} id="gender" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
                 <option value="">Select Gender</option>
                 <option value="Male">Male</option>
@@ -235,7 +253,9 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="civilStatus" className="text-sm font-medium text-slate-700">Civil Status</label>
+              <label htmlFor="civilStatus" className="text-sm font-medium text-slate-700">
+                Civil Status<RequiredMark />
+              </label>
               <select {...register('civilStatus')} id="civilStatus" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
                 <option value="">Select Civil Status</option>
                 <option value="Single">Single</option>
@@ -248,7 +268,9 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="citizenship" className="text-sm font-medium text-slate-700">Citizenship</label>
+              <label htmlFor="citizenship" className="text-sm font-medium text-slate-700">
+                Citizenship<RequiredMark />
+              </label>
               <input {...register('citizenship')} id="citizenship" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
               {errors.citizenship && <span className="text-xs text-red-500">{errors.citizenship.message}</span>}
             </div>
@@ -259,19 +281,25 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="houseNumber" className="text-sm font-medium text-slate-700">House Number / Unit</label>
+              <label htmlFor="houseNumber" className="text-sm font-medium text-slate-700">
+                House Number / Unit<RequiredMark />
+              </label>
               <input {...register('houseNumber')} id="houseNumber" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
               {errors.houseNumber && <span className="text-xs text-red-500">{errors.houseNumber.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="street" className="text-sm font-medium text-slate-700">Street</label>
+              <label htmlFor="street" className="text-sm font-medium text-slate-700">
+                Street<RequiredMark />
+              </label>
               <input {...register('street')} id="street" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
               {errors.street && <span className="text-xs text-red-500">{errors.street.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="isVoter" className="text-sm font-medium text-slate-700">Eligible to Vote</label>
+              <label htmlFor="isVoter" className="text-sm font-medium text-slate-700">
+                Eligible to Vote<RequiredMark />
+              </label>
               <select {...register('isVoter')} id="isVoter" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
                 <option value="">Select Option</option>
                 <option value="Yes">Yes</option>
@@ -282,7 +310,9 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
 
             {selectedIsVoter === 'Yes' && (
               <div className="flex flex-col gap-1">
-                <label htmlFor="precinctNumber" className="text-sm font-medium text-slate-700">Precinct Number</label>
+                <label htmlFor="precinctNumber" className="text-sm font-medium text-slate-700">
+                  Precinct Number<RequiredMark />
+                </label>
                 <input
                   {...register('precinctNumber')}
                   id="precinctNumber"

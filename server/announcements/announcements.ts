@@ -7,6 +7,7 @@ export const announcementSelect = {
   title: true,
   content: true,
   image: true,
+  isArchive: true,
   createdAt: true,
   createdById: true,
   createdBy: {
@@ -23,6 +24,7 @@ type AnnouncementEntity = {
   title: string;
   content: string;
   image: string | null;
+  isArchive: boolean;
   createdAt: Date;
   createdById: string;
   createdBy: {
@@ -37,6 +39,7 @@ export type AnnouncementRecord = {
   title: string;
   content: string;
   image: string | null;
+  isArchive: boolean;
   createdAt: string;
   createdById: string;
   createdBy: {
@@ -52,6 +55,7 @@ export function mapAnnouncementRecord(announcement: AnnouncementEntity): Announc
     title: announcement.title,
     content: announcement.content,
     image: announcement.image ?? null,
+    isArchive: announcement.isArchive,
     createdAt: announcement.createdAt.toISOString(),
     createdById: announcement.createdById,
     createdBy: {
@@ -62,8 +66,11 @@ export function mapAnnouncementRecord(announcement: AnnouncementEntity): Announc
   };
 }
 
-export async function fetchAnnouncementsFromDb(): Promise<AnnouncementRecord[]> {
+export async function fetchAnnouncementsFromDb(options: { archived?: boolean } = {}): Promise<AnnouncementRecord[]> {
   const announcements = await prisma.announcement.findMany({
+    where: {
+      isArchive: options.archived ?? false,
+    },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: announcementSelect,
   });

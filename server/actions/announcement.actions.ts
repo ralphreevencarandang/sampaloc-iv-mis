@@ -238,3 +238,55 @@ export async function updateAnnouncementAction(
     };
   }
 }
+
+export async function archiveAnnouncementAction(id: string): Promise<AnnouncementMutationResult> {
+  return setAnnouncementArchiveStatusAction(id, true)
+}
+
+export async function unarchiveAnnouncementAction(id: string): Promise<AnnouncementMutationResult> {
+  return setAnnouncementArchiveStatusAction(id, false)
+}
+
+async function setAnnouncementArchiveStatusAction(
+  id: string,
+  isArchive: boolean
+): Promise<AnnouncementMutationResult> {
+  try {
+    const existingAnnouncement = await prisma.announcement.findUnique({
+      where: { id },
+      select: { id: true },
+    })
+
+    if (!existingAnnouncement) {
+      return {
+        success: false,
+        message: "Announcement not found.",
+      }
+    }
+
+    const announcement = await prisma.announcement.update({
+      where: { id },
+      data: {
+        isArchive,
+      },
+      select: announcementSelect,
+    })
+
+    return {
+      success: true,
+      message: isArchive
+        ? "Announcement archived successfully."
+        : "Announcement restored successfully.",
+      announcement: mapAnnouncementRecord(announcement),
+    }
+  } catch (error) {
+    console.error("update announcement archive status failed", error)
+
+    return {
+      success: false,
+      message: isArchive
+        ? "An unexpected error occurred while archiving the announcement."
+        : "An unexpected error occurred while restoring the announcement.",
+    }
+  }
+}

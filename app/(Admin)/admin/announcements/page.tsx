@@ -2,21 +2,35 @@
 
 import Image from 'next/image'
 import React, { useMemo, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, ChevronLeft, ChevronRight, Calendar, Megaphone, Eye, Edit2, Trash2, Archive } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  Archive,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Edit2,
+  Megaphone,
+  Plus,
+  RotateCcw,
+  Search,
+} from 'lucide-react'
 import AnnouncementModalForm from '@/components/ui/Admin/AnnouncementModalForm'
+import {
+  archiveAnnouncementAction,
+  unarchiveAnnouncementAction,
+} from '@/server/actions/announcement.actions'
 import type { AnnouncementRecord } from '@/server/announcements/announcements'
-import Link from 'next/link'
-  
+
 const ITEMS_PER_PAGE = 10
-const ANNOUNCEMENTS_QUERY_KEY = ['announcements']
+const ANNOUNCEMENTS_QUERY_KEY = ['announcements'] as const
+type AnnouncementView = 'active' | 'archived'
 
 type AnnouncementsApiError = {
   message?: string
 }
 
-async function fetchAnnouncements(): Promise<AnnouncementRecord[]> {
-  const response = await fetch('/api/announcements', {
+async function fetchAnnouncements(view: AnnouncementView): Promise<AnnouncementRecord[]> {
+  const response = await fetch(`/api/announcements?archived=${view === 'archived'}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -40,6 +54,8 @@ export default function AnnouncementPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementRecord | null>(null)
+  const [view, setView] = useState<AnnouncementView>('active')
+  const [actionError, setActionError] = useState('')
   const queryClient = useQueryClient()
 
   const {
@@ -48,8 +64,8 @@ export default function AnnouncementPage() {
     isError,
     error,
   } = useQuery<AnnouncementRecord[]>({
-    queryKey: ANNOUNCEMENTS_QUERY_KEY,
-    queryFn: fetchAnnouncements,
+    queryKey: [...ANNOUNCEMENTS_QUERY_KEY, view],
+    queryFn: () => fetchAnnouncements(view),
   })
 
   const filteredAnnouncements = useMemo(() => {
@@ -76,6 +92,44 @@ export default function AnnouncementPage() {
     })
   }
 
+  const archiveMutation = useMutation({
+    mutationFn: async (payload: { id: string; archived: boolean }) => {
+      return payload.archived
+        ? archiveAnnouncementAction(payload.id)
+        : unarchiveAnnouncementAction(payload.id)
+    },
+    onSuccess: (result) => {
+      if (!result.success) {
+        setActionError(result.message)
+        return
+      }
+
+      setActionError('')
+      void queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_QUERY_KEY })
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : 'Failed to update archive state.')
+    },
+  })
+
+  const handleArchiveToggle = (announcement: AnnouncementRecord) => {
+    setActionError('')
+    archiveMutation.mutate({
+      id: announcement.id,
+      archived: !announcement.isArchive,
+    })
+  }
+
+  const isArchivedView = view === 'archived'
+
+  const handleViewChange = (nextView: AnnouncementView) => {
+    setView(nextView)
+    setCurrentPage(1)
+    setSearchTerm('')
+    setActionError('')
+    setSelectedAnnouncement(null)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -83,16 +137,42 @@ export default function AnnouncementPage() {
           <h1 className="text-3xl font-bold text-slate-900">Announcements</h1>
           <p className="mt-1 text-slate-600">Manage barangay announcements and updates</p>
         </div>
-        <button
-          onClick={() => {
-            setSelectedAnnouncement(null)
-            setIsModalOpen(true)
-          }}
-          className="flex w-fit items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-700"
-        >
-          <Plus className="h-5 w-5" />
-          Add Announcement
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => handleViewChange('active')}
+              className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                view === 'active'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Active
+            </button>
+            <button
+              type="button"
+              onClick={() => handleViewChange('archived')}
+              className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                view === 'archived'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Archived
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedAnnouncement(null)
+              setIsModalOpen(true)
+            }}
+            className="flex w-fit items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-700"
+          >
+            <Plus className="h-5 w-5" />
+            Add Announcement
+          </button>
+        </div>
       </div>
 
       <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
@@ -100,7 +180,7 @@ export default function AnnouncementPage() {
           <Search className="h-5 w-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by title, content, official, or position..."
+            placeholder={`Search ${isArchivedView ? 'archived' : 'active'} announcements...`}
             value={searchTerm}
             onChange={(event) => {
               setSearchTerm(event.target.value)
@@ -110,6 +190,12 @@ export default function AnnouncementPage() {
           />
         </div>
       </div>
+
+      {actionError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
@@ -122,20 +208,19 @@ export default function AnnouncementPage() {
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Position</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
-                                    <th className="px-6 py-4 text-center text-xs font-semibold text-slate-700 uppercase tracking-wide">Options</th>
-
+                <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <p className="font-medium text-slate-600">Loading announcements...</p>
                   </td>
                 </tr>
               ) : isError ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <p className="text-sm font-medium text-red-600">
                       {error instanceof Error ? error.message : 'Failed to load announcements.'}
                     </p>
@@ -172,35 +257,40 @@ export default function AnnouncementPage() {
                       </div>
                     </td>
 
-                     <td className="px-6 py-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                             
-                              <button
-                                onClick={() => {
-                                  setSelectedAnnouncement(announcement)
-                                  setIsModalOpen(true)
-                                }}
-                                className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors"
-                                title="Edit"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                               
-                                className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-
-                                <Archive className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedAnnouncement(announcement)
+                            setIsModalOpen(true)
+                          }}
+                          className="rounded-lg p-1.5 text-amber-600 transition-colors hover:bg-amber-50"
+                          title="Edit"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleArchiveToggle(announcement)}
+                          disabled={archiveMutation.isPending}
+                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          title={announcement.isArchive ? 'Unarchive' : 'Archive'}
+                        >
+                          {announcement.isArchive ? (
+                            <RotateCcw className="h-4 w-4" />
+                          ) : (
+                            <Archive className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <p className="font-medium text-slate-600">No announcements found</p>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <p className="font-medium text-slate-600">
+                      No {isArchivedView ? 'archived' : 'active'} announcements found
+                    </p>
                   </td>
                 </tr>
               )}

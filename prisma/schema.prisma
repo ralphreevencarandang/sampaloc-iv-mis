@@ -83,6 +83,7 @@ model Resident {
 
   isVoter           Boolean  @default(false)
   precinctNumber    String?   @map("precinctNumber")
+  isArchived        Boolean  @default(false)
   
  
   validIDImage     String?
@@ -104,12 +105,12 @@ model Official {
   firstName  String
   lastName   String
   middleName String
-  email      String   @unique
+  email      String    @unique
   isActive   Boolean  @default(true)
   position   String
   termStart  DateTime
   termEnd    DateTime?
-  isArchived  Boolean  @default(false)
+  isArchive  Boolean  @default(false)
 
   // Relationships
   announcements    Announcement[]    @relation("CreatedByOfficial")
@@ -122,7 +123,7 @@ model Announcement {
   title     String
   content   String   @db.Text
   image String?
-  isArchived Boolean  @default(false)
+  isArchive  Boolean  @default(false)
 
   createdById String
   createdBy   Official @relation("CreatedByOfficial", fields: [createdById], references: [id])
@@ -158,6 +159,7 @@ model Blotter {
   date          DateTime
 
   status        BlotterStatus @default(OPEN)
+  isArchive     Boolean       @default(false)
 
   handledById   String?
   handledBy     Official?     @relation("HandledByOfficial", fields: [handledById], references: [id])

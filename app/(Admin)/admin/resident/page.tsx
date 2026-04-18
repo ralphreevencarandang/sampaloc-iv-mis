@@ -1,13 +1,16 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { Search, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Archive } from 'lucide-react'
-import ResidentFormModal from '@/components/ui/Admin/ResidentFormModal'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import apiClient from '@/lib/axios'
+import { ChevronLeft, ChevronRight, Edit2, Eye, Archive, RotateCcw, Search } from 'lucide-react'
 import Link from 'next/link'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { deleteResidentAction } from '@/server/actions/resident.actions'
+import ResidentFormModal from '@/components/ui/Admin/ResidentFormModal'
+import {
+  archiveResidentAction,
+  unarchiveResidentAction,
+} from '@/server/actions/resident.actions'
+
 interface ResidentRecord {
   id: string
   email: string
@@ -24,17 +27,26 @@ interface ResidentRecord {
   citizenship: string
   isVoter: boolean
   precinctNumber: string | null
+  isArchived: boolean
   status: 'PENDING' | 'APPROVED' | 'DECLINED'
 }
 
-type DeleteResidentState = {
-  id: string
-  name: string
-}
+type ResidentView = 'active' | 'archived'
 
-async function fetchResidents(): Promise<ResidentRecord[]> {
-  const { data } = await apiClient.get<ResidentRecord[]>('/residents')
-  return data
+async function fetchResidents(view: ResidentView): Promise<ResidentRecord[]> {
+  const response = await fetch(`/api/residents?archived=${view === 'archived'}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { message?: string } | null
+    throw new Error(error?.message ?? 'Failed to fetch residents.')
+  }
+
+  return (await response.json()) as ResidentRecord[]
 }
 
 const ITEMS_PER_PAGE = 10
@@ -44,8 +56,8 @@ export default function ResidentPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedResident, setSelectedResident] = useState<ResidentRecord | null>(null)
-  const [residentToDelete, setResidentToDelete] = useState<DeleteResidentState | null>(null)
-  const [deleteError, setDeleteError] = useState('')
+  const [view, setView] = useState<ResidentView>('active')
+  const [actionError, setActionError] = useState('')
   const queryClient = useQueryClient()
 
   const {
@@ -53,9 +65,9 @@ export default function ResidentPage() {
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ['residents'],
-    queryFn: fetchResidents,
+  } = useQuery<ResidentRecord[]>({
+    queryKey: ['residents', view],
+    queryFn: () => fetchResidents(view),
   })
 
   const filteredResidents = useMemo(() => {
@@ -63,16 +75,19 @@ export default function ResidentPage() {
       const fullName = `${resident.firstName} ${resident.lastName}`.toLowerCase()
       const address = `${resident.houseNumber} ${resident.street}`.toLowerCase()
       const search = searchTerm.toLowerCase()
-      
-      return fullName.includes(search) || 
-             resident.email.toLowerCase().includes(search) || 
-             address.includes(search)
+
+      return (
+        fullName.includes(search) ||
+        resident.email.toLowerCase().includes(search) ||
+        address.includes(search)
+      )
     })
   }, [searchTerm, residents])
 
   const totalPages = Math.ceil(filteredResidents.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const paginatedResidents = filteredResidents.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+  const isArchivedView = view === 'archived'
 
   useEffect(() => {
     if (totalPages === 0) {
@@ -86,6 +101,14 @@ export default function ResidentPage() {
       queueMicrotask(() => setCurrentPage(totalPages))
     }
   }, [currentPage, totalPages])
+
+  const handleViewChange = (nextView: ResidentView) => {
+    setView(nextView)
+    setCurrentPage(1)
+    setSearchTerm('')
+    setActionError('')
+    setSelectedResident(null)
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -105,93 +128,107 @@ export default function ResidentPage() {
     const birth = new Date(birthDate)
     let age = today.getFullYear() - birth.getFullYear()
     const m = today.getMonth() - birth.getMonth()
+
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
       age--
     }
+
     return age
   }
 
-  const deleteMutation = useMutation({
-    mutationFn: async (residentId: string) => {
-      const result = await deleteResidentAction(residentId)
-
-      if (!result.success) {
-        throw new Error(result.message)
-      }
-
-      return result
-    },
-    onMutate: async (residentId: string) => {
-      setDeleteError('')
-      await queryClient.cancelQueries({ queryKey: ['residents'] })
-
-      const previousResidents = queryClient.getQueryData<ResidentRecord[]>(['residents'])
-
-      queryClient.setQueryData<ResidentRecord[]>(['residents'], (current) =>
-        (current ?? []).filter((resident) => resident.id !== residentId)
-      )
-
-      return { previousResidents }
+  const archiveMutation = useMutation({
+    mutationFn: async (payload: { id: string; archived: boolean }) => {
+      return payload.archived
+        ? archiveResidentAction(payload.id)
+        : unarchiveResidentAction(payload.id)
     },
     onSuccess: (result) => {
-      toast.success(result.message)
-      queryClient.invalidateQueries({ queryKey: ['residents'] })
-      setResidentToDelete(null)
-      setDeleteError('')
-    },
-    onError: (error, _residentId, context) => {
-      if (context?.previousResidents) {
-        queryClient.setQueryData(['residents'], context.previousResidents)
+      if (!result.success) {
+        setActionError(result.message)
+        toast.error(result.message)
+        return
       }
 
-      const message = error instanceof Error ? error.message : 'Unable to delete resident.'
-      setDeleteError(message)
+      setActionError('')
+      toast.success(result.message)
+      void queryClient.invalidateQueries({ queryKey: ['residents'] })
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to update resident archive state.'
+      setActionError(message)
       toast.error(message)
     },
   })
 
+  const handleArchiveToggle = (resident: ResidentRecord) => {
+    setActionError('')
+    archiveMutation.mutate({
+      id: resident.id,
+      archived: !resident.isArchived,
+    })
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Residents</h1>
-          <p className="text-slate-600 mt-1">Manage barangay residents and their information</p>
+          <p className="mt-1 text-slate-600">Manage barangay residents and their information</p>
         </div>
 
-        {/* Create Resident Button */}
-        {/* <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 w-fit"
-        >
-          <Plus className="w-5 h-5" />
-          Add Resident
-        </button> */}
+        <div className="flex flex-wrap gap-3">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => handleViewChange('active')}
+              className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                view === 'active'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Active
+            </button>
+            <button
+              type="button"
+              onClick={() => handleViewChange('archived')}
+              className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                view === 'archived'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Archived
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
-        <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-lg border border-gray-200">
-          <Search className="w-5 h-5 text-slate-400" />
+      <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-slate-50 px-4 py-2.5">
+          <Search className="h-5 w-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by name, email, or address..."
+            placeholder={`Search ${isArchivedView ? 'archived' : 'active'} residents...`}
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value)
+            onChange={(event) => {
+              setSearchTerm(event.target.value)
               setCurrentPage(1)
             }}
-            className="flex-1 bg-transparent outline-none text-slate-700 placeholder-slate-500"
+            className="flex-1 bg-transparent text-slate-700 outline-none placeholder-slate-500"
           />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+      {actionError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
         {isLoading ? (
-          <div className="px-6 py-12 text-center text-slate-500">
-            Loading residents...
-          </div>
+          <div className="px-6 py-12 text-center text-slate-500">Loading residents...</div>
         ) : isError ? (
           <div className="px-6 py-12 text-center text-red-500">
             Error loading residents: {error instanceof Error ? error.message : 'Unknown error'}
@@ -201,71 +238,81 @@ export default function ResidentPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-gray-100">
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Name</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Email</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Age</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Gender</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Civil Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Voters</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Address</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Status</th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-slate-700 uppercase tracking-wide">Options</th>
+                  <tr className="border-b border-gray-100 bg-slate-50">
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Name</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Email</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Age</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Gender</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Civil Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Voters</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Address</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Status</th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedResidents.length > 0 ? (
                     paginatedResidents.map((resident) => {
-                      const fullName = `${resident.firstName} ${resident.middleName ? resident.middleName + ' ' : ''}${resident.lastName}`
+                      const fullName = `${resident.firstName} ${resident.middleName ? `${resident.middleName} ` : ''}${resident.lastName}`
                       const address = `${resident.houseNumber} ${resident.street}`
                       const age = computeAge(resident.birthDate)
 
                       return (
-                        <tr key={resident.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
+                        <tr key={resident.id} className="border-b border-gray-100 transition-colors hover:bg-slate-50">
                           <td className="px-6 py-4 text-sm font-medium text-slate-900">{fullName}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{resident.email}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{age}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{resident.gender}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{resident.civilStatus}</td>
                           <td className="px-6 py-4 text-sm">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${resident.isVoter ? 'bg-primary-50 text-primary-700 border border-primary-200' : 'bg-slate-50 text-slate-700 border border-slate-200'}`}>
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
+                                resident.isVoter
+                                  ? 'border-primary-200 bg-primary-50 text-primary-700'
+                                  : 'border-slate-200 bg-slate-50 text-slate-700'
+                              }`}
+                            >
                               {resident.isVoter ? 'Yes' : 'No'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">{address}</td>
+                          <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600">{address}</td>
                           <td className="px-6 py-4 text-sm">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(resident.status)}`}>
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusColor(resident.status)}`}
+                            >
                               {resident.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <Link href={`/admin/resident/${resident.id}`} className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View">
-                              
-                                  <Eye className="w-4 h-4" />
-                             
+                              <Link
+                                href={`/admin/resident/${resident.id}`}
+                                className="rounded-lg p-1.5 text-primary-600 transition-colors hover:bg-primary-50"
+                                title="View"
+                              >
+                                <Eye className="h-4 w-4" />
                               </Link>
-                              <button 
+                              <button
                                 onClick={() => {
                                   setSelectedResident(resident)
                                   setIsModalOpen(true)
                                 }}
-                                className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit"
+                                className="rounded-lg p-1.5 text-amber-600 transition-colors hover:bg-amber-50"
+                                title="Edit"
                               >
-                                <Edit2 className="w-4 h-4" />
+                                <Edit2 className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => {
-                                  setDeleteError('')
-                                  setResidentToDelete({
-                                    id: resident.id,
-                                    name: `${resident.firstName} ${resident.middleName ? `${resident.middleName} ` : ''}${resident.lastName}`,
-                                  })
-                                }}
-                                className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                                title="Delete"
+                                onClick={() => handleArchiveToggle(resident)}
+                                disabled={archiveMutation.isPending}
+                                className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                title={resident.isArchived ? 'Unarchive' : 'Archive'}
                               >
-                                <Archive className="w-4 h-4" />
+                                {resident.isArchived ? (
+                                  <RotateCcw className="h-4 w-4" />
+                                ) : (
+                                  <Archive className="h-4 w-4" />
+                                )}
                               </button>
                             </div>
                           </td>
@@ -275,7 +322,9 @@ export default function ResidentPage() {
                   ) : (
                     <tr>
                       <td colSpan={9} className="px-6 py-12 text-center">
-                        <p className="text-slate-600 font-medium">No residents found matching your criteria</p>
+                        <p className="font-medium text-slate-600">
+                          No {isArchivedView ? 'archived' : 'active'} residents found matching your criteria
+                        </p>
                       </td>
                     </tr>
                   )}
@@ -283,9 +332,8 @@ export default function ResidentPage() {
               </table>
             </div>
 
-            {/* Pagination */}
             {filteredResidents.length > 0 && (
-              <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center justify-between border-t border-gray-100 bg-slate-50 px-6 py-4">
                 <div className="text-sm text-slate-600">
                   Showing <span className="font-semibold">{startIndex + 1}</span> to{' '}
                   <span className="font-semibold">{Math.min(startIndex + ITEMS_PER_PAGE, filteredResidents.length)}</span> of{' '}
@@ -295,16 +343,16 @@ export default function ResidentPage() {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="p-2 rounded-lg border border-gray-200 text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="rounded-lg border border-gray-200 p-2 text-slate-600 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`w-10 h-10 rounded-lg font-medium transition-colors ${
+                        className={`h-10 w-10 rounded-lg font-medium transition-colors ${
                           currentPage === page
                             ? 'bg-primary-600 text-white'
                             : 'border border-gray-200 text-slate-600 hover:bg-slate-100'
@@ -317,9 +365,9 @@ export default function ResidentPage() {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="p-2 rounded-lg border border-gray-200 text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="rounded-lg border border-gray-200 p-2 text-slate-600 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -328,56 +376,14 @@ export default function ResidentPage() {
         )}
       </div>
 
-      {/* Resident Form Modal */}
-      <ResidentFormModal 
-        isOpen={isModalOpen} 
+      <ResidentFormModal
+        isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false)
           setSelectedResident(null)
-        }} 
-        initialData={selectedResident} 
+        }}
+        initialData={selectedResident}
       />
-
-      {residentToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-slate-900">Delete resident</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              This will permanently remove <span className="font-semibold text-slate-900">{residentToDelete.name}</span> and related resident records.
-            </p>
-
-            {deleteError && (
-              <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {deleteError}
-              </div>
-            )}
-
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (!deleteMutation.isPending) {
-                    setResidentToDelete(null)
-                    setDeleteError('')
-                  }
-                }}
-                disabled={deleteMutation.isPending}
-                className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => deleteMutation.mutate(residentToDelete.id)}
-                disabled={deleteMutation.isPending}
-                className="flex-1 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
-              >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete Resident'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

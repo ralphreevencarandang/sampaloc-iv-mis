@@ -60,6 +60,7 @@ export async function loginResidentAction(
         firstName: true,
         lastName: true,
         status: true,
+        isArchived: true,
       },
     });
 
@@ -70,6 +71,13 @@ export async function loginResidentAction(
         fieldErrors: {
           email: "Invalid email or password.",
         },
+      };
+    }
+
+    if (resident.isArchived) {
+      return {
+        success: false,
+        message: "Account is archived.",
       };
     }
 

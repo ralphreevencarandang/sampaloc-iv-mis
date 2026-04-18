@@ -14,6 +14,8 @@ import {
   residentRegistrationSchema,
   type ResidentRegistrationInput,
 } from "@/validations/resident.validation";
+import logo from '@/public/images/dasma-logo.png'
+
 
 type RegisterFormState = Omit<ResidentRegistrationInput, "validIDImageName"> & {
   validIDImage: File | null;
@@ -45,6 +47,10 @@ const initialFormState: RegisterFormState = {
 
 const civilStatuses = ["Single", "Married", "Widowed", "Divorced", "Separated"];
 const genders = ["Male", "Female"];
+
+function RequiredMark() {
+  return <span aria-hidden="true" className="ml-1 text-red-500">*</span>;
+}
 
 function getSubmissionErrorMessage(error: unknown): Record<string, string> {
   const message = error instanceof Error ? error.message : "";
@@ -246,9 +252,9 @@ export default function RegisterPage() {
       <div className="mx-auto max-w-4xl rounded-xl border border-gray-100 bg-white p-8 shadow-lg">
         <div className="mb-8 text-center">
           <div className="mb-4 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-600 text-2xl font-bold text-white">
-              MSI
-            </div>
+
+
+            <Image src={logo} alt="Logo" width={80} height={80} />
           </div>
           <h1 className="text-3xl font-extrabold text-gray-900">Barangay Registration</h1>
           <p className="mt-2 text-sm text-gray-600">
@@ -279,7 +285,9 @@ export default function RegisterPage() {
             </h2>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Email Address</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Email Address<RequiredMark />
+                </label>
                 <input
                   type="email"
                   name="email"
@@ -294,7 +302,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Password</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Password<RequiredMark />
+                </label>
                 <input
                   type="password"
                   name="password"
@@ -309,7 +319,9 @@ export default function RegisterPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-gray-700">Confirm Password</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Confirm Password<RequiredMark />
+                </label>
                 <input
                   type="password"
                   name="confirmPassword"
@@ -333,7 +345,9 @@ export default function RegisterPage() {
             </h2>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">First Name</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  First Name<RequiredMark />
+                </label>
                 <input
                   type="text"
                   name="firstName"
@@ -358,7 +372,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Last Name</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Last Name<RequiredMark />
+                </label>
                 <input
                   type="text"
                   name="lastName"
@@ -372,7 +388,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Birth Date</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Birth Date<RequiredMark />
+                </label>
                 <input
                   type="date"
                   name="birthDate"
@@ -386,7 +404,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Gender</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Gender<RequiredMark />
+                </label>
                 <select
                   name="gender"
                   value={formData.gender}
@@ -406,7 +426,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Civil Status</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Civil Status<RequiredMark />
+                </label>
                 <select
                   name="civilStatus"
                   value={formData.civilStatus}
@@ -435,7 +457,9 @@ export default function RegisterPage() {
             </h2>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Street</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Street<RequiredMark />
+                </label>
                 <input
                   type="text"
                   name="street"
@@ -449,7 +473,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">House Number</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  House Number<RequiredMark />
+                </label>
                 <input
                   type="text"
                   name="houseNumber"
@@ -465,7 +491,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Contact Number</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Contact Number<RequiredMark />
+                </label>
                 <input
                   type="tel"
                   name="contactNumber"
@@ -494,7 +522,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Citizenship</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Citizenship<RequiredMark />
+                </label>
                 <input
                   type="text"
                   name="citizenship"
@@ -511,7 +541,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Eligible to Vote</label>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Eligible to Vote<RequiredMark />
+                </label>
                 <select
                   name="isVoter"
                   value={formData.isVoter}
@@ -532,7 +564,7 @@ export default function RegisterPage() {
               {formData.isVoter === "Yes" && (
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Precinct Number
+                    Precinct Number<RequiredMark />
                   </label>
                   <input
                     type="text"
@@ -558,7 +590,9 @@ export default function RegisterPage() {
               Identity Verification
             </h2>
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Upload Valid ID</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Upload Valid ID<RequiredMark />
+              </label>
               <label className="relative block w-full">
                 <input type="file" accept="image/*" onChange={handleIDImageChange} className="sr-only" />
                 <div

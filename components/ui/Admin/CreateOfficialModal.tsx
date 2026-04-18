@@ -16,6 +16,10 @@ type CreateOfficialModalProps = ModalProps & {
   onOfficialCreated: (official: OfficialRecord) => void;
 };
 
+function RequiredMark() {
+  return <span aria-hidden="true" className="ml-1 text-red-500">*</span>;
+}
+
 const positionOptions = [
   "Barangay Captain",
   "Barangay Kagawad - Health",
@@ -218,7 +222,7 @@ const CreateOfficialModal = ({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
               <label htmlFor="firstName" className="text-sm font-medium text-slate-700">
-                First Name
+                First Name<RequiredMark />
               </label>
               <input
                 id="firstName"
@@ -232,7 +236,7 @@ const CreateOfficialModal = ({
 
             <div className="flex flex-col gap-2">
               <label htmlFor="lastName" className="text-sm font-medium text-slate-700">
-                Last Name
+                Last Name<RequiredMark />
               </label>
               <input
                 id="lastName"
@@ -246,7 +250,7 @@ const CreateOfficialModal = ({
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <label htmlFor="email" className="text-sm font-medium text-slate-700">
-                Email
+                Email<RequiredMark />
               </label>
               <input
                 id="email"
@@ -311,7 +315,7 @@ const CreateOfficialModal = ({
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <label htmlFor="status" className="text-sm font-medium text-slate-700">
-                Status
+                Status<RequiredMark />
               </label>
               <select
                 id="status"
@@ -326,7 +330,7 @@ const CreateOfficialModal = ({
             </div>
             <div className="flex flex-col gap-2 md:col-span-2">
               <label htmlFor="position" className="text-sm font-medium text-slate-700">
-                Position
+                Position<RequiredMark />
               </label>
               <select
                 id="position"
@@ -345,7 +349,7 @@ const CreateOfficialModal = ({
 
             <div className="flex flex-col gap-2">
               <label htmlFor="termStart" className="text-sm font-medium text-slate-700">
-                Term Start
+                Term Start<RequiredMark />
               </label>
               <input
                 id="termStart"

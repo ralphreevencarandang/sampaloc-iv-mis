@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { fetchAnnouncementsFromDb } from "@/server/announcements/announcements";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const announcements = await fetchAnnouncementsFromDb();
+    const { searchParams } = new URL(request.url);
+    const archived = searchParams.get("archived") === "true";
+    const announcements = await fetchAnnouncementsFromDb({ archived });
 
     return NextResponse.json(announcements);
   } catch (error) {

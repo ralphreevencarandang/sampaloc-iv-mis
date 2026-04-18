@@ -41,6 +41,10 @@ const defaultValues: AnnouncementFormInput = {
   imageName: '',
 }
 
+function RequiredMark() {
+  return <span aria-hidden="true" className="ml-1 text-red-500">*</span>
+}
+
 async function fetchOfficials(): Promise<OfficialRecord[]> {
   const response = await fetch('/api/officials', {
     method: 'GET',
@@ -255,7 +259,7 @@ export default function AnnouncementModalForm({
 
           <div className="flex flex-col gap-2">
             <label htmlFor="createdById" className="text-sm font-medium text-slate-700">
-              Created By
+              Created By<RequiredMark />
             </label>
             <select
               id="createdById"
@@ -284,7 +288,7 @@ export default function AnnouncementModalForm({
 
           <div className="flex flex-col gap-2">
             <label htmlFor="title" className="text-sm font-medium text-slate-700">
-              Announcement Title
+              Announcement Title<RequiredMark />
             </label>
             <input
               id="title"
@@ -298,7 +302,7 @@ export default function AnnouncementModalForm({
 
           <div className="flex flex-col gap-2">
             <label htmlFor="content" className="text-sm font-medium text-slate-700">
-              Content
+              Content<RequiredMark />
             </label>
             <textarea
               id="content"

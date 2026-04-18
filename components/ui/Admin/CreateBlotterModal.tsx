@@ -14,6 +14,10 @@ export interface ModalProps {
   onClose: () => void;
 }
 
+function RequiredMark() {
+  return <span aria-hidden="true" className="ml-1 text-red-500">*</span>;
+}
+
 const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
   const queryClient = useQueryClient();
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -36,7 +40,7 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
     handleSubmit,
     reset,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<BlotterFormInput>({
     resolver: zodResolver(blotterSchema),
     defaultValues: {
@@ -59,12 +63,12 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
       setSubmitError(null);
       onClose();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const result = error as CreateBlotterResult;
       setSubmitError(result.message || "Something went wrong.");
       if (result.fieldErrors) {
         Object.keys(result.fieldErrors).forEach((key) => {
-          setError(key as any, {
+          setError(key as keyof BlotterFormInput, {
             type: "server",
             message: result.fieldErrors![key],
           });
@@ -120,7 +124,9 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="complainantId" className="text-sm font-medium text-slate-700">Complainant</label>
+              <label htmlFor="complainantId" className="text-sm font-medium text-slate-700">
+                Complainant<RequiredMark />
+              </label>
               <select
                 id="complainantId"
                 {...register("complainantId")}
@@ -139,7 +145,9 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="respondentName" className="text-sm font-medium text-slate-700">Respondent Name</label>
+              <label htmlFor="respondentName" className="text-sm font-medium text-slate-700">
+                Respondent Name<RequiredMark />
+              </label>
               <input
                 id="respondentName"
                 type="text"
@@ -153,7 +161,9 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="location" className="text-sm font-medium text-slate-700">Location</label>
+              <label htmlFor="location" className="text-sm font-medium text-slate-700">
+                Location<RequiredMark />
+              </label>
               <input
                 id="location"
                 type="text"
@@ -167,7 +177,9 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="date" className="text-sm font-medium text-slate-700">Date and Time</label>
+              <label htmlFor="date" className="text-sm font-medium text-slate-700">
+                Date and Time<RequiredMark />
+              </label>
               <input
                 id="date"
                 type="datetime-local"
@@ -181,7 +193,9 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="incident" className="text-sm font-medium text-slate-700">Incident Description</label>
+            <label htmlFor="incident" className="text-sm font-medium text-slate-700">
+              Incident Description<RequiredMark />
+            </label>
             <textarea
               id="incident"
               placeholder="Incident Description"
@@ -213,7 +227,9 @@ const CreateBlotterModal = ({ isOpen, onClose }: ModalProps) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="status" className="text-sm font-medium text-slate-700">Status</label>
+              <label htmlFor="status" className="text-sm font-medium text-slate-700">
+                Status<RequiredMark />
+              </label>
               <select
                 id="status"
                 {...register("status")}

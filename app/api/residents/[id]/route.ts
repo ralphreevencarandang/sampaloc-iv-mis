@@ -27,6 +27,7 @@ export async function GET(_: Request, { params }: RouteContext) {
         citizenship: true,
         isVoter: true,
         precinctNumber: true,
+        isArchived: true,
         validIDImage: true,
         status: true,
         createdAt: true,
