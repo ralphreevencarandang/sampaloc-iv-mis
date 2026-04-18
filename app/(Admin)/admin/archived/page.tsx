@@ -1,8 +1,67 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import React, { useState } from 'react'
 import { Archive, Calendar, Megaphone, Scale, Search, Shield, Users } from 'lucide-react'
 import ArchiveCard from '@/components/ui/Admin/ArchiveCard'
+import api from '@/lib/axios'
+import axios from 'axios'
+import type { AnnouncementRecord } from '@/server/announcements/announcements'
+import type { ResidentRecord } from '@/app/(Admin)/admin/resident/page'
+import type { OfficialRecord } from '@/server/officials/officials'
+import type { BlotterRecord } from '@/server/actions/blotter.actions'
+
+async function fetchArchivedBlotters(): Promise<BlotterRecord[]> {
+  try {
+    const response = await api.get<BlotterRecord[]>('/archives?type=blotters')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { message?: string } | undefined)?.message
+      throw new Error(message ?? 'Failed to fetch archived blotters.')
+    }
+    throw error
+  }
+}
+
+async function fetchArchivedOfficials(): Promise<OfficialRecord[]> {
+  try {
+    const response = await api.get<OfficialRecord[]>('/archives?type=officials')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { message?: string } | undefined)?.message
+      throw new Error(message ?? 'Failed to fetch archived officials.')
+    }
+    throw error
+  }
+}
+
+async function fetchArchivedResidents(): Promise<ResidentRecord[]> {
+  try {
+    const response = await api.get<ResidentRecord[]>('/archives?type=residents')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { message?: string } | undefined)?.message
+      throw new Error(message ?? 'Failed to fetch archived residents.')
+    }
+    throw error
+  }
+}
+
+async function fetchArchivedAnnouncements(): Promise<AnnouncementRecord[]> {
+  try {
+    const response = await api.get<AnnouncementRecord[]>('/archives?type=announcements')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { message?: string } | undefined)?.message
+      throw new Error(message ?? 'Failed to fetch archived announcements.')
+    }
+    throw error
+  }
+}
 
 const ARCHIVED_DATA = {
   Residents: [
@@ -67,6 +126,50 @@ function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationProps) {
 function ArchivedPage() {
   const [activeTab, setActiveTab] = useState<TabId>('Residents')
 
+  const {
+    data: archivedOfficials = [],
+    isLoading: isOfficialsLoading,
+    isError: isOfficialsError,
+    error: officialsError,
+  } = useQuery({
+    queryKey: ['archivedData', 'officials'],
+    queryFn: fetchArchivedOfficials,
+    enabled: activeTab === 'Officials',
+  })
+
+  const {
+    data: archivedResidents = [],
+    isLoading: isResidentsLoading,
+    isError: isResidentsError,
+    error: residentsError,
+  } = useQuery({
+    queryKey: ['archivedData', 'residents'],
+    queryFn: fetchArchivedResidents,
+    enabled: activeTab === 'Residents',
+  })
+
+  const {
+    data: archivedAnnouncements = [],
+    isLoading: isAnnouncementsLoading,
+    isError: isAnnouncementsError,
+    error: announcementsError,
+  } = useQuery({
+    queryKey: ['archivedData', 'announcements'],
+    queryFn: fetchArchivedAnnouncements,
+    enabled: activeTab === 'Announcements',
+  })
+
+  const {
+    data: archivedBlotters = [],
+    isLoading: isBlottersLoading,
+    isError: isBlottersError,
+    error: blottersError,
+  } = useQuery({
+    queryKey: ['archivedData', 'blotters'],
+    queryFn: fetchArchivedBlotters,
+    enabled: activeTab === 'Blotters',
+  })
+
   const tabs: TabDefinition[] = [
     { id: 'Residents', label: 'Residents', icon: Users },
     { id: 'Officials', label: 'Officials', icon: Shield },
@@ -77,43 +180,131 @@ function ArchivedPage() {
   const renderContent = () => {
     switch (activeTab) {
       case 'Residents':
-        return ARCHIVED_DATA.Residents.map((item) => (
+        if (isResidentsLoading) {
+          return [
+            <div key="loading-residents" className="flex w-full flex-col items-center justify-center py-12 text-center">
+              <p className="font-medium text-slate-600">Loading archived residents...</p>
+            </div>
+          ]
+        }
+        
+        if (isResidentsError) {
+          return [
+            <div key="error-residents" className="flex w-full flex-col items-center justify-center py-12 text-center text-red-600">
+              <p className="font-medium">
+                {residentsError instanceof Error ? residentsError.message : 'Error loading residents'}
+              </p>
+            </div>
+          ]
+        }
+
+        if (archivedResidents.length === 0) {
+          return [] 
+        }
+
+        return archivedResidents.map((item) => (
           <ArchiveCard
             key={item.id}
-            title={item.name}
+            title={`${item.firstName} ${item.lastName}`}
             subtitle={`Resident ID: ${item.id}`}
-            metadata={item.status}
-            archivedDate={item.archivedDate}
+            metadata={`Status: ${item.status}`}
+            archivedDate={item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : 'N/A'}
           />
         ))
       case 'Officials':
-        return ARCHIVED_DATA.Officials.map((item) => (
+        if (isOfficialsLoading) {
+          return [
+            <div key="loading-officials" className="flex w-full flex-col items-center justify-center py-12 text-center">
+              <p className="font-medium text-slate-600">Loading archived officials...</p>
+            </div>
+          ]
+        }
+        
+        if (isOfficialsError) {
+          return [
+            <div key="error-officials" className="flex w-full flex-col items-center justify-center py-12 text-center text-red-600">
+              <p className="font-medium">
+                {officialsError instanceof Error ? officialsError.message : 'Error loading officials'}
+              </p>
+            </div>
+          ]
+        }
+
+        if (archivedOfficials.length === 0) {
+          return [] 
+        }
+
+        return archivedOfficials.map((item) => (
           <ArchiveCard
             key={item.id}
             title={item.name}
             subtitle={`Official ID: ${item.id} • ${item.position}`}
-            metadata={`Term Ended: ${new Date(item.termEnded).toLocaleDateString()}`}
-            archivedDate={item.archivedDate}
+            metadata={`Term Ended: ${item.termEnd ? new Date(item.termEnd).toLocaleDateString() : 'N/A'}`}
+            archivedDate={'N/A'}
           />
         ))
       case 'Announcements':
-        return ARCHIVED_DATA.Announcements.map((item) => (
+        if (isAnnouncementsLoading) {
+          return [
+            <div key="loading" className="flex w-full flex-col items-center justify-center py-12 text-center">
+              <p className="font-medium text-slate-600">Loading archived announcements...</p>
+            </div>
+          ]
+        }
+        
+        if (isAnnouncementsError) {
+          return [
+            <div key="error" className="flex w-full flex-col items-center justify-center py-12 text-center text-red-600">
+              <p className="font-medium">
+                {announcementsError instanceof Error ? announcementsError.message : 'Error loading announcements'}
+              </p>
+            </div>
+          ]
+        }
+
+        if (archivedAnnouncements.length === 0) {
+          return [] 
+        }
+
+        return archivedAnnouncements.map((item) => (
           <ArchiveCard
             key={item.id}
             title={item.title}
             subtitle={`Announcement ID: ${item.id}`}
-            metadata={`Posted on: ${new Date(item.postedDate).toLocaleDateString()}`}
-            archivedDate={item.archivedDate}
+            metadata={`Posted on: ${new Date(item.createdAt).toLocaleDateString()}`}
+            archivedDate={new Date(item.createdAt).toISOString().split('T')[0]}
           />
         ))
       case 'Blotters':
-        return ARCHIVED_DATA.Blotters.map((item) => (
+        if (isBlottersLoading) {
+          return [
+            <div key="loading" className="flex w-full flex-col items-center justify-center py-12 text-center">
+              <p className="font-medium text-slate-600">Loading archived blotters...</p>
+            </div>
+          ]
+        }
+        
+        if (isBlottersError) {
+          return [
+            <div key="error" className="flex w-full flex-col items-center justify-center py-12 text-center text-red-600">
+              <p className="font-medium">
+                {blottersError instanceof Error ? blottersError.message : 'Error loading blotters'}
+              </p>
+            </div>
+          ]
+        }
+
+        if (archivedBlotters.length === 0) {
+          return [] 
+        }
+
+        return archivedBlotters.map((item) => (
           <ArchiveCard
             key={item.id}
             title={item.incident}
             subtitle={`Case ID: ${item.id}`}
-            metadata={`Status: ${item.resolution}`}
-            archivedDate={item.archivedDate}
+            metadata={`Status: ${item.status}`}
+            archivedDate={item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : 'N/A'}
           />
         ))
       default:

@@ -2,12 +2,13 @@
 
 import Image from 'next/image'
 import React, { useMemo, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Archive } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Archive, RotateCcw } from 'lucide-react'
 import axios from 'axios'
 import CreateOfficialModal from '@/components/ui/Admin/CreateOfficialModal'
 import apiClient from '@/lib/axios'
 import type { OfficialRecord } from '@/server/officials/officials'
+import { archiveOfficialAction, unarchiveOfficialAction } from '@/server/actions/archive.actions'
 import Link from 'next/link'
 
 const ITEMS_PER_PAGE = 10
@@ -30,6 +31,7 @@ export default function OfficialsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [actionError, setActionError] = useState('')
   const queryClient = useQueryClient()
 
   const {
@@ -73,6 +75,35 @@ export default function OfficialsPage() {
     setCurrentPage(1)
   }
 
+  const archiveMutation = useMutation({
+    mutationFn: async (payload: { id: string; archived: boolean }) => {
+      return payload.archived
+        ? archiveOfficialAction(payload.id)
+        : unarchiveOfficialAction(payload.id)
+    },
+    onSuccess: (result) => {
+      if (!result.success) {
+        setActionError(result.message)
+        return
+      }
+
+      setActionError('')
+      void queryClient.invalidateQueries({ queryKey: OFFICIALS_QUERY_KEY })
+      void queryClient.invalidateQueries({ queryKey: ['archivedData', 'officials'] })
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : 'Failed to update official archive state.')
+    },
+  })
+
+  const handleArchiveToggle = (official: OfficialRecord) => {
+    setActionError('')
+    archiveMutation.mutate({
+      id: official.id,
+      archived: !official.isArchive,
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -106,6 +137,12 @@ export default function OfficialsPage() {
           />
         </div>
       </div>
+
+      {actionError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
@@ -176,8 +213,17 @@ export default function OfficialsPage() {
                         <button className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Delete">
-                          <Archive className="w-4 h-4" />
+                        <button
+                          onClick={() => handleArchiveToggle(official)}
+                          disabled={archiveMutation.isPending}
+                          className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={official.isArchive ? 'Unarchive' : 'Archive'}
+                        >
+                          {official.isArchive ? (
+                            <RotateCcw className="w-4 h-4" />
+                          ) : (
+                            <Archive className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     </td>

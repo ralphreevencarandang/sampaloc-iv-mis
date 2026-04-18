@@ -23,14 +23,13 @@ import type { AnnouncementRecord } from '@/server/announcements/announcements'
 
 const ITEMS_PER_PAGE = 10
 const ANNOUNCEMENTS_QUERY_KEY = ['announcements'] as const
-type AnnouncementView = 'active' | 'archived'
 
 type AnnouncementsApiError = {
   message?: string
 }
 
-async function fetchAnnouncements(view: AnnouncementView): Promise<AnnouncementRecord[]> {
-  const response = await fetch(`/api/announcements?archived=${view === 'archived'}`, {
+async function fetchAnnouncements(): Promise<AnnouncementRecord[]> {
+  const response = await fetch(`/api/announcements`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -54,7 +53,6 @@ export default function AnnouncementPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementRecord | null>(null)
-  const [view, setView] = useState<AnnouncementView>('active')
   const [actionError, setActionError] = useState('')
   const queryClient = useQueryClient()
 
@@ -64,8 +62,8 @@ export default function AnnouncementPage() {
     isError,
     error,
   } = useQuery<AnnouncementRecord[]>({
-    queryKey: [...ANNOUNCEMENTS_QUERY_KEY, view],
-    queryFn: () => fetchAnnouncements(view),
+    queryKey: ANNOUNCEMENTS_QUERY_KEY,
+    queryFn: fetchAnnouncements,
   })
 
   const filteredAnnouncements = useMemo(() => {
@@ -106,6 +104,7 @@ export default function AnnouncementPage() {
 
       setActionError('')
       void queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_QUERY_KEY })
+      void queryClient.invalidateQueries({ queryKey: ['archivedData', 'announcements'] })
     },
     onError: (error) => {
       setActionError(error instanceof Error ? error.message : 'Failed to update archive state.')
@@ -120,16 +119,6 @@ export default function AnnouncementPage() {
     })
   }
 
-  const isArchivedView = view === 'archived'
-
-  const handleViewChange = (nextView: AnnouncementView) => {
-    setView(nextView)
-    setCurrentPage(1)
-    setSearchTerm('')
-    setActionError('')
-    setSelectedAnnouncement(null)
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -138,30 +127,6 @@ export default function AnnouncementPage() {
           <p className="mt-1 text-slate-600">Manage barangay announcements and updates</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => handleViewChange('active')}
-              className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                view === 'active'
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              Active
-            </button>
-            <button
-              type="button"
-              onClick={() => handleViewChange('archived')}
-              className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                view === 'archived'
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              Archived
-            </button>
-          </div>
           <button
             onClick={() => {
               setSelectedAnnouncement(null)
@@ -180,7 +145,7 @@ export default function AnnouncementPage() {
           <Search className="h-5 w-5 text-slate-400" />
           <input
             type="text"
-            placeholder={`Search ${isArchivedView ? 'archived' : 'active'} announcements...`}
+            placeholder="Search active announcements..."
             value={searchTerm}
             onChange={(event) => {
               setSearchTerm(event.target.value)
@@ -289,7 +254,7 @@ export default function AnnouncementPage() {
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <p className="font-medium text-slate-600">
-                      No {isArchivedView ? 'archived' : 'active'} announcements found
+                      No active announcements found
                     </p>
                   </td>
                 </tr>

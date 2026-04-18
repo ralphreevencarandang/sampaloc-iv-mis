@@ -87,6 +87,9 @@ export async function createBlotter(formData: FormData): Promise<CreateBlotterRe
 export async function getResidentsForDropdown() {
   try {
     const residents = await prisma.resident.findMany({
+      where: {
+        isArchived: false,
+      },
       select: {
         id: true,
         firstName: true,
@@ -106,4 +109,49 @@ export async function getResidentsForDropdown() {
     console.error("fetch residents failed", error);
     throw new Error("Failed to fetch residents");
   }
+}
+
+export interface BlotterRecord {
+  id: string;
+  complainant: string;
+  respondentName: string;
+  incident: string;
+  location: string;
+  date: string;
+  status: string;
+  handledBy?: string;
+  blotterImage: string | null;
+  createdAt: string;
+  isArchive: boolean;
+}
+
+export async function getBlottersFromDb(options: { archived?: boolean } = {}): Promise<BlotterRecord[]> {
+  const blotters = await prisma.blotter.findMany({
+    where: {
+      isArchive: options.archived ?? false,
+    },
+    include: {
+      complainant: true,
+      handledBy: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return blotters.map((b) => ({
+    id: b.id,
+    complainant: [b.complainant.firstName, b.complainant.lastName].filter(Boolean).join(" "),
+    respondentName: b.respondentName,
+    incident: b.incident,
+    location: b.location,
+    date: b.date.toISOString(),
+    status: b.status === "OPEN" ? "Open" : "Resolved",
+    handledBy: b.handledBy
+      ? [b.handledBy.firstName, b.handledBy.lastName].filter(Boolean).join(" ")
+      : undefined,
+    blotterImage: b.blotterImage,
+    createdAt: b.createdAt.toISOString(),
+    isArchive: b.isArchive,
+  }));
 }

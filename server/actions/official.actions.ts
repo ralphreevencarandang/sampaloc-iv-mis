@@ -138,6 +138,7 @@ export async function createOfficial(formData: FormData): Promise<CreateOfficial
         position: true,
         termStart: true,
         termEnd: true,
+        isArchive: true,
       },
     });
 

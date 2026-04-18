@@ -11,7 +11,7 @@ import {
   unarchiveResidentAction,
 } from '@/server/actions/resident.actions'
 
-interface ResidentRecord {
+export interface ResidentRecord {
   id: string
   email: string
   firstName: string
@@ -29,12 +29,11 @@ interface ResidentRecord {
   precinctNumber: string | null
   isArchived: boolean
   status: 'PENDING' | 'APPROVED' | 'DECLINED'
+  createdAt?: string
 }
 
-type ResidentView = 'active' | 'archived'
-
-async function fetchResidents(view: ResidentView): Promise<ResidentRecord[]> {
-  const response = await fetch(`/api/residents?archived=${view === 'archived'}`, {
+async function fetchResidents(): Promise<ResidentRecord[]> {
+  const response = await fetch(`/api/residents`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -56,7 +55,6 @@ export default function ResidentPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedResident, setSelectedResident] = useState<ResidentRecord | null>(null)
-  const [view, setView] = useState<ResidentView>('active')
   const [actionError, setActionError] = useState('')
   const queryClient = useQueryClient()
 
@@ -66,8 +64,8 @@ export default function ResidentPage() {
     isError,
     error,
   } = useQuery<ResidentRecord[]>({
-    queryKey: ['residents', view],
-    queryFn: () => fetchResidents(view),
+    queryKey: ['residents'],
+    queryFn: fetchResidents,
   })
 
   const filteredResidents = useMemo(() => {
@@ -87,7 +85,6 @@ export default function ResidentPage() {
   const totalPages = Math.ceil(filteredResidents.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const paginatedResidents = filteredResidents.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-  const isArchivedView = view === 'archived'
 
   useEffect(() => {
     if (totalPages === 0) {
@@ -102,13 +99,7 @@ export default function ResidentPage() {
     }
   }, [currentPage, totalPages])
 
-  const handleViewChange = (nextView: ResidentView) => {
-    setView(nextView)
-    setCurrentPage(1)
-    setSearchTerm('')
-    setActionError('')
-    setSelectedResident(null)
-  }
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -152,6 +143,7 @@ export default function ResidentPage() {
       setActionError('')
       toast.success(result.message)
       void queryClient.invalidateQueries({ queryKey: ['residents'] })
+      void queryClient.invalidateQueries({ queryKey: ['archivedData', 'residents'] })
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : 'Failed to update resident archive state.'
@@ -177,30 +169,6 @@ export default function ResidentPage() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => handleViewChange('active')}
-              className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                view === 'active'
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              Active
-            </button>
-            <button
-              type="button"
-              onClick={() => handleViewChange('archived')}
-              className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                view === 'archived'
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              Archived
-            </button>
-          </div>
         </div>
       </div>
 
@@ -209,7 +177,7 @@ export default function ResidentPage() {
           <Search className="h-5 w-5 text-slate-400" />
           <input
             type="text"
-            placeholder={`Search ${isArchivedView ? 'archived' : 'active'} residents...`}
+            placeholder="Search active residents..."
             value={searchTerm}
             onChange={(event) => {
               setSearchTerm(event.target.value)
@@ -323,7 +291,7 @@ export default function ResidentPage() {
                     <tr>
                       <td colSpan={9} className="px-6 py-12 text-center">
                         <p className="font-medium text-slate-600">
-                          No {isArchivedView ? 'archived' : 'active'} residents found matching your criteria
+                          No active residents found matching your criteria
                         </p>
                       </td>
                     </tr>

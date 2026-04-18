@@ -12,6 +12,7 @@ export type OfficialRecord = {
   termStart: string;
   termEnd: string | null;
   status: OfficialStatus;
+  isArchive: boolean;
 };
 
 type OfficialEntity = {
@@ -24,6 +25,7 @@ type OfficialEntity = {
   termStart: Date;
   termEnd: Date | null;
   isActive: boolean;
+  isArchive: boolean;
 };
 
 function buildOfficialName(firstName: string, lastName: string) {
@@ -42,11 +44,15 @@ function mapOfficialRecord(
     termStart: official.termStart.toISOString(),
     termEnd: official.termEnd?.toISOString() ?? null,
     status: official.isActive ? "Active" : "Inactive",
+    isArchive: official.isArchive,
   };
 }
 
-export async function fetchOfficialsFromDb(): Promise<OfficialRecord[]> {
+export async function fetchOfficialsFromDb(options: { archived?: boolean } = {}): Promise<OfficialRecord[]> {
   const officials = await prisma.official.findMany({
+    where: {
+      isArchive: options.archived ?? false,
+    },
     orderBy: [{ termStart: "desc" }, { id: "desc" }],
     select: {
       id: true,
@@ -58,6 +64,7 @@ export async function fetchOfficialsFromDb(): Promise<OfficialRecord[]> {
       position: true,
       termStart: true,
       termEnd: true,
+      isArchive: true,
     },
   });
 

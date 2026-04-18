@@ -1,31 +1,24 @@
 "use client"
 
 import React, { useState, useMemo } from 'react'
-import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Archive } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { Search, Plus, Edit2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Archive, RotateCcw } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import CreateBlotterModal from '@/components/ui/Admin/CreateBlotterModal'
 import axios from '@/lib/axios'
+import type { BlotterRecord } from '@/server/actions/blotter.actions'
+import { archiveBlotterAction, unarchiveBlotterAction } from '@/server/actions/archive.actions'
+import toast from 'react-hot-toast'
 
 const ITEMS_PER_PAGE = 10
-
-interface BlotterData {
-  id: string
-  complainant: string
-  respondentName: string
-  incident: string
-  location: string
-  date: string
-  status: string
-  handledBy?: string
-  blotterImage: string | null
-}
 
 export default function BlotterPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [actionError, setActionError] = useState('')
+  const queryClient = useQueryClient()
 
-  const { data: blotters = [], isLoading, error } = useQuery<BlotterData[]>({
+  const { data: blotters = [], isLoading, error } = useQuery<BlotterRecord[]>({
     queryKey: ['blotters'],
     queryFn: async () => {
       const response = await axios.get('/blotter')
@@ -55,6 +48,35 @@ export default function BlotterPage() {
       default:
         return 'bg-slate-50 text-slate-700 border-slate-200'
     }
+  }
+
+  const archiveMutation = useMutation({
+    mutationFn: async (payload: { id: string; archived: boolean }) => {
+      return payload.archived
+        ? archiveBlotterAction(payload.id)
+        : unarchiveBlotterAction(payload.id)
+    },
+    onSuccess: (result) => {
+      if (!result.success) {
+        setActionError(result.message)
+        return
+      }
+
+      setActionError('')
+      void queryClient.invalidateQueries({ queryKey: ['blotters'] })
+      void queryClient.invalidateQueries({ queryKey: ['archivedData', 'blotters'] })
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : 'Failed to update blotter archive state.')
+    },
+  })
+
+  const handleArchiveToggle = (blotter: BlotterRecord) => {
+    setActionError('')
+    archiveMutation.mutate({
+      id: blotter.id,
+      archived: !blotter.isArchive,
+    })
   }
 
   return (
@@ -88,6 +110,12 @@ export default function BlotterPage() {
           />
         </div>
       </div>
+
+      {actionError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -147,8 +175,17 @@ export default function BlotterPage() {
                         <button className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Delete">
-                          <Archive className="w-4 h-4" />
+                        <button
+                          onClick={() => handleArchiveToggle(blotter)}
+                          disabled={archiveMutation.isPending}
+                          className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={blotter.isArchive ? 'Unarchive' : 'Archive'}
+                        >
+                          {blotter.isArchive ? (
+                            <RotateCcw className="w-4 h-4" />
+                          ) : (
+                            <Archive className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     </td>
