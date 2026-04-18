@@ -113,6 +113,7 @@ export async function getResidentsForDropdown() {
 
 export interface BlotterRecord {
   id: string;
+  complainantId: string;
   complainant: string;
   respondentName: string;
   incident: string;
@@ -120,6 +121,7 @@ export interface BlotterRecord {
   date: string;
   status: string;
   handledBy?: string;
+  handledById?: string;
   blotterImage: string | null;
   createdAt: string;
   isArchive: boolean;
@@ -141,6 +143,7 @@ export async function getBlottersFromDb(options: { archived?: boolean } = {}): P
 
   return blotters.map((b) => ({
     id: b.id,
+    complainantId: b.complainantId,
     complainant: [b.complainant.firstName, b.complainant.lastName].filter(Boolean).join(" "),
     respondentName: b.respondentName,
     incident: b.incident,
@@ -150,8 +153,95 @@ export async function getBlottersFromDb(options: { archived?: boolean } = {}): P
     handledBy: b.handledBy
       ? [b.handledBy.firstName, b.handledBy.lastName].filter(Boolean).join(" ")
       : undefined,
+    handledById: b.handledById ?? undefined,
     blotterImage: b.blotterImage,
-    createdAt: b.createdAt.toISOString(),
     isArchive: b.isArchive,
   }));
+}
+
+export async function updateBlotter(id: string, formData: FormData): Promise<CreateBlotterResult> {
+  const fileValue = formData.get("blotterImage");
+  const blotterImageFile = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
+
+  const handledById = formData.get("handledById") as string;
+
+  const parsed = blotterSchema.safeParse({
+    complainantId: formData.get("complainantId"),
+    respondentName: formData.get("respondentName"),
+    location: formData.get("location"),
+    date: formData.get("date"),
+    incident: formData.get("incident"),
+    status: formData.get("status"),
+    handledById: handledById ? handledById : undefined,
+    blotterImageName: blotterImageFile ? blotterImageFile.name : formData.get("blotterImageName"),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please correct the highlighted fields.",
+      fieldErrors: getBlotterFieldErrors(parsed.error),
+    };
+  }
+
+  const { data } = parsed;
+
+  try {
+    const currentBlotter = await prisma.blotter.findUnique({
+      where: { id },
+    });
+
+    if (!currentBlotter) {
+      return {
+        success: false,
+        message: "Blotter record not found.",
+      };
+    }
+
+    let blotterImage = currentBlotter.blotterImage;
+
+    if (blotterImageFile) {
+      const uploadResult = await uploadImageToCloudinary(blotterImageFile, {
+        assetLabel: "Blotter image",
+        folder: "blotters",
+      });
+      blotterImage = uploadResult.secure_url;
+    } else if (!formData.get("blotterImageName")) {
+      blotterImage = null;
+    }
+
+    await prisma.blotter.update({
+      where: { id },
+      data: {
+        complainantId: data.complainantId,
+        respondentName: data.respondentName,
+        incident: data.incident,
+        location: data.location,
+        date: new Date(data.date),
+        status: data.status,
+        handledById: data.handledById || null,
+        blotterImage,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Blotter updated successfully.",
+    };
+  } catch (error) {
+    if (error instanceof CloudinaryUploadError) {
+      return {
+        success: false,
+        message: "Please correct the highlighted fields.",
+        fieldErrors: {
+          blotterImageName: error.message,
+        },
+      };
+    }
+    console.error("update blotter failed", error);
+    return {
+      success: false,
+      message: "An unexpected error occurred while updating the blotter.",
+    };
+  }
 }

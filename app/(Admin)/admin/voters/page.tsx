@@ -5,6 +5,7 @@ import { Search, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 
+import Link from 'next/link'
 interface ResidentVoter {
   id: string
   precinctNumber: string 
@@ -157,9 +158,11 @@ export default function VotersPage() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <button className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View">
-                              <Eye className="w-4 h-4" />
-                            </button>
+                            <Link href={`/admin/resident/${voter.id}`}>
+                              <button className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </Link>
                           </div>
                         </td>
                       </tr>

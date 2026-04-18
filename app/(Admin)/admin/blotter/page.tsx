@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { Search, Plus, Edit2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Archive, RotateCcw } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import CreateBlotterModal from '@/components/ui/Admin/CreateBlotterModal'
+import BlotterModalForm from '@/components/ui/Admin/BlotterModalForm'
 import axios from '@/lib/axios'
 import type { BlotterRecord } from '@/server/actions/blotter.actions'
 import { archiveBlotterAction, unarchiveBlotterAction } from '@/server/actions/archive.actions'
@@ -15,6 +15,7 @@ export default function BlotterPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedBlotter, setSelectedBlotter] = useState<BlotterRecord | null>(null)
   const [actionError, setActionError] = useState('')
   const queryClient = useQueryClient()
 
@@ -87,7 +88,10 @@ export default function BlotterPage() {
           <p className="text-slate-600 mt-1">Manage barangay blotter reports and incidents</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setSelectedBlotter(null)
+            setIsModalOpen(true)
+          }}
           className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 w-fit"
         >
           <Plus className="w-5 h-5" />
@@ -172,7 +176,12 @@ export default function BlotterPage() {
                             <Eye className="w-4 h-4" />
                           </a>
                         )}
-                        <button className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
+                        <button 
+                          onClick={() => {
+                            setSelectedBlotter(blotter)
+                            setIsModalOpen(true)
+                          }}
+                          className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
@@ -244,7 +253,14 @@ export default function BlotterPage() {
         )}
       </div>
 
-      <CreateBlotterModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <BlotterModalForm 
+        isOpen={isModalOpen} 
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedBlotter(null)
+        }} 
+        initialData={selectedBlotter} 
+      />
     </div>
   )
 }
