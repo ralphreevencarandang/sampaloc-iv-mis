@@ -2,6 +2,22 @@ import prismaModule from "@/lib/prisma";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
+export const announcementSelect = {
+  id: true,
+  title: true,
+  content: true,
+  image: true,
+  createdAt: true,
+  createdById: true,
+  createdBy: {
+    select: {
+      firstName: true,
+      lastName: true,
+      position: true,
+    },
+  },
+} as const;
+
 type AnnouncementEntity = {
   id: string;
   title: string;
@@ -49,21 +65,7 @@ export function mapAnnouncementRecord(announcement: AnnouncementEntity): Announc
 export async function fetchAnnouncementsFromDb(): Promise<AnnouncementRecord[]> {
   const announcements = await prisma.announcement.findMany({
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    select: {
-      id: true,
-      title: true,
-      content: true,
-      image: true,
-      createdAt: true,
-      createdById: true,
-      createdBy: {
-        select: {
-          firstName: true,
-          lastName: true,
-          position: true,
-        },
-      },
-    },
+    select: announcementSelect,
   });
 
   return announcements.map(mapAnnouncementRecord);

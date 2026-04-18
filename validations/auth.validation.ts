@@ -21,12 +21,21 @@ const baseResidentFields = {
   occupation: z.string().trim().optional().default(""),
   citizenship: requiredString("Citizenship"),
   isVoter: requiredString("Eligible to Vote"),
+  precinctNumber: z.string().trim().optional().default(""),
 };
 
 export const adminResidentUpdateSchema = z.object({
   email: z.email("Enter a valid email address.").trim().toLowerCase(),
   status: z.enum(["PENDING", "APPROVED", "DECLINED"]),
   ...baseResidentFields,
+}).superRefine((value, ctx) => {
+  if (value.isVoter === "Yes" && !value.precinctNumber.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["precinctNumber"],
+      message: "Precinct number is required when eligible to vote.",
+    });
+  }
 });
 
 export type AdminResidentUpdateInput = z.input<typeof adminResidentUpdateSchema>;
@@ -42,6 +51,15 @@ export const residentRegistrationSchema = z
   .refine((value) => value.password === value.confirmPassword, {
     message: "Passwords do not match.",
     path: ["confirmPassword"],
+  })
+  .superRefine((value, ctx) => {
+    if (value.isVoter === "Yes" && !value.precinctNumber.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["precinctNumber"],
+        message: "Precinct number is required when eligible to vote.",
+      });
+    }
   });
 
 export type ResidentRegistrationInput = z.infer<

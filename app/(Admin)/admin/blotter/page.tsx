@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from 'react'
-import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Archive } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import CreateBlotterModal from '@/components/ui/Admin/CreateBlotterModal'
 import axios from '@/lib/axios'
@@ -148,7 +148,7 @@ export default function BlotterPage() {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Delete">
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

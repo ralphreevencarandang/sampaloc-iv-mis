@@ -3,11 +3,12 @@
 import Image from 'next/image'
 import React, { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Archive } from 'lucide-react'
 import axios from 'axios'
 import CreateOfficialModal from '@/components/ui/Admin/CreateOfficialModal'
 import apiClient from '@/lib/axios'
 import type { OfficialRecord } from '@/server/officials/officials'
+import Link from 'next/link'
 
 const ITEMS_PER_PAGE = 10
 const OFFICIALS_QUERY_KEY = ['officials']
@@ -167,14 +168,16 @@ export default function OfficialsPage() {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View">
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        <Link href={`/admin/officials/${official.id}`}>
+                          <button className="p-1.5 hover:bg-primary-50 text-primary-600 rounded-lg transition-colors" title="View">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </Link>
                         <button className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Delete">
-                          <Trash2 className="w-4 h-4" />
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

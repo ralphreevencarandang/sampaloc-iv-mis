@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
-import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Search, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Archive } from 'lucide-react'
 import ResidentFormModal from '@/components/ui/Admin/ResidentFormModal'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '@/lib/axios'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
+import { deleteResidentAction } from '@/server/actions/resident.actions'
 interface ResidentRecord {
   id: string
   email: string
@@ -21,7 +23,13 @@ interface ResidentRecord {
   occupation: string | null
   citizenship: string
   isVoter: boolean
+  precinctNumber: string | null
   status: 'PENDING' | 'APPROVED' | 'DECLINED'
+}
+
+type DeleteResidentState = {
+  id: string
+  name: string
 }
 
 async function fetchResidents(): Promise<ResidentRecord[]> {
@@ -36,6 +44,9 @@ export default function ResidentPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedResident, setSelectedResident] = useState<ResidentRecord | null>(null)
+  const [residentToDelete, setResidentToDelete] = useState<DeleteResidentState | null>(null)
+  const [deleteError, setDeleteError] = useState('')
+  const queryClient = useQueryClient()
 
   const {
     data: residents = [],
@@ -63,6 +74,19 @@ export default function ResidentPage() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const paginatedResidents = filteredResidents.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
+  useEffect(() => {
+    if (totalPages === 0) {
+      if (currentPage !== 1) {
+        queueMicrotask(() => setCurrentPage(1))
+      }
+      return
+    }
+
+    if (currentPage > totalPages) {
+      queueMicrotask(() => setCurrentPage(totalPages))
+    }
+  }, [currentPage, totalPages])
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED':
@@ -86,6 +110,45 @@ export default function ResidentPage() {
     }
     return age
   }
+
+  const deleteMutation = useMutation({
+    mutationFn: async (residentId: string) => {
+      const result = await deleteResidentAction(residentId)
+
+      if (!result.success) {
+        throw new Error(result.message)
+      }
+
+      return result
+    },
+    onMutate: async (residentId: string) => {
+      setDeleteError('')
+      await queryClient.cancelQueries({ queryKey: ['residents'] })
+
+      const previousResidents = queryClient.getQueryData<ResidentRecord[]>(['residents'])
+
+      queryClient.setQueryData<ResidentRecord[]>(['residents'], (current) =>
+        (current ?? []).filter((resident) => resident.id !== residentId)
+      )
+
+      return { previousResidents }
+    },
+    onSuccess: (result) => {
+      toast.success(result.message)
+      queryClient.invalidateQueries({ queryKey: ['residents'] })
+      setResidentToDelete(null)
+      setDeleteError('')
+    },
+    onError: (error, _residentId, context) => {
+      if (context?.previousResidents) {
+        queryClient.setQueryData(['residents'], context.previousResidents)
+      }
+
+      const message = error instanceof Error ? error.message : 'Unable to delete resident.'
+      setDeleteError(message)
+      toast.error(message)
+    },
+  })
 
   return (
     <div className="space-y-6">
@@ -191,8 +254,18 @@ export default function ResidentPage() {
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
-                              <button className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Delete">
-                                <Trash2 className="w-4 h-4" />
+                              <button
+                                onClick={() => {
+                                  setDeleteError('')
+                                  setResidentToDelete({
+                                    id: resident.id,
+                                    name: `${resident.firstName} ${resident.middleName ? `${resident.middleName} ` : ''}${resident.lastName}`,
+                                  })
+                                }}
+                                className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <Archive className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -264,6 +337,47 @@ export default function ResidentPage() {
         }} 
         initialData={selectedResident} 
       />
+
+      {residentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-slate-900">Delete resident</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              This will permanently remove <span className="font-semibold text-slate-900">{residentToDelete.name}</span> and related resident records.
+            </p>
+
+            {deleteError && (
+              <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!deleteMutation.isPending) {
+                    setResidentToDelete(null)
+                    setDeleteError('')
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+                className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteMutation.mutate(residentToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="flex-1 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete Resident'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -18,6 +18,7 @@ import {
   X,
   ChevronDown,
   LogOut,
+  Archive,
 } from 'lucide-react';
 import { logoutAdminAction } from '@/server/actions/auth.actions';
 
@@ -61,6 +62,7 @@ const AdminSidebar = () => {
     { label: 'VAWC', href: '/admin/vawc', icon: <BookOpen className="w-5 h-5" /> },
     { label: 'Pet Registration', href: '/admin/pets', icon: <PawPrint className="w-5 h-5" /> },
     { label: 'Crisis Inventory', href: '/admin/inventory', icon: <AlertTriangle className="w-5 h-5" /> },
+    { label: 'Archived', href: '/admin/archived', icon: <Archive className="w-5 h-5" /> },
   ];
 
   const isActive = (href: string) => {

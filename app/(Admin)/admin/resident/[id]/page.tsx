@@ -37,6 +37,7 @@ type ResidentDetail = {
   occupation: string | null
   citizenship: string
   isVoter: boolean
+  precinctNumber: string | null
   validIDImage: string | null
   status: ResidentStatus
   createdAt: string
@@ -358,6 +359,12 @@ export default function ResidentViewPage() {
                 <InfoTile
                   label="Eligible to Vote"
                   value={resident.isVoter ? 'Yes' : 'No'}
+                />
+              </div>
+              <div className="mt-5 space-y-4">
+                <InfoTile
+                  label="Precinct Number"
+                  value={resident.precinctNumber ? resident.precinctNumber : 'Not provided'}
                 />
               </div>
             </section>

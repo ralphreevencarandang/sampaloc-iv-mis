@@ -11,6 +11,8 @@ export async function GET() {
       },
       select: {
         id: true,
+        
+        precinctNumber: true,
         firstName: true,
         lastName: true,
         middleName: true,

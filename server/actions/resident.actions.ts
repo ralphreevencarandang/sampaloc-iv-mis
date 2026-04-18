@@ -10,6 +10,7 @@ import {
   type ResidentRegistrationInput,
   adminResidentUpdateSchema,
 } from "@/validations/resident.validation";
+import { revalidatePath } from "next/cache";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -21,7 +22,7 @@ export type RegisterResidentResult = {
 
 type SanitizedResidentRegistration = Omit<
   ResidentRegistrationInput,
-  "password" | "confirmPassword" | "middleName" | "birthDate" | "occupation" | "validIDImageName" | "isVoter"
+  "password" | "confirmPassword" | "middleName" | "birthDate" | "occupation" | "validIDImageName" | "isVoter" | "precinctNumber"
 > & {
   email: string;
   firstName: string;
@@ -36,6 +37,7 @@ type SanitizedResidentRegistration = Omit<
   birthDate: Date;
   password: string;
   isVoter: boolean;
+  precinctNumber: string | null;
 };
 
 function getFormValue(formData: FormData, key: string) {
@@ -73,6 +75,7 @@ function validateResidentRegistration(formData: FormData): {
     occupation: getFormValue(formData, "occupation"),
     citizenship: getFormValue(formData, "citizenship"),
     isVoter: getFormValue(formData, "isVoter"),
+    precinctNumber: getFormValue(formData, "precinctNumber"),
     validIDImageName: validIDImageFile.name,
   };
 
@@ -110,6 +113,7 @@ function validateResidentRegistration(formData: FormData): {
       occupation: data.occupation || null,
       citizenship: data.citizenship,
       isVoter: data.isVoter === "Yes",
+      precinctNumber: data.isVoter === "Yes" ? data.precinctNumber : null,
       validIDImageFile,
     },
   };
@@ -174,6 +178,7 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
           occupation: data.occupation,
           citizenship: data.citizenship,
           isVoter: data.isVoter,
+          precinctNumber: data.precinctNumber,
           validIDImage: uploadResult.secure_url,
         },
       });
@@ -225,6 +230,7 @@ export async function updateResidentAction(id: string, formData: FormData): Prom
     occupation: getFormValue(formData, "occupation"),
     citizenship: getFormValue(formData, "citizenship"),
     isVoter: getFormValue(formData, "isVoter"),
+    precinctNumber: getFormValue(formData, "precinctNumber"),
   };
 
   const parsed = adminResidentUpdateSchema.safeParse(input);
@@ -255,6 +261,7 @@ export async function updateResidentAction(id: string, formData: FormData): Prom
         occupation: data.occupation || null,
         citizenship: data.citizenship,
         isVoter: data.isVoter === "Yes",
+        precinctNumber: data.isVoter === "Yes" ? data.precinctNumber || null : null,
         status: data.status,
       },
     });
@@ -268,6 +275,38 @@ export async function updateResidentAction(id: string, formData: FormData): Prom
     return {
       success: false,
       message: "An unexpected error occurred while updating the resident.",
+    };
+  }
+}
+
+export type DeleteResidentResult = {
+  success: boolean;
+  message: string;
+};
+
+export async function deleteResidentAction(id: string): Promise<DeleteResidentResult> {
+  try {
+    await prisma.$transaction([
+      prisma.pet.deleteMany({ where: { ownerId: id } }),
+      prisma.blotter.deleteMany({ where: { complainantId: id } }),
+      prisma.inventoryTransaction.deleteMany({ where: { distributedToId: id } }),
+      prisma.documentRequest.deleteMany({ where: { residentId: id } }),
+      prisma.medicalRecord.deleteMany({ where: { patientId: id } }),
+      prisma.resident.delete({ where: { id } }),
+    ]);
+
+    revalidatePath("/admin/resident");
+
+    return {
+      success: true,
+      message: "Resident deleted successfully.",
+    };
+  } catch (error) {
+    console.error("delete resident failed", error);
+
+    return {
+      success: false,
+      message: "An unexpected error occurred while deleting the resident.",
     };
   }
 }

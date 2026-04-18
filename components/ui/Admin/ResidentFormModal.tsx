@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -23,6 +23,7 @@ export interface ResidentRecord {
   occupation: string | null
   citizenship: string
   isVoter: boolean
+  precinctNumber: string | null
   status: 'PENDING' | 'APPROVED' | 'DECLINED'
 }
 
@@ -40,6 +41,9 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
     register,
     handleSubmit,
     reset,
+    control,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<AdminResidentUpdateInput>({
     resolver: zodResolver(adminResidentUpdateSchema),
@@ -58,8 +62,10 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
       occupation: '',
       citizenship: '',
       isVoter: 'No',
+      precinctNumber: '',
     },
   })
+  const selectedIsVoter = useWatch({ control, name: 'isVoter' })
 
   useEffect(() => {
     if (isOpen) {
@@ -80,6 +86,7 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
           occupation: initialData.occupation || '',
           citizenship: initialData.citizenship,
           isVoter: initialData.isVoter ? 'Yes' : 'No',
+          precinctNumber: initialData.precinctNumber || '',
         })
       } else {
         reset()
@@ -87,6 +94,16 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
       queueMicrotask(() => setGlobalError(''))
     }
   }, [isOpen, initialData, reset])
+
+  useEffect(() => {
+    if (selectedIsVoter === 'No') {
+      const currentPrecinctNumber = getValues('precinctNumber')
+
+      if (currentPrecinctNumber) {
+        setValue('precinctNumber', '', { shouldDirty: true, shouldValidate: true })
+      }
+    }
+  }, [getValues, selectedIsVoter, setValue])
 
   const mutation = useMutation({
     mutationFn: async (data: AdminResidentUpdateInput) => {
@@ -262,6 +279,20 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
               </select>
               {errors.isVoter && <span className="text-xs text-red-500">{errors.isVoter.message}</span>}
             </div>
+
+            {selectedIsVoter === 'Yes' && (
+              <div className="flex flex-col gap-1">
+                <label htmlFor="precinctNumber" className="text-sm font-medium text-slate-700">Precinct Number</label>
+                <input
+                  {...register('precinctNumber')}
+                  id="precinctNumber"
+                  type="text"
+                  className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500"
+                  placeholder="00015"
+                />
+                {errors.precinctNumber && <span className="text-xs text-red-500">{errors.precinctNumber.message}</span>}
+              </div>
+            )}
           </div>
 
           <div className="sticky bottom-0 bg-white py-4 border-t border-gray-100 mt-6 flex gap-3">

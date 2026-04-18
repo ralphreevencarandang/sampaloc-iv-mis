@@ -7,6 +7,7 @@ import axios from 'axios'
 
 interface ResidentVoter {
   id: string
+  precinctNumber: string 
   firstName: string
   lastName: string
   middleName: string | null
@@ -122,6 +123,7 @@ export default function VotersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-50 border-b border-gray-100">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Precint Numger</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Full Name</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Email</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Date of Birth</th>
@@ -135,6 +137,8 @@ export default function VotersPage() {
                   {paginatedVoters.length > 0 ? (
                     paginatedVoters.map((voter) => (
                       <tr key={voter.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm text-slate-600">{voter.precinctNumber}</td>
+
                         <td className="px-6 py-4 text-sm font-medium text-slate-900">
                           {`${voter.firstName} ${voter.middleName ? voter.middleName + ' ' : ''}${voter.lastName}`}
                         </td>

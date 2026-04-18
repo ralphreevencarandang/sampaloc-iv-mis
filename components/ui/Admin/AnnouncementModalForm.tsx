@@ -1,73 +1,97 @@
 'use client'
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import Image from "next/image";
-import React, { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
-import { Upload, X } from "lucide-react";
-import { MAX_VALID_ID_IMAGE_SIZE_BYTES, validateValidIdImageFile } from "@/lib/valid-id-image";
-import { createAnnouncementAction } from "@/server/actions/announcement.actions";
-import { type AnnouncementRecord } from "@/server/announcements/announcements";
-import { type OfficialRecord } from "@/server/officials/officials";
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Upload, X } from 'lucide-react'
+import Image from 'next/image'
+import React, { useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { MAX_VALID_ID_IMAGE_SIZE_BYTES, validateValidIdImageFile } from '@/lib/valid-id-image'
+import {
+  createAnnouncementAction,
+  updateAnnouncementAction,
+} from '@/server/actions/announcement.actions'
+import { type AnnouncementRecord } from '@/server/announcements/announcements'
+import { type OfficialRecord } from '@/server/officials/officials'
 import {
   announcementSchema,
   type AnnouncementFormInput,
-} from "@/validations/announcement.validation";
-import { ModalProps } from "./CreateResidentModal";
+} from '@/validations/announcement.validation'
 
-type CreateAnnouncementModalProps = ModalProps & {
-  onAnnouncementCreated: (announcement: AnnouncementRecord) => void;
-};
+type AnnouncementModalMode = 'create' | 'edit'
 
-type OfficialsApiError = {
-  message?: string;
-};
-
-const defaultValues: AnnouncementFormInput = {
-  title: "",
-  content: "",
-  createdById: "",
-  imageName: "",
-};
-
-async function fetchOfficials(): Promise<OfficialRecord[]> {
-  const response = await fetch("/api/officials", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as OfficialsApiError | null;
-    throw new Error(error?.message ?? "Failed to fetch officials.");
-  }
-
-  return (await response.json()) as OfficialRecord[];
+type AnnouncementModalFormProps = {
+  isOpen: boolean
+  onClose: () => void
+  mode: AnnouncementModalMode
+  initialData?: AnnouncementRecord | null
+  onSaved?: (announcement: AnnouncementRecord) => void
 }
 
-const CreateAnnouncementModal = ({
+type OfficialsApiError = {
+  message?: string
+}
+
+const ANNOUNCEMENTS_QUERY_KEY = ['announcements']
+
+const defaultValues: AnnouncementFormInput = {
+  title: '',
+  content: '',
+  createdById: '',
+  imageName: '',
+}
+
+async function fetchOfficials(): Promise<OfficialRecord[]> {
+  const response = await fetch('/api/officials', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as OfficialsApiError | null
+    throw new Error(error?.message ?? 'Failed to fetch officials.')
+  }
+
+  return (await response.json()) as OfficialRecord[]
+}
+
+export default function AnnouncementModalForm({
   isOpen,
   onClose,
-  onAnnouncementCreated,
-}: CreateAnnouncementModalProps) => {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  mode,
+  initialData,
+  onSaved,
+}: AnnouncementModalFormProps) {
+  const queryClient = useQueryClient()
+  const [imagePreview, setImagePreview] = useState<string | null>(() => initialData?.image ?? null)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imageRemoved, setImageRemoved] = useState(false)
+  const [isBlobPreview, setIsBlobPreview] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const isEditMode = mode === 'edit' && Boolean(initialData)
+  const formDefaultValues: AnnouncementFormInput = isEditMode && initialData
+    ? {
+        title: initialData.title,
+        content: initialData.content,
+        createdById: initialData.createdById,
+        imageName: '',
+      }
+    : defaultValues
 
   const {
     register,
     handleSubmit,
-    reset,
     setError,
     setValue,
     clearErrors,
     formState: { errors },
   } = useForm<AnnouncementFormInput>({
     resolver: zodResolver(announcementSchema),
-    defaultValues,
-  });
+    defaultValues: formDefaultValues,
+  })
 
   const {
     data: officials = [],
@@ -75,149 +99,151 @@ const CreateAnnouncementModal = ({
     isError: isOfficialsError,
     error: officialsError,
   } = useQuery<OfficialRecord[]>({
-    queryKey: ["officials"],
+    queryKey: ['officials'],
     queryFn: fetchOfficials,
     enabled: isOpen,
-  });
+  })
 
   useEffect(() => {
     return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
+      if (isBlobPreview && imagePreview) {
+        URL.revokeObjectURL(imagePreview)
       }
-    };
-  }, [imagePreview]);
+    }
+  }, [imagePreview, isBlobPreview])
 
-  const createAnnouncementMutation = useMutation({
-    mutationFn: createAnnouncementAction,
+  const announcementMutation = useMutation({
+    mutationFn: async (data: AnnouncementFormInput) => {
+      const submission = new FormData()
+      submission.set('title', data.title)
+      submission.set('content', data.content)
+      submission.set('createdById', data.createdById)
+
+      if (selectedImage) {
+        submission.set('image', selectedImage)
+      } else if (isEditMode && imageRemoved) {
+        submission.set('removeImage', 'true')
+      }
+
+      if (isEditMode && initialData) {
+        return updateAnnouncementAction(initialData.id, submission)
+      }
+
+      return createAnnouncementAction(submission)
+    },
     onSuccess: (result) => {
       if (!result.success) {
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, message]) => {
             setError(field as keyof AnnouncementFormInput, {
-              type: "server",
+              type: 'server',
               message,
-            });
-          });
+            })
+          })
         } else {
-          setError("root", {
-            type: "server",
+          setError('root', {
+            type: 'server',
             message: result.message,
-          });
+          })
         }
-        return;
+        return
       }
 
       if (result.announcement) {
-        onAnnouncementCreated(result.announcement);
+        onSaved?.(result.announcement)
       }
 
-      handleClose();
+      void queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_QUERY_KEY })
+      handleClose()
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : "";
+      const message = error instanceof Error ? error.message : ''
 
       if (/body.?size.?limit|payload|request entity too large|413|too large/i.test(message)) {
-        setError("imageName", {
-          type: "server",
+        setError('imageName', {
+          type: 'server',
           message: `Announcement image size must be ${Math.floor(
             MAX_VALID_ID_IMAGE_SIZE_BYTES / (1024 * 1024)
           )}MB or less.`,
-        });
-        return;
+        })
+        return
       }
 
-      setError("root", {
-        type: "server",
-        message: "An unexpected error occurred while creating the announcement.",
-      });
+      setError('root', {
+        type: 'server',
+        message: isEditMode
+          ? 'An unexpected error occurred while updating the announcement.'
+          : 'An unexpected error occurred while creating the announcement.',
+      })
     },
-  });
+  })
 
   const handleClose = () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-    }
-
-    setImagePreview(null);
-    setSelectedImage(null);
-    reset(defaultValues);
-
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = ''
     }
 
-    onClose();
-  };
+    onClose()
+  }
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files?.[0]
 
     if (!file) {
-      return;
+      return
     }
 
-    const validationError = validateValidIdImageFile(file);
+    const validationError = validateValidIdImageFile(file)
 
     if (validationError) {
-      setSelectedImage(null);
-      setValue("imageName", "", { shouldValidate: true });
-      setError("imageName", {
-        type: "manual",
-        message: validationError.replace("Valid ID", "Announcement image"),
-      });
-      return;
+      setError('imageName', {
+        type: 'manual',
+        message: validationError.replace('Valid ID', 'Announcement image'),
+      })
+      event.target.value = ''
+      return
     }
 
-    clearErrors("imageName");
-    setValue("imageName", file.name, { shouldValidate: true });
-    setSelectedImage(file);
+    clearErrors('imageName')
+    setValue('imageName', file.name, { shouldValidate: true })
+    setSelectedImage(file)
+    setImageRemoved(false)
 
-    setImagePreview((current) => {
-      if (current) {
-        URL.revokeObjectURL(current);
-      }
-
-      return URL.createObjectURL(file);
-    });
-  };
+    setImagePreview(URL.createObjectURL(file))
+    setIsBlobPreview(true)
+  }
 
   const handleRemoveImage = () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-    }
-
-    setImagePreview(null);
-    setSelectedImage(null);
-    setValue("imageName", "", { shouldValidate: true });
-    clearErrors("imageName");
+    setImagePreview(null)
+    setSelectedImage(null)
+    setImageRemoved(true)
+    setIsBlobPreview(false)
+    setValue('imageName', '', { shouldValidate: true })
+    clearErrors('imageName')
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = ''
     }
-  };
+  }
 
   const onSubmit = async (data: AnnouncementFormInput) => {
-    const submission = new FormData();
-    submission.set("title", data.title);
-    submission.set("content", data.content);
-    submission.set("createdById", data.createdById);
+    await announcementMutation.mutateAsync(data)
+  }
 
-    if (selectedImage) {
-      submission.set("image", selectedImage);
-    }
+  if (!isOpen) return null
 
-    await createAnnouncementMutation.mutateAsync(submission);
-  };
-
-  if (!isOpen) return null;
+  const title = isEditMode ? 'Edit Announcement' : 'Add New Announcement'
+  const subtitle = isEditMode
+    ? 'Update the announcement details below'
+    : 'Create a new barangay announcement'
+  const submitLabel = isEditMode ? 'Save Changes' : 'Post Announcement'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-lg bg-white shadow-xl">
         <div className="sticky top-0 border-b border-gray-100 bg-white p-6">
-          <h2 className="text-2xl font-bold text-slate-900">Add New Announcement</h2>
-          <p className="mt-1 text-slate-600">Create a new barangay announcement</p>
+          <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
+          <p className="mt-1 text-slate-600">{subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 space-y-4 p-6">
@@ -233,12 +259,12 @@ const CreateAnnouncementModal = ({
             </label>
             <select
               id="createdById"
-              {...register("createdById")}
+              {...register('createdById')}
               disabled={isLoadingOfficials || isOfficialsError}
               className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100"
             >
               <option value="">
-                {isLoadingOfficials ? "Loading officials..." : "Select Official"}
+                {isLoadingOfficials ? 'Loading officials...' : 'Select Official'}
               </option>
               {officials.map((official) => (
                 <option key={official.id} value={official.id}>
@@ -251,9 +277,7 @@ const CreateAnnouncementModal = ({
             )}
             {isOfficialsError && (
               <p className="text-sm text-red-500">
-                {officialsError instanceof Error
-                  ? officialsError.message
-                  : "Failed to load officials."}
+                {officialsError instanceof Error ? officialsError.message : 'Failed to load officials.'}
               </p>
             )}
           </div>
@@ -266,7 +290,7 @@ const CreateAnnouncementModal = ({
               id="title"
               type="text"
               placeholder="Enter announcement title"
-              {...register("title")}
+              {...register('title')}
               className="rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
             />
             {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
@@ -280,7 +304,7 @@ const CreateAnnouncementModal = ({
               id="content"
               rows={5}
               placeholder="Enter announcement content"
-              {...register("content")}
+              {...register('content')}
               className="resize-none rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
             />
             {errors.content && <p className="text-sm text-red-500">{errors.content.message}</p>}
@@ -290,7 +314,7 @@ const CreateAnnouncementModal = ({
             <label htmlFor="image" className="text-sm font-medium text-slate-700">
               Upload Image (Optional)
             </label>
-            <input type="hidden" {...register("imageName")} />
+            <input type="hidden" {...register('imageName')} />
             <div className="relative">
               <input
                 id="image"
@@ -306,7 +330,13 @@ const CreateAnnouncementModal = ({
               >
                 <Upload className="h-5 w-5 text-slate-400" />
                 <span className="text-sm font-medium text-slate-600">
-                  {selectedImage ? selectedImage.name : "Click to upload image"}
+                  {selectedImage
+                    ? selectedImage.name
+                    : imageRemoved
+                      ? 'Click to upload image'
+                      : imagePreview
+                        ? 'Current image selected'
+                        : 'Click to upload image'}
                 </span>
               </label>
             </div>
@@ -322,7 +352,7 @@ const CreateAnnouncementModal = ({
                   alt="Announcement preview"
                   width={640}
                   height={360}
-                  unoptimized
+                  unoptimized={isBlobPreview}
                   className="max-h-48 w-auto"
                 />
                 <button
@@ -347,16 +377,14 @@ const CreateAnnouncementModal = ({
             </button>
             <button
               type="submit"
-              disabled={createAnnouncementMutation.isPending}
+              disabled={announcementMutation.isPending}
               className="flex-1 rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {createAnnouncementMutation.isPending ? "Posting..." : "Post Announcement"}
+              {announcementMutation.isPending ? 'Saving...' : submitLabel}
             </button>
           </div>
         </form>
       </div>
     </div>
-  );
-};
-
-export default CreateAnnouncementModal;
+  )
+}

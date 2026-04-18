@@ -37,6 +37,7 @@ const initialFormState: RegisterFormState = {
   occupation: "",
   citizenship: "",
   isVoter: "",
+  precinctNumber: "",
   validIDImageName: "",
   validIDImage: null,
   validIDImagePreview: "",
@@ -110,18 +111,27 @@ export default function RegisterPage() {
   ) => {
     const { name, value } = event.target;
 
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-    }));
+    setFormData((current) => {
+      if (name === "isVoter" && value === "No") {
+        return {
+          ...current,
+          isVoter: value,
+          precinctNumber: "",
+        };
+      }
 
-    if (errors[name] || errors.submit) {
-      setErrors((current) => ({
+      return {
         ...current,
-        [name]: "",
-        submit: "",
-      }));
-    }
+        [name]: value,
+      };
+    });
+
+    setErrors((current) => ({
+      ...current,
+      [name]: "",
+      submit: "",
+      ...(name === "isVoter" && value === "No" ? { precinctNumber: "" } : {}),
+    }));
   };
 
   const handleIDImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,6 +189,7 @@ export default function RegisterPage() {
       occupation: formData.occupation,
       citizenship: formData.citizenship,
       isVoter: formData.isVoter,
+      precinctNumber: formData.precinctNumber,
       validIDImageName: formData.validIDImageName,
     });
 
@@ -224,6 +235,7 @@ export default function RegisterPage() {
     submission.set("occupation", formData.occupation);
     submission.set("citizenship", formData.citizenship);
     submission.set("isVoter", formData.isVoter);
+    submission.set("precinctNumber", formData.precinctNumber);
     submission.set("validIDImage", formData.validIDImage);
 
     await registerMutation.mutateAsync(submission);
@@ -516,6 +528,28 @@ export default function RegisterPage() {
                   <p className="mt-1 text-sm text-red-500">{errors.isVoter}</p>
                 )}
               </div>
+
+              {formData.isVoter === "Yes" && (
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Precinct Number
+                  </label>
+                  <input
+                    type="text"
+                    name="precinctNumber"
+                    value={formData.precinctNumber}
+                    onChange={handleInputChange}
+                    required
+                    className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                      errors.precinctNumber ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="00015"
+                  />
+                  {errors.precinctNumber && (
+                    <p className="mt-1 text-sm text-red-500">{errors.precinctNumber}</p>
+                  )}
+                </div>
+              )}
             </div>
           </section>
 

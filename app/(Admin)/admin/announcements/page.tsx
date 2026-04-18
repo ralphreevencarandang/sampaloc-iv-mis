@@ -3,10 +3,11 @@
 import Image from 'next/image'
 import React, { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, ChevronLeft, ChevronRight, Calendar, Megaphone } from 'lucide-react'
-import CreateAnnouncementModal from '@/components/ui/Admin/CreateAnnouncementModal'
+import { Search, Plus, ChevronLeft, ChevronRight, Calendar, Megaphone, Eye, Edit2, Trash2, Archive } from 'lucide-react'
+import AnnouncementModalForm from '@/components/ui/Admin/AnnouncementModalForm'
 import type { AnnouncementRecord } from '@/server/announcements/announcements'
-
+import Link from 'next/link'
+  
 const ITEMS_PER_PAGE = 10
 const ANNOUNCEMENTS_QUERY_KEY = ['announcements']
 
@@ -38,6 +39,7 @@ export default function AnnouncementPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementRecord | null>(null)
   const queryClient = useQueryClient()
 
   const {
@@ -67,7 +69,7 @@ export default function AnnouncementPage() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const paginatedAnnouncements = filteredAnnouncements.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
-  const handleAnnouncementCreated = () => {
+  const handleAnnouncementSaved = () => {
     setCurrentPage(1)
     void queryClient.invalidateQueries({
       queryKey: ANNOUNCEMENTS_QUERY_KEY,
@@ -82,7 +84,10 @@ export default function AnnouncementPage() {
           <p className="mt-1 text-slate-600">Manage barangay announcements and updates</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setSelectedAnnouncement(null)
+            setIsModalOpen(true)
+          }}
           className="flex w-fit items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-700"
         >
           <Plus className="h-5 w-5" />
@@ -117,6 +122,8 @@ export default function AnnouncementPage() {
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Position</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
+                                    <th className="px-6 py-4 text-center text-xs font-semibold text-slate-700 uppercase tracking-wide">Options</th>
+
               </tr>
             </thead>
             <tbody>
@@ -164,6 +171,30 @@ export default function AnnouncementPage() {
                         {new Date(announcement.createdAt).toLocaleDateString()}
                       </div>
                     </td>
+
+                     <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                             
+                              <button
+                                onClick={() => {
+                                  setSelectedAnnouncement(announcement)
+                                  setIsModalOpen(true)
+                                }}
+                                className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                               
+                                className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+
+                                <Archive className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
                   </tr>
                 ))
               ) : (
@@ -219,10 +250,16 @@ export default function AnnouncementPage() {
         )}
       </div>
 
-      <CreateAnnouncementModal
+      <AnnouncementModalForm
+        key={`${isModalOpen ? 'open' : 'closed'}-${selectedAnnouncement?.id ?? 'create'}`}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onAnnouncementCreated={handleAnnouncementCreated}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedAnnouncement(null)
+        }}
+        mode={selectedAnnouncement ? 'edit' : 'create'}
+        initialData={selectedAnnouncement}
+        onSaved={handleAnnouncementSaved}
       />
     </div>
   )
