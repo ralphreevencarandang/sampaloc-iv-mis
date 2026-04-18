@@ -338,10 +338,7 @@ function ArchivedPage() {
         <div className="w-full">
           <TabNavigation tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
-        <button className="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
-          <Calendar className="h-4 w-4 text-slate-500" />
-          Filter by Date
-        </button>
+        
       </div>
 
       <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">

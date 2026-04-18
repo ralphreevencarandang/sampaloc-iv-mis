@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Edit2, Trash2, Eye, ChevronLeft, ChevronRight, Archive, RotateCcw } from 'lucide-react'
 import axios from 'axios'
-import CreateOfficialModal from '@/components/ui/Admin/CreateOfficialModal'
+import OfficialModalForm from '@/components/ui/Admin/OfficialModalForm'
 import apiClient from '@/lib/axios'
 import type { OfficialRecord } from '@/server/officials/officials'
 import { archiveOfficialAction, unarchiveOfficialAction } from '@/server/actions/archive.actions'
@@ -31,6 +31,7 @@ export default function OfficialsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedOfficial, setSelectedOfficial] = useState<OfficialRecord | null>(null)
   const [actionError, setActionError] = useState('')
   const queryClient = useQueryClient()
 
@@ -65,14 +66,6 @@ export default function OfficialsPage() {
       default:
         return 'bg-slate-50 text-slate-700 border-slate-200'
     }
-  }
-
-  const handleOfficialCreated = (official: OfficialRecord) => {
-    queryClient.setQueryData<OfficialRecord[]>(OFFICIALS_QUERY_KEY, (current = []) => [
-      official,
-      ...current,
-    ])
-    setCurrentPage(1)
   }
 
   const archiveMutation = useMutation({
@@ -113,7 +106,10 @@ export default function OfficialsPage() {
           <p className="text-slate-600 mt-1">Manage barangay officials and their positions</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setSelectedOfficial(null)
+            setIsModalOpen(true)
+          }}
           className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md shadow-primary-600/30 transition-all duration-300 hover:-translate-y-0.5 w-fit"
         >
           <Plus className="w-5 h-5" />
@@ -210,7 +206,14 @@ export default function OfficialsPage() {
                             <Eye className="w-4 h-4" />
                           </button>
                         </Link>
-                        <button className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit">
+                        <button 
+                          onClick={() => {
+                            setSelectedOfficial(official)
+                            setIsModalOpen(true)
+                          }}
+                          className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" 
+                          title="Edit"
+                        >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
@@ -284,10 +287,13 @@ export default function OfficialsPage() {
       </div>
 
       {/* Add Official Modal */}
-      <CreateOfficialModal
+      <OfficialModalForm
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onOfficialCreated={handleOfficialCreated}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedOfficial(null)
+        }}
+        initialData={selectedOfficial}
       />
     </div>
   )

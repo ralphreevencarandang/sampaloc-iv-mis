@@ -6,6 +6,8 @@ const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? pr
 export type OfficialRecord = {
   id: string;
   name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   officialProfile: string | null;
   position: string;
@@ -38,6 +40,8 @@ function mapOfficialRecord(
   return {
     id: official.id,
     name: buildOfficialName(official.firstName, official.lastName),
+    firstName: official.firstName,
+    lastName: official.lastName,
     email: official.email,
     officialProfile: official.officialProfile ?? null,
     position: official.position,

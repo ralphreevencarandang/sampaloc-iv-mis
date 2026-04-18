@@ -166,3 +166,112 @@ export async function createOfficial(formData: FormData): Promise<CreateOfficial
     };
   }
 }
+
+export async function updateOfficial(id: string, formData: FormData): Promise<CreateOfficialResult> {
+  const { data, fieldErrors } = validateOfficialForm(formData);
+
+  if (!data) {
+    return {
+      success: false,
+      message: "Please correct the highlighted fields.",
+      fieldErrors,
+    };
+  }
+
+  const termStart = new Date(data.termStart);
+  const termEnd = data.termEnd ? new Date(data.termEnd) : null;
+  const isActive = data.status === "Active";
+
+  try {
+    const existingOfficial = await prisma.official.findUnique({
+      where: { email: data.email },
+      select: { id: true },
+    });
+
+    if (existingOfficial && existingOfficial.id !== id) {
+      return {
+        success: false,
+        message: "An official with that email already exists.",
+        fieldErrors: {
+          email: "Email is already assigned to another official.",
+        },
+      };
+    }
+
+    const currentOfficial = await prisma.official.findUnique({
+      where: { id },
+    });
+
+    if (!currentOfficial) {
+      return {
+        success: false,
+        message: "Official not found.",
+      };
+    }
+
+    let officialProfile = currentOfficial.officialProfile;
+
+    if (data.officialProfileFile) {
+      const uploadResult = await uploadImageToCloudinary(data.officialProfileFile, {
+        assetLabel: "Official profile image",
+        folder: "officials/profile",
+        publicIdPrefix: `${data.firstName}-${data.lastName}`.replace(/[^a-z0-9]/gi, "-").toLowerCase(),
+      });
+
+      officialProfile = uploadResult.secure_url;
+    } else if (!formData.get("officialProfileName")) {
+      // If no file but name is empty, user cleared the image
+      officialProfile = null;
+    }
+
+    const updatedOfficial = await prisma.official.update({
+      where: { id },
+      data: {
+        officialProfile,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        isActive,
+        position: data.position,
+        termStart,
+        termEnd,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        officialProfile: true,
+        isActive: true,
+        position: true,
+        termStart: true,
+        termEnd: true,
+        isArchive: true,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Official updated successfully.",
+      official: mapOfficialRecord(updatedOfficial),
+    };
+  } catch (error) {
+    if (error instanceof CloudinaryUploadError) {
+      return {
+        success: false,
+        message: "Please correct the highlighted fields.",
+        fieldErrors: {
+          officialProfileName: error.message,
+        },
+      };
+    }
+
+    console.error("update official failed", error);
+
+    return {
+      success: false,
+      message: "An unexpected error occurred while updating the official.",
+    };
+  }
+}
+
