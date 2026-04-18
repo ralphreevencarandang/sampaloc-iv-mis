@@ -29,6 +29,7 @@ async function main() {
             occupation: "Engineer",
             citizenship: "Filipino",
             isVoter: true,
+            precinctNumber: "1234A",
             status: "APPROVED" as const,
         },
         {
@@ -45,6 +46,7 @@ async function main() {
             occupation: "Teacher",
             citizenship: "Filipino",
             isVoter: true,
+            precinctNumber: "1234B",
             status: "APPROVED" as const,
         },
         {
@@ -77,6 +79,7 @@ async function main() {
             occupation: "Doctor",
             citizenship: "Filipino",
             isVoter: true,
+            precinctNumber: "5678C",
             status: "APPROVED" as const,
         },
         {
@@ -93,6 +96,7 @@ async function main() {
             occupation: "Business Owner",
             citizenship: "Filipino",
             isVoter: true,
+            precinctNumber: "9101D",
             status: "APPROVED" as const,
         },
         {
@@ -109,6 +113,7 @@ async function main() {
             occupation: "Security Guard",
             citizenship: "Filipino",
             isVoter: true,
+            precinctNumber: "1121E",
             status: "PENDING" as const,
         }
     ];

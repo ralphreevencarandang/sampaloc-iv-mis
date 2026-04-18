@@ -43,6 +43,35 @@ enum VerificationStatus {
   DECLINED
 }
 
+enum VawcStatus {
+  REPORTED
+  SUMMONED
+  RESOLVED
+  DISMISSED
+}
+
+enum AbuseType {
+  PHYSICAL
+  SEXUAL
+  PSYCHOLOGICAL
+  ECONOMIC
+}
+
+enum RelationshipType {
+  SPOUSE
+  FORMER_SPOUSE
+  LIVE_IN
+  DATING
+  FORMER_DATING
+  OTHER
+}
+
+enum ScheduleStatus {
+  PENDING
+  COMPLETED
+  CANCELED
+}
+
 // ==========================================
 // MODELS
 // ==========================================
@@ -53,7 +82,7 @@ model Admin {
   email     String    @unique
   password  String
   role      AdminRole
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   medicalRecordsChecked MedicalRecord[] @relation("CheckedByHealthWorker")
 }
@@ -67,50 +96,49 @@ model Resident {
   resetOtp          String?
   resetOtpExpireAt  DateTime?
 
-  firstName         String
-  lastName          String
-  middleName        String?
-  birthDate         DateTime
-  gender            String
-  civilStatus       String
+  firstName   String
+  lastName    String
+  middleName  String?
+  birthDate   DateTime
+  gender      String
+  civilStatus String
 
-  street            String
-  houseNumber       String
+  street      String
+  houseNumber String
 
-  contactNumber     String?
-  occupation        String?
-  citizenship       String
+  contactNumber String?
+  occupation    String?
+  citizenship   String
 
-  isVoter           Boolean  @default(false)
-  precinctNumber    String?   @map("precinctNumber")
-  isArchived        Boolean  @default(false)
-  
- 
-  validIDImage     String?
-  status           VerificationStatus @default(PENDING)
+  isVoter        Boolean @default(false)
+  precinctNumber String? @map("precinctNumber")
+  isArchived     Boolean @default(false)
 
-  createdAt        DateTime @default(now())
+  validIDImage String?
+  status       VerificationStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
 
   // Relationships
-  pets                  Pet[]
-  blottersFiled         Blotter[]              @relation("Complainant")
-  itemsReceived         InventoryTransaction[] @relation("DistributedTo")
-  documentRequests      DocumentRequest[]      @relation("RequestedByResident")
-  medicalRecords        MedicalRecord[]        @relation("Patient")
+  pets             Pet[]
+  blottersFiled    Blotter[]              @relation("Complainant")
+  itemsReceived    InventoryTransaction[] @relation("DistributedTo")
+  documentRequests DocumentRequest[]      @relation("RequestedByResident")
+  medicalRecords   MedicalRecord[]        @relation("Patient")
 }
 
 model Official {
-  id         String   @id @default(cuid())
-  officialProfile      String?
-  firstName  String
-  lastName   String
-  middleName String
-  email      String    @unique
-  isActive   Boolean  @default(true)
-  position   String
-  termStart  DateTime
-  termEnd    DateTime?
-  isArchive  Boolean  @default(false)
+  id              String    @id @default(cuid())
+  officialProfile String?
+  firstName       String
+  lastName        String
+  middleName      String
+  email           String    @unique
+  isActive        Boolean   @default(true)
+  position        String
+  termStart       DateTime
+  termEnd         DateTime?
+  isArchive       Boolean   @default(false)
 
   // Relationships
   announcements    Announcement[]    @relation("CreatedByOfficial")
@@ -119,11 +147,11 @@ model Official {
 }
 
 model Announcement {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   title     String
-  content   String   @db.Text
-  image String?
-  isArchive  Boolean  @default(false)
+  content   String  @db.Text
+  image     String?
+  isArchive Boolean @default(false)
 
   createdById String
   createdBy   Official @relation("CreatedByOfficial", fields: [createdById], references: [id])
@@ -132,9 +160,9 @@ model Announcement {
 }
 
 model Pet {
-  id              String   @id @default(cuid())
-  ownerId         String
-  owner           Resident @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id      String   @id @default(cuid())
+  ownerId String
+  owner   Resident @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   name            String
   type            String
@@ -142,93 +170,165 @@ model Pet {
   color           String?
   vaccinationDate DateTime?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model Blotter {
-  id            String        @id @default(cuid())
+  id           String  @id @default(cuid())
   blotterImage String?
 
   complainantId String
-  complainant   Resident      @relation("Complainant", fields: [complainantId], references: [id])
+  complainant   Resident @relation("Complainant", fields: [complainantId], references: [id])
 
   respondentName String
 
-  incident      String        @db.Text
-  location      String
-  date          DateTime
+  incident String   @db.Text
+  location String
+  date     DateTime
 
-  status        BlotterStatus @default(OPEN)
-  isArchive     Boolean       @default(false)
+  status    BlotterStatus @default(OPEN)
+  isArchive Boolean       @default(false)
 
-  handledById   String?
-  handledBy     Official?     @relation("HandledByOfficial", fields: [handledById], references: [id])
+  handledById String?
+  handledBy   Official? @relation("HandledByOfficial", fields: [handledById], references: [id])
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vawcRecord VawcRecord?
 }
 
 model InventoryItem {
-  id        String                 @id @default(cuid())
-  name      String
-  category  String
-  quantity  Int                    @default(0)
-  unit      String
+  id       String @id @default(cuid())
+  name     String
+  category String
+  quantity Int    @default(0)
+  unit     String
 
-  createdAt DateTime               @default(now())
-  updatedAt DateTime               @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // History of IN/OUT for this item
   transactions InventoryTransaction[]
 }
 
 model InventoryTransaction {
-  id            String          @id @default(cuid())
+  id String @id @default(cuid())
 
-  itemId        String
-  item          InventoryItem   @relation(fields: [itemId], references: [id])
+  itemId String
+  item   InventoryItem @relation(fields: [itemId], references: [id])
 
-  quantity      Int
-  type          TransactionType
+  quantity Int
+  type     TransactionType
 
   // Optional: Only used if it's distributed OUT to a specific resident
   distributedToId String?
-  distributedTo   Resident?     @relation("DistributedTo", fields: [distributedToId], references: [id])
+  distributedTo   Resident? @relation("DistributedTo", fields: [distributedToId], references: [id])
 
-  date          DateTime        @default(now())
+  date DateTime @default(now())
 }
 
 model DocumentRequest {
-  id         String        @id @default(cuid())
+  id String @id @default(cuid())
 
   residentId String
-  resident   Resident      @relation("RequestedByResident", fields: [residentId], references: [id])
+  resident   Resident @relation("RequestedByResident", fields: [residentId], references: [id])
 
-  type       String
-  purpose    String
+  type    String
+  purpose String
 
-  status     RequestStatus @default(PENDING)
+  status RequestStatus @default(PENDING)
 
   approvedById String?
-  approvedBy    Official?   @relation("ApprovedByOfficial", fields: [approvedById], references: [id])
+  approvedBy   Official? @relation("ApprovedByOfficial", fields: [approvedById], references: [id])
 
-  requestedAt DateTime     @default(now())
+  requestedAt DateTime  @default(now())
   releasedAt  DateTime?
 }
-  
+
 model MedicalRecord {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  patientId   String
-  patient     Resident @relation("Patient", fields: [patientId], references: [id], onDelete: Cascade)
+  patientId String
+  patient   Resident @relation("Patient", fields: [patientId], references: [id], onDelete: Cascade)
 
-  symptoms    String   @db.Text
-  diagnosis   String   @db.Text
-  treatment   String   @db.Text
-  prescription String?  @db.Text
+  symptoms     String  @db.Text
+  diagnosis    String  @db.Text
+  treatment    String  @db.Text
+  prescription String? @db.Text
 
   checkedById String
-  checkedBy   Admin    @relation("CheckedByHealthWorker", fields: [checkedById], references: [id])
+  checkedBy   Admin  @relation("CheckedByHealthWorker", fields: [checkedById], references: [id])
 
-  date        DateTime @default(now())
+  date DateTime @default(now())
+}
+
+model VawcRecord {
+  id         String @id @default(cuid())
+  caseNumber String @unique
+
+  // Victim Fields
+  victimName          String
+  victimAge           Int
+  victimSex           String
+  victimCivilStatus   String
+  victimAddress       String
+  victimContactNumber String?
+  isMinor             Boolean @default(false)
+  guardianName        String?
+
+  // Respondent Fields
+  respondentName          String
+  respondentAge           Int
+  respondentSex           String
+  respondentAddress       String
+  respondentContactNumber String?
+  respondentOccupation    String?
+  relationshipToVictim    RelationshipType
+
+  // Incident Details
+  abuseType        AbuseType
+  narrative        String    @db.Text
+  incidentDate     DateTime
+  incidentLocation String
+  vawcImage        String?
+
+  // Status & Linkages
+  status    VawcStatus @default(REPORTED)
+  isArchive Boolean    @default(false)
+
+  // Link to existing Blotter record
+  blotterId String?  @unique
+  blotter   Blotter? @relation(fields: [blotterId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  statusHistory VawcStatusHistory[]
+  schedules     VawcSchedule[]
+}
+
+model VawcStatusHistory {
+  id           String     @id @default(cuid())
+  vawcRecordId String
+  vawcRecord   VawcRecord @relation(fields: [vawcRecordId], references: [id], onDelete: Cascade)
+  status       VawcStatus
+  remarks      String?    @db.Text
+
+  changedById String?
+
+  createdAt DateTime @default(now())
+}
+
+model VawcSchedule {
+  id           String     @id @default(cuid())
+  vawcRecordId String
+  vawcRecord   VawcRecord @relation(fields: [vawcRecordId], references: [id], onDelete: Cascade)
+
+  scheduledDate DateTime
+  purpose       String
+  status        ScheduleStatus @default(PENDING)
+  notes         String?        @db.Text
+
+  createdAt DateTime @default(now())
 }
