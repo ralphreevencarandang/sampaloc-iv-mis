@@ -254,7 +254,7 @@ export default function RegisterPage() {
           <div className="mb-4 flex justify-center">
 
 
-            <Image src={logo} alt="Logo" width={80} height={80} />
+            <Image className="w-auto h-auto" src={logo} alt="Logo" width={80} height={80} />
           </div>
           <h1 className="text-3xl font-extrabold text-gray-900">Barangay Registration</h1>
           <p className="mt-2 text-sm text-gray-600">
@@ -315,6 +315,11 @@ export default function RegisterPage() {
                   }`}
                   placeholder="********"
                 />
+                {!errors.password && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Must be at least 8 characters, include an uppercase letter, a number, and a special character.
+                  </p>
+                )}
                 {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
               </div>
 

@@ -71,7 +71,7 @@ export default function LoginPage() {
             <div className="mb-4 flex justify-center">
               
 
-              <Image src={logo} alt="Logo" width={80} height={80} />
+              <Image className="w-auto h-auto" src={logo} alt="Logo" width={80} height={80} />
             </div>
             <h2 className="text-3xl font-extrabold text-gray-900">Barangay Portal</h2>
             <p className="mt-2 text-sm text-gray-600">Please sign in to access your account</p>

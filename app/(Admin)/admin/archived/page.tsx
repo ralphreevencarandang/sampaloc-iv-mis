@@ -1,16 +1,20 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import React, { useState } from 'react'
-import { Archive, Calendar, Megaphone, Scale, Search, Shield, Users } from 'lucide-react'
+import { Archive, Calendar, Megaphone, Scale, Search, Shield, ShieldAlert, Users } from 'lucide-react'
 import ArchiveCard from '@/components/ui/Admin/ArchiveCard'
 import api from '@/lib/axios'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 import type { AnnouncementRecord } from '@/server/announcements/announcements'
 import type { ResidentRecord } from '@/app/(Admin)/admin/resident/page'
 import type { OfficialRecord } from '@/server/officials/officials'
 import type { BlotterRecord } from '@/server/actions/blotter.actions'
 import type { VawcRecordType } from '@/server/actions/vawc.actions'
+import { unarchiveResidentAction } from '@/server/actions/resident.actions'
+import { unarchiveOfficialAction, unarchiveBlotterAction, unarchiveVawcAction } from '@/server/actions/archive.actions'
+import { unarchiveAnnouncementAction } from '@/server/actions/announcement.actions'
 
 async function fetchArchivedVawc(): Promise<VawcRecordType[]> {
   try {
@@ -139,6 +143,46 @@ function TabNavigation({ tabs, activeTab, onTabChange }: TabNavigationProps) {
 
 function ArchivedPage() {
   const [activeTab, setActiveTab] = useState<TabId>('Residents')
+  const queryClient = useQueryClient()
+
+  const handleUnarchiveSuccess = (tab: string, message: string) => {
+    toast.success(message)
+    queryClient.invalidateQueries({ queryKey: ['archivedData', tab] })
+  }
+
+  const handleUnarchiveError = (message: string) => {
+    toast.error(message)
+  }
+
+  const unarchiveResident = useMutation({
+    mutationFn: unarchiveResidentAction,
+    onSuccess: (res) => res.success ? handleUnarchiveSuccess('residents', res.message) : handleUnarchiveError(res.message),
+    onError: () => handleUnarchiveError('Failed to unarchive resident'),
+  })
+
+  const unarchiveOfficial = useMutation({
+    mutationFn: unarchiveOfficialAction,
+    onSuccess: (res) => res.success ? handleUnarchiveSuccess('officials', res.message) : handleUnarchiveError(res.message),
+    onError: () => handleUnarchiveError('Failed to unarchive official'),
+  })
+
+  const unarchiveAnnouncement = useMutation({
+    mutationFn: unarchiveAnnouncementAction,
+    onSuccess: (res) => res.success ? handleUnarchiveSuccess('announcements', res.message) : handleUnarchiveError(res.message),
+    onError: () => handleUnarchiveError('Failed to unarchive announcement'),
+  })
+
+  const unarchiveBlotter = useMutation({
+    mutationFn: unarchiveBlotterAction,
+    onSuccess: (res) => res.success ? handleUnarchiveSuccess('blotters', res.message) : handleUnarchiveError(res.message),
+    onError: () => handleUnarchiveError('Failed to unarchive blotter'),
+  })
+
+  const unarchiveVawc = useMutation({
+    mutationFn: unarchiveVawcAction,
+    onSuccess: (res) => res.success ? handleUnarchiveSuccess('vawc', res.message) : handleUnarchiveError(res.message),
+    onError: () => handleUnarchiveError('Failed to unarchive VAWC record'),
+  })
 
   const {
     data: archivedOfficials = [],
@@ -235,6 +279,8 @@ function ArchivedPage() {
             subtitle={`Resident ID: ${item.id}`}
             metadata={`Status: ${item.status}`}
             archivedDate={item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : 'N/A'}
+            onUnarchive={() => unarchiveResident.mutate(item.id)}
+            isUnarchiving={unarchiveResident.isPending && unarchiveResident.variables === item.id}
           />
         ))
       case 'Officials':
@@ -267,6 +313,8 @@ function ArchivedPage() {
             subtitle={`Official ID: ${item.id} • ${item.position}`}
             metadata={`Term Ended: ${item.termEnd ? new Date(item.termEnd).toLocaleDateString() : 'N/A'}`}
             archivedDate={'N/A'}
+            onUnarchive={() => unarchiveOfficial.mutate(item.id)}
+            isUnarchiving={unarchiveOfficial.isPending && unarchiveOfficial.variables === item.id}
           />
         ))
       case 'Announcements':
@@ -299,6 +347,8 @@ function ArchivedPage() {
             subtitle={`Announcement ID: ${item.id}`}
             metadata={`Posted on: ${new Date(item.createdAt).toLocaleDateString()}`}
             archivedDate={new Date(item.createdAt).toISOString().split('T')[0]}
+            onUnarchive={() => unarchiveAnnouncement.mutate(item.id)}
+            isUnarchiving={unarchiveAnnouncement.isPending && unarchiveAnnouncement.variables === item.id}
           />
         ))
       case 'Blotters':
@@ -331,6 +381,8 @@ function ArchivedPage() {
             subtitle={`Case ID: ${item.id}`}
             metadata={`Status: ${item.status}`}
             archivedDate={item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : 'N/A'}
+            onUnarchive={() => unarchiveBlotter.mutate(item.id)}
+            isUnarchiving={unarchiveBlotter.isPending && unarchiveBlotter.variables === item.id}
           />
         ))
       case 'VAWC':
@@ -363,6 +415,8 @@ function ArchivedPage() {
             subtitle={`Victim: ${item.victimName}`}
             metadata={`Respondant: ${item.respondentName} | Status: ${item.status}`}
             archivedDate={item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : 'N/A'}
+            onUnarchive={() => unarchiveVawc.mutate(item.id)}
+            isUnarchiving={unarchiveVawc.isPending && unarchiveVawc.variables === item.id}
           />
         ))
       default:

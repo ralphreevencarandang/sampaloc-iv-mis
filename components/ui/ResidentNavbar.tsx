@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, Settings, X } from "lucide-react";
+import { LogOut, Menu, Settings, SquareUser, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
@@ -54,8 +54,8 @@ function ResidentProfileMenu({
             onClick={() => setIsProfileMenuOpen(false)}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
           >
-            <Settings className="h-4 w-4" />
-            Settings
+            <SquareUser className="h-4 w-4" />
+            My Account
           </button>
           <button
             type="button"
