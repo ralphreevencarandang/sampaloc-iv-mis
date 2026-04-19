@@ -137,7 +137,7 @@ async function main() {
         update: {},
         create: {
             name: "System Admin",
-            email: "admin@samplociv.com",
+            email: "admin@sampalociv.com",
             password: adminPassword,
             role: "ADMIN",
         },

@@ -177,8 +177,9 @@ model Blotter {
   id           String  @id @default(cuid())
   blotterImage String?
 
-  complainantId String
-  complainant   Resident @relation("Complainant", fields: [complainantId], references: [id])
+  complainantId   String?
+  complainant     Resident? @relation("Complainant", fields: [complainantId], references: [id])
+  complainantName String
 
   respondentName String
 

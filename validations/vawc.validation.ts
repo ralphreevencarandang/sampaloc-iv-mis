@@ -7,7 +7,7 @@ export const vawcSchema = z.object({
   victimCivilStatus: z.string().min(1, "Civil Status is required."),
   victimAddress: z.string().min(5, "Address must be at least 5 characters."),
   victimContactNumber: z.string().optional(),
-  isMinor: z.boolean().default(false),
+  isMinor: z.preprocess((val) => val === "true" || val === true, z.boolean()),
   guardianName: z.string().optional(),
 
   respondentName: z.string().min(2, "Respondent name must be at least 2 characters."),
@@ -30,12 +30,12 @@ export const vawcSchema = z.object({
 
 export type VawcFormInput = z.infer<typeof vawcSchema>;
 
-export function getVawcFieldErrors(error: z.ZodError<VawcFormInput>) {
-  const fieldErrors: Partial<Record<keyof VawcFormInput, string>> = {};
-  error.errors.forEach((err) => {
-    if (err.path[0]) {
-      fieldErrors[err.path[0] as keyof VawcFormInput] = err.message;
-    }
-  });
-  return fieldErrors;
+export function getVawcFieldErrors(error: z.ZodError) {
+  const fieldErrors = error.flatten().fieldErrors;
+  return Object.fromEntries(
+    Object.entries(fieldErrors).flatMap(([key, messages]) => {
+      const message = Array.isArray(messages) ? messages[0] : undefined;
+      return message ? [[key, message]] : [];
+    })
+  ) as Partial<Record<keyof VawcFormInput, string>>;
 }

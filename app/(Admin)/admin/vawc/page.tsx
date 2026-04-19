@@ -2,10 +2,14 @@
 
 import React, { useState, useMemo } from 'react'
 import { Search, Plus, Edit2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, ShieldAlert } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import VawcModalForm from '@/components/ui/Admin/VawcModalForm'
 import axios from '@/lib/axios'
 import type { VawcRecordType } from '@/server/actions/vawc.actions'
+import { archiveVawcAction } from '@/server/actions/archive.actions'
+import Link from 'next/link'
+import { Archive } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const ITEMS_PER_PAGE = 10
 
@@ -15,6 +19,8 @@ export default function VawcPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedVawc, setSelectedVawc] = useState<VawcRecordType | null>(null)
 
+  const queryClient = useQueryClient();
+
   const { data: vawcs = [], isLoading, error } = useQuery<VawcRecordType[]>({
     queryKey: ['vawcs'],
     queryFn: async () => {
@@ -22,6 +28,21 @@ export default function VawcPage() {
       return response.data
     }
   })
+
+  const archiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await archiveVawcAction(id);
+      if (!result.success) throw new Error(result.message);
+      return result;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message);
+      queryClient.invalidateQueries({ queryKey: ["vawcs"] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to archive VAWC record.");
+    }
+  });
 
   const filteredVawcs = useMemo(() => {
     return vawcs.filter(vawc =>
@@ -154,11 +175,11 @@ export default function VawcPage() {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                         {vawc.vawcImage && (
-                          <a href={vawc.vawcImage} target="_blank" rel="noreferrer" className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="View Evidence">
-                            <Eye className="w-4 h-4" />
-                          </a>
-                        )}
+                        <Link 
+                          href={`/admin/vawc/${vawc.id}`}
+                          className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors" title="View Case">
+                          <Eye className="w-4 h-4" />
+                        </Link>
                         <button 
                           onClick={() => {
                             setSelectedVawc(vawc)
@@ -166,6 +187,16 @@ export default function VawcPage() {
                           }}
                           className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit Case">
                           <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => {
+                             if(confirm('Are you sure you want to archive this VAWC case?')) {
+                               archiveMutation.mutate(vawc.id);
+                             }
+                          }}
+                          disabled={archiveMutation.isPending}
+                          className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors disabled:opacity-50" title="Archive Case">
+                          <Archive className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

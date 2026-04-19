@@ -142,3 +142,70 @@ async function setBlotterArchiveStatusAction(
     }
   }
 }
+
+export type VawcArchiveResult = {
+  success: boolean;
+  message: string;
+  vawc?: {
+    id: string;
+    caseNumber: string;
+    victimName: string;
+    incidentDate: string;
+    status: string;
+  };
+};
+
+export async function archiveVawcAction(id: string): Promise<VawcArchiveResult> {
+  return setVawcArchiveStatusAction(id, true);
+}
+
+export async function unarchiveVawcAction(id: string): Promise<VawcArchiveResult> {
+  return setVawcArchiveStatusAction(id, false);
+}
+
+async function setVawcArchiveStatusAction(
+  id: string,
+  isArchive: boolean
+): Promise<VawcArchiveResult> {
+  try {
+    const existingVawc = await prisma.vawcRecord.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existingVawc) {
+      return {
+        success: false,
+        message: "VAWC record not found.",
+      };
+    }
+
+    const vawc = await prisma.vawcRecord.update({
+      where: { id },
+      data: { isArchive },
+    });
+
+    return {
+      success: true,
+      message: isArchive
+        ? "VAWC record archived successfully."
+        : "VAWC record restored successfully.",
+      vawc: {
+        id: vawc.id,
+        caseNumber: vawc.caseNumber,
+        victimName: vawc.victimName,
+        incidentDate: vawc.incidentDate.toISOString(),
+        status: vawc.status === "RESOLVED" || vawc.status === "DISMISSED" ? vawc.status : vawc.status,
+      },
+    };
+  } catch (error) {
+    console.error("update VAWC archive status failed", error);
+
+    return {
+      success: false,
+      message: isArchive
+        ? "An unexpected error occurred while archiving the VAWC record."
+        : "An unexpected error occurred while restoring the VAWC record.",
+    };
+  }
+}

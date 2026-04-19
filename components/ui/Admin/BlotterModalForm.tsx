@@ -46,6 +46,7 @@ const BlotterModalForm = ({ isOpen, onClose, initialData }: BlotterModalFormProp
     register,
     handleSubmit,
     reset,
+    watch,
     setError,
     setValue,
     clearErrors,
@@ -60,7 +61,8 @@ const BlotterModalForm = ({ isOpen, onClose, initialData }: BlotterModalFormProp
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        setValue("complainantId", initialData.complainantId);
+        setValue("complainantId", initialData.complainantId || "");
+        setValue("complainantName", initialData.complainant);
         setValue("respondentName", initialData.respondentName);
         setValue("location", initialData.location);
         setValue("incident", initialData.incident);
@@ -140,7 +142,8 @@ const BlotterModalForm = ({ isOpen, onClose, initialData }: BlotterModalFormProp
 
   const onSubmit = (data: BlotterFormInput) => {
     const formData = new FormData();
-    formData.append("complainantId", data.complainantId);
+    if (data.complainantId) formData.append("complainantId", data.complainantId);
+    formData.append("complainantName", data.complainantName);
     formData.append("respondentName", data.respondentName);
     formData.append("location", data.location);
     formData.append("date", data.date);
@@ -237,25 +240,49 @@ const BlotterModalForm = ({ isOpen, onClose, initialData }: BlotterModalFormProp
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <label htmlFor="complainantName" className="text-sm font-medium text-slate-700">
+                Complainant Name<RequiredMark />
+              </label>
+              <input
+                id="complainantName"
+                type="text"
+                placeholder="Complainant Name"
+                {...register("complainantName")}
+                disabled={!!watch("complainantId")}
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700 disabled:bg-slate-50 disabled:opacity-75"
+              />
+              {errors.complainantName && (
+                <span className="text-red-500 text-xs">{errors.complainantName.message}</span>
+              )}
+            </div>
+            
             <div className="flex flex-col gap-1.5">
               <label htmlFor="complainantId" className="text-sm font-medium text-slate-700">
-                Complainant<RequiredMark />
+                Link to Resident (Optional)
               </label>
               <select
                 id="complainantId"
                 {...register("complainantId")}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setValue("complainantId", value, { shouldValidate: true });
+                  if (value) {
+                    const resident = residents?.find(r => r.id === value);
+                    if (resident) {
+                      setValue("complainantName", resident.fullName, { shouldValidate: true });
+                    }
+                  }
+                }}
                 className="px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700 disabled:bg-slate-50 disabled:opacity-75"
               >
-                <option value="">Select Complainant</option>
+                <option value="">None (Manual Entry)</option>
                 {residents?.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.fullName}
                   </option>
                 ))}
               </select>
-              {errors.complainantId && (
-                <span className="text-red-500 text-xs">{errors.complainantId.message}</span>
-              )}
             </div>
 
             <div className="flex flex-col gap-1.5">

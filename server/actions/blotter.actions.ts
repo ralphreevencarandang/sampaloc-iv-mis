@@ -19,7 +19,8 @@ export async function createBlotter(formData: FormData): Promise<CreateBlotterRe
   const handledById = formData.get("handledById") as string;
 
   const parsed = blotterSchema.safeParse({
-    complainantId: formData.get("complainantId"),
+    complainantId: formData.get("complainantId") || undefined,
+    complainantName: formData.get("complainantName"),
     respondentName: formData.get("respondentName"),
     location: formData.get("location"),
     date: formData.get("date"),
@@ -51,7 +52,8 @@ export async function createBlotter(formData: FormData): Promise<CreateBlotterRe
 
     await prisma.blotter.create({
       data: {
-        complainantId: data.complainantId,
+        complainantId: data.complainantId || null,
+        complainantName: data.complainantName,
         respondentName: data.respondentName,
         incident: data.incident,
         location: data.location,
@@ -113,7 +115,7 @@ export async function getResidentsForDropdown() {
 
 export interface BlotterRecord {
   id: string;
-  complainantId: string;
+  complainantId?: string | null;
   complainant: string;
   respondentName: string;
   incident: string;
@@ -144,7 +146,7 @@ export async function getBlottersFromDb(options: { archived?: boolean } = {}): P
   return blotters.map((b) => ({
     id: b.id,
     complainantId: b.complainantId,
-    complainant: [b.complainant.firstName, b.complainant.lastName].filter(Boolean).join(" "),
+    complainant: b.complainantName,
     respondentName: b.respondentName,
     incident: b.incident,
     location: b.location,
@@ -166,7 +168,8 @@ export async function updateBlotter(id: string, formData: FormData): Promise<Cre
   const handledById = formData.get("handledById") as string;
 
   const parsed = blotterSchema.safeParse({
-    complainantId: formData.get("complainantId"),
+    complainantId: formData.get("complainantId") || undefined,
+    complainantName: formData.get("complainantName"),
     respondentName: formData.get("respondentName"),
     location: formData.get("location"),
     date: formData.get("date"),
@@ -213,7 +216,8 @@ export async function updateBlotter(id: string, formData: FormData): Promise<Cre
     await prisma.blotter.update({
       where: { id },
       data: {
-        complainantId: data.complainantId,
+        complainantId: data.complainantId || null,
+        complainantName: data.complainantName,
         respondentName: data.respondentName,
         incident: data.incident,
         location: data.location,

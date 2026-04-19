@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const blotterSchema = z.object({
   blotterImageName: z.string().optional(),
-  complainantId: z.string().min(1, { message: "Please select a complainant." }),
+  complainantId: z.string().optional(),
+  complainantName: z.string().min(1, { message: "Complainant name is required." }),
   respondentName: z.string().min(1, { message: "Respondent name is required." }),
   incident: z.string().min(1, { message: "Incident description is required." }),
   location: z.string().min(1, { message: "Location is required." }),

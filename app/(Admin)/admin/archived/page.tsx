@@ -10,6 +10,20 @@ import type { AnnouncementRecord } from '@/server/announcements/announcements'
 import type { ResidentRecord } from '@/app/(Admin)/admin/resident/page'
 import type { OfficialRecord } from '@/server/officials/officials'
 import type { BlotterRecord } from '@/server/actions/blotter.actions'
+import type { VawcRecordType } from '@/server/actions/vawc.actions'
+
+async function fetchArchivedVawc(): Promise<VawcRecordType[]> {
+  try {
+    const response = await api.get<VawcRecordType[]>('/archives?type=vawc')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { message?: string } | undefined)?.message
+      throw new Error(message ?? 'Failed to fetch archived VAWC records.')
+    }
+    throw error
+  }
+}
 
 async function fetchArchivedBlotters(): Promise<BlotterRecord[]> {
   try {
@@ -82,7 +96,7 @@ const ARCHIVED_DATA = {
   ],
 } as const
 
-type TabId = keyof typeof ARCHIVED_DATA
+type TabId = keyof typeof ARCHIVED_DATA | 'VAWC'
 
 type TabDefinition = {
   id: TabId
@@ -170,11 +184,23 @@ function ArchivedPage() {
     enabled: activeTab === 'Blotters',
   })
 
+  const {
+    data: archivedVawc = [],
+    isLoading: isVawcLoading,
+    isError: isVawcError,
+    error: vawcError,
+  } = useQuery({
+    queryKey: ['archivedData', 'vawc'],
+    queryFn: fetchArchivedVawc,
+    enabled: activeTab === 'VAWC',
+  })
+
   const tabs: TabDefinition[] = [
     { id: 'Residents', label: 'Residents', icon: Users },
     { id: 'Officials', label: 'Officials', icon: Shield },
     { id: 'Announcements', label: 'Announcements', icon: Megaphone },
     { id: 'Blotters', label: 'Blotters', icon: Scale },
+    { id: 'VAWC', label: 'VAWC', icon: ShieldAlert },
   ]
 
   const renderContent = () => {
@@ -304,6 +330,38 @@ function ArchivedPage() {
             title={item.incident}
             subtitle={`Case ID: ${item.id}`}
             metadata={`Status: ${item.status}`}
+            archivedDate={item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : 'N/A'}
+          />
+        ))
+      case 'VAWC':
+        if (isVawcLoading) {
+          return [
+            <div key="loading" className="flex w-full flex-col items-center justify-center py-12 text-center">
+              <p className="font-medium text-slate-600">Loading archived VAWC cases...</p>
+            </div>
+          ]
+        }
+        
+        if (isVawcError) {
+          return [
+            <div key="error" className="flex w-full flex-col items-center justify-center py-12 text-center text-red-600">
+              <p className="font-medium">
+                {vawcError instanceof Error ? vawcError.message : 'Error loading VAWC cases'}
+              </p>
+            </div>
+          ]
+        }
+
+        if (archivedVawc.length === 0) {
+          return [] 
+        }
+
+        return archivedVawc.map((item) => (
+          <ArchiveCard
+            key={item.id}
+            title={item.caseNumber}
+            subtitle={`Victim: ${item.victimName}`}
+            metadata={`Respondant: ${item.respondentName} | Status: ${item.status}`}
             archivedDate={item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : 'N/A'}
           />
         ))

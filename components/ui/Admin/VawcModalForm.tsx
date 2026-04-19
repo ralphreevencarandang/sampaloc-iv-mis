@@ -301,7 +301,6 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
                   <option value="">Select</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
-                <option value="Other">Other</option>
               </select>
               {errors.respondentSex && <span className="text-red-500 text-xs">{errors.respondentSex.message}</span>}
             </div>
