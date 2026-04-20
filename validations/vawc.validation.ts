@@ -1,31 +1,77 @@
 import { z } from "zod";
 
-export const vawcSchema = z.object({
-  victimName: z.string().min(2, "Victim name must be at least 2 characters."),
-  victimAge: z.coerce.number().min(0, "Age must be a valid positive number."),
-  victimSex: z.string().min(1, "Sex is required."),
-  victimCivilStatus: z.string().min(1, "Civil Status is required."),
-  victimAddress: z.string().min(5, "Address must be at least 5 characters."),
-  victimContactNumber: z.string().optional(),
-  isMinor: z.preprocess((val) => val === "true" || val === true, z.boolean()),
-  guardianName: z.string().optional(),
+const trimToUndefined = (value: unknown) => {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
 
-  respondentName: z.string().min(2, "Respondent name must be at least 2 characters."),
-  respondentAge: z.coerce.number().min(0, "Age must be a valid positive number."),
-  respondentSex: z.string().min(1, "Sex is required."),
-  respondentAddress: z.string().min(5, "Address must be at least 5 characters."),
-  respondentContactNumber: z.string().optional(),
-  respondentOccupation: z.string().optional(),
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
+};
+
+const requiredString = (message: string, minLength = 1) =>
+  z.preprocess(
+    trimToUndefined,
+    z.string().min(minLength, message)
+  );
+
+const optionalTrimmedString = z.preprocess(
+  trimToUndefined,
+  z.string().optional()
+);
+
+const requiredNumber = (message: string) =>
+  z.preprocess((value) => {
+    if (value === "" || value === null || value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value === "number") {
+      return value;
+    }
+
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }, z.number().int(message).min(0, message));
+
+export const vawcSchema = z.object({
+  victimName: requiredString("Victim name is required.", 2),
+  victimAge: requiredNumber("Victim age is required."),
+  victimSex: requiredString("Victim sex is required."),
+  victimCivilStatus: requiredString("Victim civil status is required."),
+  victimAddress: requiredString("Victim address is required.", 5),
+  victimContactNumber: optionalTrimmedString,
+  isMinor: z.preprocess((val) => val === "true" || val === true, z.boolean()),
+  guardianName: optionalTrimmedString,
+
+  respondentName: requiredString("Respondent name is required.", 2),
+  respondentAge: requiredNumber("Respondent age is required."),
+  respondentSex: requiredString("Respondent sex is required."),
+  respondentAddress: requiredString("Respondent address is required.", 5),
+  respondentContactNumber: optionalTrimmedString,
+  respondentOccupation: optionalTrimmedString,
   relationshipToVictim: z.enum(["SPOUSE", "FORMER_SPOUSE", "LIVE_IN", "DATING", "FORMER_DATING", "OTHER"]),
 
   abuseType: z.enum(["PHYSICAL", "SEXUAL", "PSYCHOLOGICAL", "ECONOMIC"]),
-  narrative: z.string().min(10, "Narrative must be at least 10 characters long."),
-  incidentDate: z.string().min(1, "Incident date and time is required."),
-  incidentLocation: z.string().min(2, "Location is required."),
+  narrative: requiredString("Narrative is required.", 10),
+  incidentDate: requiredString("Incident date and time is required."),
+  incidentLocation: requiredString("Incident location is required.", 2),
   
   status: z.enum(["REPORTED", "SUMMONED", "RESOLVED", "DISMISSED"]).default("REPORTED"),
   
-  vawcImageName: z.string().optional(), // Used for tracking cloudinary file name validation if applicable
+  vawcImageName: optionalTrimmedString,
+}).superRefine((data, ctx) => {
+  if (data.isMinor && !data.guardianName) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["guardianName"],
+      message: "Guardian name is required when the victim is a minor.",
+    });
+  }
 });
 
 export type VawcFormInput = z.infer<typeof vawcSchema>;
