@@ -49,14 +49,13 @@ function ResidentProfileMenu({
 
       {isProfileMenuOpen && (
         <div className="absolute right-0 mt-3 w-48 rounded-xl border border-gray-100 bg-white p-2 shadow-xl">
-          <button
-            type="button"
-            onClick={() => setIsProfileMenuOpen(false)}
+          <Link
+            href="/my-account"
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
           >
             <SquareUser className="h-4 w-4" />
             My Account
-          </button>
+          </Link>
           <button
             type="button"
             onClick={() => {

@@ -26,12 +26,12 @@ html {
     }
 
     .padding-x{
-        padding-left: 4%;
-        padding-right: 4%;
+        padding-left: clamp(1rem, 4vw, 2.5rem);
+        padding-right: clamp(1rem, 4vw, 2.5rem);
     }
     .padding-y{
-        padding-top: 4%;
-        padding-bottom: 4%;
+        padding-top: clamp(1.5rem, 4vw, 3rem);
+        padding-bottom: clamp(1.5rem, 4vw, 3rem);
     }
     
 }
