@@ -12,6 +12,8 @@ import {
 } from "@/validations/resident.validation";
 import { revalidatePath } from "next/cache";
 
+import { sendResidentApprovalEmail } from "@/lib/nodemailer";
+
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
 export type RegisterResidentResult = {
@@ -246,7 +248,12 @@ export async function updateResidentAction(id: string, formData: FormData): Prom
   const data = parsed.data;
 
   try {
-    await prisma.resident.update({
+    const existingResident = await prisma.resident.findUnique({
+      where: { id },
+      select: { status: true, email: true, firstName: true },
+    });
+
+    const updatedResident = await prisma.resident.update({
       where: { id },
       data: {
         firstName: data.firstName,
@@ -265,6 +272,15 @@ export async function updateResidentAction(id: string, formData: FormData): Prom
         status: data.status,
       },
     });
+
+    if (
+      existingResident &&
+      existingResident.status !== "APPROVED" &&
+      updatedResident.status === "APPROVED"
+    ) {
+      // Launch email sending asynchronously without blocking the request
+      sendResidentApprovalEmail(updatedResident.email, updatedResident.firstName);
+    }
 
     return {
       success: true,

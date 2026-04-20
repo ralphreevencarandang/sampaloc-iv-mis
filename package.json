@@ -12,6 +12,8 @@
     "@hookform/resolvers": "^5.2.2",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.0.7",
     "@tanstack/react-query": "^5.99.0",
     "axios": "^1.15.0",
     "cloudinary": "^2.9.0",
@@ -24,6 +26,7 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.72.1",
     "react-hot-toast": "^2.6.0",
+    "resend": "^6.12.0",
     "yup": "^1.7.1",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
