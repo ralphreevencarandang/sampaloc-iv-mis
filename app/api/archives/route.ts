@@ -3,6 +3,7 @@ import { fetchAnnouncementsFromDb } from "@/server/announcements/announcements";
 import { fetchOfficialsFromDb } from "@/server/officials/officials";
 import { getBlottersFromDb } from "@/server/actions/blotter.actions";
 import { getVawcFromDb } from "@/server/actions/vawc.actions";
+import { getPetsFromDb } from "@/server/actions/pet.action";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
@@ -58,6 +59,11 @@ export async function GET(request: Request) {
     if (type === "vawc") {
       const vawcCases = await getVawcFromDb({ archived: true });
       return NextResponse.json(vawcCases);
+    }
+
+    if (type === "pets") {
+      const pets = await getPetsFromDb({ archived: true });
+      return NextResponse.json(pets);
     }
     
     // Fallback for other mock entities at the moment

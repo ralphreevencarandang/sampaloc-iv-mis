@@ -134,10 +134,10 @@ const ResidentAnnouncement = () => {
                       <h3 className="mb-4 text-2xl font-bold text-slate-900">{announcement.title}</h3>
                       <p className="mb-8 whitespace-pre-line text-slate-600">{announcement.content}</p>
 
-                      <div className="mt-auto flex items-center gap-1 font-semibold text-primary-600">
+                      {/* <div className="mt-auto flex items-center gap-1 font-semibold text-primary-600">
                         Announcement details
                         <ArrowRight className="h-4 w-4" />
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 ))}

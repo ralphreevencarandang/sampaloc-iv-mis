@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch, type Resolver, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, X, Eye, ShieldAlert } from "lucide-react";
+import { Loader2, X, ShieldAlert } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 
@@ -22,6 +22,63 @@ function RequiredMark() {
 }
 
 const SECTION_HEADING = "text-lg font-bold text-slate-800 pb-2 border-b border-slate-200 mt-6 mb-4 flex items-center gap-2";
+const CREATE_DEFAULTS: Partial<VawcFormInput> = {
+  victimName: "",
+  victimAge: undefined,
+  victimSex: "",
+  victimCivilStatus: "",
+  victimAddress: "",
+  victimContactNumber: "",
+  isMinor: false,
+  guardianName: "",
+  respondentName: "",
+  respondentAge: undefined,
+  respondentSex: "",
+  respondentAddress: "",
+  respondentContactNumber: "",
+  respondentOccupation: "",
+  relationshipToVictim: undefined,
+  abuseType: undefined,
+  narrative: "",
+  incidentDate: "",
+  incidentLocation: "",
+  status: "REPORTED",
+  vawcImageName: "",
+};
+
+const FIELD_LABELS: Partial<Record<keyof VawcFormInput, string>> = {
+  victimName: "Victim name",
+  victimAge: "Victim age",
+  victimSex: "Victim sex",
+  victimCivilStatus: "Victim civil status",
+  victimAddress: "Victim address",
+  victimContactNumber: "Victim contact number",
+  isMinor: "Victim is a minor",
+  guardianName: "Guardian name",
+  respondentName: "Respondent name",
+  respondentAge: "Respondent age",
+  respondentSex: "Respondent sex",
+  respondentAddress: "Respondent address",
+  respondentContactNumber: "Respondent contact number",
+  respondentOccupation: "Respondent occupation",
+  relationshipToVictim: "Relationship to victim",
+  abuseType: "Type of abuse",
+  narrative: "Narrative summary",
+  incidentDate: "Incident date and time",
+  incidentLocation: "Incident location",
+  status: "Case status",
+  vawcImageName: "Evidentiary image",
+};
+
+const fieldClasses = (hasError: boolean) =>
+  `px-4 py-2 border rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700 ${
+    hasError ? "border-red-400 bg-red-50" : "border-gray-200"
+  }`;
+
+const selectClasses = (hasError: boolean) =>
+  `px-4 py-2 bg-white border rounded-lg focus:outline-none focus:border-primary-500 text-slate-700 ${
+    hasError ? "border-red-400 bg-red-50" : "border-gray-200"
+  }`;
 
 const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => {
   const queryClient = useQueryClient();
@@ -35,20 +92,24 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setError,
     setValue,
     clearErrors,
     formState: { errors },
   } = useForm<VawcFormInput>({
-    resolver: zodResolver(vawcSchema),
-    defaultValues: {
-      status: "REPORTED",
-      isMinor: false,
-    },
+    resolver: zodResolver(vawcSchema as never) as Resolver<VawcFormInput>,
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+    shouldFocusError: true,
+    defaultValues: CREATE_DEFAULTS,
   });
 
-  const isMinor = watch("isMinor") === true || String(watch("isMinor")) === "true";
+  const isMinorValue = useWatch({ control, name: "isMinor" });
+  const isMinor = isMinorValue === true || String(isMinorValue) === "true";
+  const fieldErrorEntries = Object.entries(errors).filter(
+    ([key, error]) => key !== "root" && error?.message
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -81,20 +142,17 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
         }
 
         if (initialData.vawcImage) {
-          setImagePreview(initialData.vawcImage);
+          queueMicrotask(() => setImagePreview(initialData.vawcImage));
           setValue("vawcImageName", initialData.vawcImage);
         } else {
-          setImagePreview(null);
+          queueMicrotask(() => setImagePreview(null));
           setValue("vawcImageName", "");
         }
-        setImageFile(null);
+        queueMicrotask(() => setImageFile(null));
       } else {
-        reset({
-          status: "REPORTED",
-          isMinor: false,
-        });
-        setImagePreview(null);
-        setImageFile(null);
+        reset(CREATE_DEFAULTS);
+        queueMicrotask(() => setImagePreview(null));
+        queueMicrotask(() => setImageFile(null));
       }
     }
   }, [isOpen, initialData, setValue, reset]);
@@ -128,17 +186,19 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
       setError("root", { type: "server", message: errorMsg });
 
       if (result.fieldErrors) {
-        Object.keys(result.fieldErrors).forEach((key) => {
+        const fieldErrors = result.fieldErrors as Record<string, string>;
+
+        Object.keys(fieldErrors).forEach((key) => {
           setError(key as keyof VawcFormInput, {
             type: "server",
-            message: result.fieldErrors![key],
+            message: fieldErrors[key],
           });
         });
       }
     },
   });
 
-  const onSubmit = (data: VawcFormInput) => {
+  const onSubmit: SubmitHandler<VawcFormInput> = (data) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null && key !== "vawcImageName") {
@@ -212,18 +272,33 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
               {errors.root.message}
             </div>
           )}
+          {fieldErrorEntries.length > 0 && (
+            <div className="bg-red-50 text-red-700 p-4 rounded-lg text-sm mb-4 border border-red-100">
+              <p className="font-semibold">Validation failed for the following fields:</p>
+              <ul className="mt-2 list-disc pl-5 space-y-1">
+                {fieldErrorEntries.map(([key, error]) => (
+                  <li key={key}>
+                    <span className="font-medium">
+                      {FIELD_LABELS[key as keyof VawcFormInput] ?? key}:
+                    </span>{" "}
+                    {error?.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* VICTIM DETAILS */}
           <h3 className={SECTION_HEADING}>Complainant (Victim) Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5 md:col-span-2">
               <label className="text-sm font-medium text-slate-700">Full Name<RequiredMark /></label>
-              <input type="text" {...register("victimName")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="text" {...register("victimName")} className={fieldClasses(!!errors.victimName)} />
               {errors.victimName && <span className="text-red-500 text-xs">{errors.victimName.message}</span>}
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Age<RequiredMark /></label>
-              <input type="number" {...register("victimAge")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="number" inputMode="numeric" {...register("victimAge")} className={fieldClasses(!!errors.victimAge)} />
               {errors.victimAge && <span className="text-red-500 text-xs">{errors.victimAge.message}</span>}
             </div>
           </div>
@@ -231,7 +306,7 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Sex<RequiredMark /></label>
-              <select {...register("victimSex")} className="px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
+              <select {...register("victimSex")} className={selectClasses(!!errors.victimSex)}>
                 <option value="">Select</option>
                 <option value="Female">Female</option>
                 <option value="Male">Male</option>
@@ -241,7 +316,7 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Civil Status<RequiredMark /></label>
-              <select {...register("victimCivilStatus")} className="px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
+              <select {...register("victimCivilStatus")} className={selectClasses(!!errors.victimCivilStatus)}>
                 <option value="">Select</option>
                 <option value="Single">Single</option>
                 <option value="Married">Married</option>
@@ -252,31 +327,33 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Contact Number</label>
-              <input type="text" {...register("victimContactNumber")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="text" {...register("victimContactNumber")} className={fieldClasses(!!errors.victimContactNumber)} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="flex flex-col gap-1.5 md:col-span-2">
               <label className="text-sm font-medium text-slate-700">Address<RequiredMark /></label>
-              <input type="text" {...register("victimAddress")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="text" {...register("victimAddress")} className={fieldClasses(!!errors.victimAddress)} />
               {errors.victimAddress && <span className="text-red-500 text-xs">{errors.victimAddress.message}</span>}
             </div>
             <div className="flex flex-col gap-1.5 justify-center ">
               <label className="text-sm font-medium text-slate-700">
                 Is Minor?<RequiredMark />
               </label>
-              <select {...register("isMinor")} className="px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
+              <select {...register("isMinor")} className={selectClasses(!!errors.isMinor)}>
                 <option value="false">No</option>
                 <option value="true">Yes</option>
               </select>
+              {errors.isMinor && <span className="text-red-500 text-xs">{errors.isMinor.message}</span>}
             </div>
           </div>
 
           {isMinor && (
             <div className="flex flex-col gap-1.5 mt-4">
               <label className="text-sm font-medium text-slate-700">Guardian Name<RequiredMark /></label>
-              <input type="text" {...register("guardianName")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="text" {...register("guardianName")} className={fieldClasses(!!errors.guardianName)} />
+              {errors.guardianName && <span className="text-red-500 text-xs">{errors.guardianName.message}</span>}
             </div>
           )}
 
@@ -284,20 +361,21 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
           <h3 className={SECTION_HEADING}>Respondent Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="flex flex-col gap-1.5 md:col-span-4">
+              
               <label className="text-sm font-medium text-slate-700">Full Name<RequiredMark /></label>
-              <input type="text" {...register("respondentName")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="text" {...register("respondentName")} className={fieldClasses(!!errors.respondentName)} />
               {errors.respondentName && <span className="text-red-500 text-xs">{errors.respondentName.message}</span>}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 md:col-span-4 gap-4 mt-4">
+              <div className="flex flex-col gap-1.5  ">
                 <label className="text-sm font-medium text-slate-700">Age<RequiredMark /></label>
-                <input type="number" {...register("respondentAge")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+                <input type="number" inputMode="numeric" {...register("respondentAge")} className={fieldClasses(!!errors.respondentAge)} />
                 {errors.respondentAge && <span className="text-red-500 text-xs">{errors.respondentAge.message}</span>}
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-slate-700">Sex<RequiredMark /></label>
-                <select {...register("respondentSex")} className="px-3 py-2 border border-gray-200 rounded-lg bg-white outline-none">
+              <select {...register("respondentSex")} className={selectClasses(!!errors.respondentSex)}>
                   <option value="">Select</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -312,18 +390,18 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
              <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Address<RequiredMark /></label>
-              <input type="text" {...register("respondentAddress")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="text" {...register("respondentAddress")} className={fieldClasses(!!errors.respondentAddress)} />
               {errors.respondentAddress && <span className="text-red-500 text-xs">{errors.respondentAddress.message}</span>}
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Contact Number</label>
-              <input type="text" {...register("respondentContactNumber")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="text" {...register("respondentContactNumber")} className={fieldClasses(!!errors.respondentContactNumber)} />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Relationship to Victim<RequiredMark /></label>
-              <select {...register("relationshipToVictim")} className="px-3 py-2 border rounded-lg bg-white outline-none border border-gray-200">
+              <select {...register("relationshipToVictim")} className={selectClasses(!!errors.relationshipToVictim)}>
                 <option value="">Select Relationship</option>
                 <option value="SPOUSE">Spouse</option>
                 <option value="FORMER_SPOUSE">Former Spouse</option>
@@ -345,7 +423,7 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Type of Abuse<RequiredMark /></label>
-              <select {...register("abuseType")} className="px-3 py-2  border border-gray-200 rounded-lg bg-white outline-none">
+              <select {...register("abuseType")} className={selectClasses(!!errors.abuseType)}>
                 <option value="">Select Type</option>
                 <option value="PHYSICAL">Physical Violence</option>
                 <option value="SEXUAL">Sexual Violence</option>
@@ -356,19 +434,19 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
             </div>
              <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Date & Time<RequiredMark /></label>
-              <input type="datetime-local" {...register("incidentDate")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="datetime-local" {...register("incidentDate")} className={fieldClasses(!!errors.incidentDate)} />
               {errors.incidentDate && <span className="text-red-500 text-xs">{errors.incidentDate.message}</span>}
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">Location<RequiredMark /></label>
-              <input type="text" {...register("incidentLocation")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+              <input type="text" {...register("incidentLocation")} className={fieldClasses(!!errors.incidentLocation)} />
               {errors.incidentLocation && <span className="text-red-500 text-xs">{errors.incidentLocation.message}</span>}
             </div>
           </div>
           
           <div className="flex flex-col gap-1.5 mt-4">
             <label className="text-sm font-medium text-slate-700">Narrative Summary<RequiredMark /></label>
-            <textarea rows={4} {...register("narrative")} className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700" />
+            <textarea rows={4} {...register("narrative")} className={fieldClasses(!!errors.narrative)} />
              {errors.narrative && <span className="text-red-500 text-xs">{errors.narrative.message}</span>}
           </div>
 
@@ -381,7 +459,8 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
               ref={fileInputRef}
               onChange={handleImageChange}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 placeholder-slate-400 text-slate-700 file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:bg-primary-50 file:text-primary-700"
-            />
+              />
+            {errors.vawcImageName && <span className="text-red-500 text-xs">{errors.vawcImageName.message}</span>}
             {imagePreview && (
               <div className="mt-3 relative inline-block overflow-hidden rounded-lg group">
                 <Image src={imagePreview} alt="Evidence" width={192} height={128} className="h-32 w-48 object-cover border" unoptimized />
@@ -394,12 +473,13 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
 
           <div className="flex flex-col gap-1.5 mt-4 md:w-1/3">
               <label className="text-sm font-medium text-slate-700">Case Status<RequiredMark /></label>
-              <select {...register("status")} className="px-3 py-2 border border-gray-200 rounded-lg bg-white outline-none">
+              <select {...register("status")} className={selectClasses(!!errors.status)}>
                 <option value="REPORTED">Reported / Filing Phase</option>
                 <option value="SUMMONED">Summoned </option>
                 <option value="RESOLVED">Resolved</option>
                 <option value="DISMISSED">Dismissed</option>
               </select>
+              {errors.status && <span className="text-red-500 text-xs">{errors.status.message}</span>}
           </div>
 
           <div className="flex gap-3 pt-6 border-t  border-gray-200 mt-8 sticky bottom-0 bg-white">

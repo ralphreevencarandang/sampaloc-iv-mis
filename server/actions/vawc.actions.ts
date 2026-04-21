@@ -7,6 +7,15 @@ import { CloudinaryUploadError, uploadImageToCloudinary } from "@/lib/cloudinary
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
+const getFormString = (formData: FormData, key: string) => {
+  const value = formData.get(key);
+  return value === null ? undefined : value;
+};
+
+const getFormBoolean = (formData: FormData, key: string) => {
+  return formData.get(key) === "true";
+};
+
 export type CreateVawcResult = {
   success: boolean;
   message?: string;
@@ -135,29 +144,30 @@ export async function getVawcById(id: string): Promise<VawcRecordType | null> {
 export async function createVawc(formData: FormData): Promise<CreateVawcResult> {
   const fileValue = formData.get("vawcImage");
   const vawcImageFile = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
+  const isMinor = getFormBoolean(formData, "isMinor");
 
   const parsed = vawcSchema.safeParse({
-    victimName: formData.get("victimName"),
-    victimAge: formData.get("victimAge"),
-    victimSex: formData.get("victimSex"),
-    victimCivilStatus: formData.get("victimCivilStatus"),
-    victimAddress: formData.get("victimAddress"),
-    victimContactNumber: formData.get("victimContactNumber"),
-    isMinor: formData.get("isMinor") === "true",
-    guardianName: formData.get("guardianName"),
-    respondentName: formData.get("respondentName"),
-    respondentAge: formData.get("respondentAge"),
-    respondentSex: formData.get("respondentSex"),
-    respondentAddress: formData.get("respondentAddress"),
-    respondentContactNumber: formData.get("respondentContactNumber"),
-    respondentOccupation: formData.get("respondentOccupation"),
-    relationshipToVictim: formData.get("relationshipToVictim"),
-    abuseType: formData.get("abuseType"),
-    narrative: formData.get("narrative"),
-    incidentDate: formData.get("incidentDate"),
-    incidentLocation: formData.get("incidentLocation"),
-    status: formData.get("status"),
-    vawcImageName: vawcImageFile ? vawcImageFile.name : formData.get("vawcImageName"),
+    victimName: getFormString(formData, "victimName"),
+    victimAge: getFormString(formData, "victimAge"),
+    victimSex: getFormString(formData, "victimSex"),
+    victimCivilStatus: getFormString(formData, "victimCivilStatus"),
+    victimAddress: getFormString(formData, "victimAddress"),
+    victimContactNumber: getFormString(formData, "victimContactNumber"),
+    isMinor,
+    guardianName: isMinor ? getFormString(formData, "guardianName") : undefined,
+    respondentName: getFormString(formData, "respondentName"),
+    respondentAge: getFormString(formData, "respondentAge"),
+    respondentSex: getFormString(formData, "respondentSex"),
+    respondentAddress: getFormString(formData, "respondentAddress"),
+    respondentContactNumber: getFormString(formData, "respondentContactNumber"),
+    respondentOccupation: getFormString(formData, "respondentOccupation"),
+    relationshipToVictim: getFormString(formData, "relationshipToVictim"),
+    abuseType: getFormString(formData, "abuseType"),
+    narrative: getFormString(formData, "narrative"),
+    incidentDate: getFormString(formData, "incidentDate"),
+    incidentLocation: getFormString(formData, "incidentLocation"),
+    status: getFormString(formData, "status"),
+    vawcImageName: vawcImageFile ? vawcImageFile.name : getFormString(formData, "vawcImageName"),
   });
 
   if (!parsed.success) {
@@ -242,29 +252,30 @@ export async function createVawc(formData: FormData): Promise<CreateVawcResult> 
 export async function updateVawc(id: string, formData: FormData): Promise<CreateVawcResult> {
   const fileValue = formData.get("vawcImage");
   const vawcImageFile = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
+  const isMinor = getFormBoolean(formData, "isMinor");
 
   const parsed = vawcSchema.safeParse({
-    victimName: formData.get("victimName"),
-    victimAge: formData.get("victimAge"),
-    victimSex: formData.get("victimSex"),
-    victimCivilStatus: formData.get("victimCivilStatus"),
-    victimAddress: formData.get("victimAddress"),
-    victimContactNumber: formData.get("victimContactNumber"),
-    isMinor: formData.get("isMinor") === "true",
-    guardianName: formData.get("guardianName"),
-    respondentName: formData.get("respondentName"),
-    respondentAge: formData.get("respondentAge"),
-    respondentSex: formData.get("respondentSex"),
-    respondentAddress: formData.get("respondentAddress"),
-    respondentContactNumber: formData.get("respondentContactNumber"),
-    respondentOccupation: formData.get("respondentOccupation"),
-    relationshipToVictim: formData.get("relationshipToVictim"),
-    abuseType: formData.get("abuseType"),
-    narrative: formData.get("narrative"),
-    incidentDate: formData.get("incidentDate"),
-    incidentLocation: formData.get("incidentLocation"),
-    status: formData.get("status"),
-    vawcImageName: vawcImageFile ? vawcImageFile.name : formData.get("vawcImageName"),
+    victimName: getFormString(formData, "victimName"),
+    victimAge: getFormString(formData, "victimAge"),
+    victimSex: getFormString(formData, "victimSex"),
+    victimCivilStatus: getFormString(formData, "victimCivilStatus"),
+    victimAddress: getFormString(formData, "victimAddress"),
+    victimContactNumber: getFormString(formData, "victimContactNumber"),
+    isMinor,
+    guardianName: isMinor ? getFormString(formData, "guardianName") : undefined,
+    respondentName: getFormString(formData, "respondentName"),
+    respondentAge: getFormString(formData, "respondentAge"),
+    respondentSex: getFormString(formData, "respondentSex"),
+    respondentAddress: getFormString(formData, "respondentAddress"),
+    respondentContactNumber: getFormString(formData, "respondentContactNumber"),
+    respondentOccupation: getFormString(formData, "respondentOccupation"),
+    relationshipToVictim: getFormString(formData, "relationshipToVictim"),
+    abuseType: getFormString(formData, "abuseType"),
+    narrative: getFormString(formData, "narrative"),
+    incidentDate: getFormString(formData, "incidentDate"),
+    incidentLocation: getFormString(formData, "incidentLocation"),
+    status: getFormString(formData, "status"),
+    vawcImageName: vawcImageFile ? vawcImageFile.name : getFormString(formData, "vawcImageName"),
   });
 
   if (!parsed.success) {

@@ -485,7 +485,7 @@ export default function MyAccountPage() {
   });
 
   const petsQuery = useQuery({
-    queryKey: ["resident-pets", residentId],
+    queryKey: ["pets", "user", residentId],
     queryFn: async () => {
       if (!residentId) {
         throw new Error("Resident session is missing.");
