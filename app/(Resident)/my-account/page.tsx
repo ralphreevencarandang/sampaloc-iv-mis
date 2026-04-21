@@ -18,6 +18,7 @@ import {
   Users,
   User,
   WalletCards,
+  ArrowLeft,
 } from "lucide-react";
 import { useResidentAuth } from "@/components/providers/resident-auth-provider";
 import apiClient from "@/lib/axios";
@@ -545,10 +546,14 @@ export default function MyAccountPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3">
-        <Link href="/" className="inline-flex w-fit items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
-          <Home className="h-4 w-4" />
-          Back to home
+        <Link href="/" className="inline-flex w-fit items-center gap-2    hover:text-slate-900">
+                        <ArrowLeft className="  h-5 w-5 " />
+              <p className="">Back to home</p>
         </Link>
+
+                    
+           
+
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-600">
             My Account

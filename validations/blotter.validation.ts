@@ -14,6 +14,19 @@ export const blotterSchema = z.object({
 
 export type BlotterFormInput = z.infer<typeof blotterSchema>;
 
+export const residentBlotterSchema = blotterSchema.pick({
+  blotterImageName: true,
+  respondentName: true,
+  incident: true,
+  location: true,
+  date: true,
+}).extend({
+  complainantId: z.string().optional(),
+  complainantName: z.string().min(1, { message: "Complainant name is required." }),
+});
+
+export type ResidentBlotterFormInput = z.infer<typeof residentBlotterSchema>;
+
 export function getBlotterFieldErrors(error: z.ZodError) {
   const fieldErrors = error.flatten().fieldErrors;
 

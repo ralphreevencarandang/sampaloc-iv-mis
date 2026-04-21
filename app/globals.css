@@ -14,24 +14,27 @@
 }
 
 @plugin "daisyui" {
-   themes: light --default;
+  themes: light --default;
 }
+
 html {
   scroll-behavior: smooth;
 }
-@layer components {
-    .max-container {
-        max-width: 1440px;
-        margin: 0 auto;
-    }
 
-    .padding-x{
-        padding-left: clamp(1rem, 4vw, 2.5rem);
-        padding-right: clamp(1rem, 4vw, 2.5rem);
-    }
-    .padding-y{
-        padding-top: clamp(1.5rem, 4vw, 3rem);
-        padding-bottom: clamp(1.5rem, 4vw, 3rem);
-    }
-    
+@layer components {
+  .max-container {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  .padding-x {
+    padding-left: clamp(1rem, 4vw, 2.5rem);
+    padding-right: clamp(1rem, 4vw, 2.5rem);
+  }
+
+  .padding-y {
+    padding-top: clamp(1.5rem, 4vw, 3rem);
+    padding-bottom: clamp(1.5rem, 4vw, 3rem);
+  }
+
 }

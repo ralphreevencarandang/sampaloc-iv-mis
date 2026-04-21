@@ -20,7 +20,10 @@ export async function GET(_: Request, { params }: RouteContext) {
     }
 
     const blotters = await prisma.blotter.findMany({
-      where: { complainantId: id },
+      where: {
+        complainantId: id,
+        isArchive: false,
+      },
       select: {
         id: true,
         incident: true,

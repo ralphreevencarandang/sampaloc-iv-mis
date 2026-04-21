@@ -21,6 +21,19 @@ export const petSchema = z.object({
 export type PetFormInput = z.input<typeof petSchema>;
 export type PetInput = z.output<typeof petSchema>;
 
+export const residentPetSchema = petSchema.pick({
+  name: true,
+  type: true,
+  breed: true,
+  color: true,
+  vaccinationDate: true,
+}).extend({
+  ownerId: z.string().optional(),
+  ownerName: z.string().min(1, { message: "Owner name is required." }),
+});
+
+export type ResidentPetFormInput = z.input<typeof residentPetSchema>;
+
 export function getPetFieldErrors(error: z.ZodError) {
   const fieldErrors = error.flatten().fieldErrors;
 

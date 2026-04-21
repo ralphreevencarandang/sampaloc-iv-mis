@@ -4,8 +4,10 @@ import prismaModule from "@/lib/prisma";
 import {
   getPetFieldErrors,
   petSchema,
+  residentPetSchema,
   type PetFormInput,
 } from "@/validations/pet.validation";
+import { getCurrentResidentFromSession } from "@/lib/resident-session";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -282,6 +284,94 @@ export async function updatePet(id: string, formData: FormData): Promise<PetMuta
     return {
       success: false,
       message: "An unexpected error occurred while updating the pet.",
+    };
+  }
+}
+
+export async function createResidentPet(formData: FormData): Promise<PetMutationResult> {
+  const currentResident = await getCurrentResidentFromSession();
+
+  if (!currentResident) {
+    return {
+      success: false,
+      message: "You must be signed in to register a pet.",
+    };
+  }
+
+  const resident = await prisma.resident.findUnique({
+    where: { id: currentResident.id },
+    select: {
+      id: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+      isArchived: true,
+      status: true,
+    },
+  });
+
+  if (!resident || resident.isArchived || resident.status !== "APPROVED") {
+    return {
+      success: false,
+      message: "Your resident account is not eligible to register a pet.",
+    };
+  }
+
+  const ownerName = [resident.firstName, resident.middleName, resident.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  const parsed = residentPetSchema.safeParse({
+    ownerId: resident.id,
+    ownerName,
+    name: getFormValue(formData, "name"),
+    type: getFormValue(formData, "type"),
+    breed: getFormValue(formData, "breed"),
+    color: getFormValue(formData, "color"),
+    vaccinationDate: getFormValue(formData, "vaccinationDate"),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please correct the highlighted fields.",
+      fieldErrors: getPetFieldErrors(parsed.error),
+    };
+  }
+
+  const { data } = parsed;
+
+  try {
+    const createdPet = await prisma.pet.create({
+      data: {
+        ownerId: resident.id,
+        name: data.name,
+        type: data.type,
+        breed: data.breed || null,
+        color: data.color || null,
+        vaccinationDate: data.vaccinationDate ? new Date(data.vaccinationDate) : null,
+      },
+      include: {
+        owner: {
+          select: {
+            firstName: true,
+            middleName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      message: "Pet registered successfully.",
+      pet: mapPetRecord(createdPet as PetEntity),
+    };
+  } catch (error) {
+    console.error("create resident pet failed", error);
+    return {
+      success: false,
+      message: "An unexpected error occurred while registering the pet.",
     };
   }
 }

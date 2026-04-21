@@ -2,7 +2,12 @@
 
 import prismaModule from "@/lib/prisma";
 import { CloudinaryUploadError, uploadImageToCloudinary } from "@/lib/cloudinary";
-import { blotterSchema, getBlotterFieldErrors } from "@/validations/blotter.validation";
+import { getCurrentResidentFromSession } from "@/lib/resident-session";
+import {
+  blotterSchema,
+  getBlotterFieldErrors,
+  residentBlotterSchema,
+} from "@/validations/blotter.validation";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -12,10 +17,26 @@ export type CreateBlotterResult = {
   fieldErrors?: Record<string, string>;
 };
 
-export async function createBlotter(formData: FormData): Promise<CreateBlotterResult> {
+function getUploadedBlotterImage(formData: FormData) {
   const fileValue = formData.get("blotterImage");
-  const blotterImageFile = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
+  return fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
+}
 
+async function uploadBlotterImageIfPresent(blotterImageFile: File | null) {
+  if (!blotterImageFile) {
+    return null;
+  }
+
+  const uploadResult = await uploadImageToCloudinary(blotterImageFile, {
+    assetLabel: "Blotter image",
+    folder: "blotters",
+  });
+
+  return uploadResult.secure_url;
+}
+
+export async function createBlotter(formData: FormData): Promise<CreateBlotterResult> {
+  const blotterImageFile = getUploadedBlotterImage(formData);
   const handledById = formData.get("handledById") as string;
 
   const parsed = blotterSchema.safeParse({
@@ -41,14 +62,7 @@ export async function createBlotter(formData: FormData): Promise<CreateBlotterRe
   const { data } = parsed;
 
   try {
-    let blotterImage: string | null = null;
-    if (blotterImageFile) {
-      const uploadResult = await uploadImageToCloudinary(blotterImageFile, {
-        assetLabel: "Blotter image",
-        folder: "blotters",
-      });
-      blotterImage = uploadResult.secure_url;
-    }
+    const blotterImage = await uploadBlotterImageIfPresent(blotterImageFile);
 
     await prisma.blotter.create({
       data: {
@@ -82,6 +96,100 @@ export async function createBlotter(formData: FormData): Promise<CreateBlotterRe
     return {
       success: false,
       message: "An unexpected error occurred while creating the blotter.",
+    };
+  }
+}
+
+export async function createResidentBlotter(formData: FormData): Promise<CreateBlotterResult> {
+  const currentResident = await getCurrentResidentFromSession();
+
+  if (!currentResident) {
+    return {
+      success: false,
+      message: "You must be signed in to file a blotter.",
+    };
+  }
+
+  const blotterImageFile = getUploadedBlotterImage(formData);
+  const resident = await prisma.resident.findUnique({
+    where: { id: currentResident.id },
+    select: {
+      id: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+      isArchived: true,
+      status: true,
+    },
+  });
+
+  if (!resident || resident.isArchived || resident.status !== "APPROVED") {
+    return {
+      success: false,
+      message: "Your resident account is not eligible to file a blotter.",
+    };
+  }
+
+  const complainantName = [resident.firstName, resident.middleName, resident.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  const parsed = residentBlotterSchema.safeParse({
+    complainantId: resident.id,
+    complainantName,
+    respondentName: formData.get("respondentName"),
+    location: formData.get("location"),
+    date: formData.get("date"),
+    incident: formData.get("incident"),
+    blotterImageName: blotterImageFile?.name,
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please correct the highlighted fields.",
+      fieldErrors: getBlotterFieldErrors(parsed.error),
+    };
+  }
+
+  const { data } = parsed;
+
+  try {
+    const blotterImage = await uploadBlotterImageIfPresent(blotterImageFile);
+
+    await prisma.blotter.create({
+      data: {
+        complainantId: resident.id,
+        complainantName: data.complainantName,
+        respondentName: data.respondentName,
+        incident: data.incident,
+        location: data.location,
+        date: new Date(data.date),
+        status: "OPEN",
+        handledById: null,
+        blotterImage,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Blotter filed successfully.",
+    };
+  } catch (error) {
+    if (error instanceof CloudinaryUploadError) {
+      return {
+        success: false,
+        message: "Please correct the highlighted fields.",
+        fieldErrors: {
+          blotterImageName: error.message,
+        },
+      };
+    }
+
+    console.error("create resident blotter failed", error);
+    return {
+      success: false,
+      message: "An unexpected error occurred while filing the blotter.",
     };
   }
 }
@@ -157,13 +265,13 @@ export async function getBlottersFromDb(options: { archived?: boolean } = {}): P
       : undefined,
     handledById: b.handledById ?? undefined,
     blotterImage: b.blotterImage,
+    createdAt: b.createdAt.toISOString(),
     isArchive: b.isArchive,
   }));
 }
 
 export async function updateBlotter(id: string, formData: FormData): Promise<CreateBlotterResult> {
-  const fileValue = formData.get("blotterImage");
-  const blotterImageFile = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
+  const blotterImageFile = getUploadedBlotterImage(formData);
 
   const handledById = formData.get("handledById") as string;
 
@@ -204,11 +312,7 @@ export async function updateBlotter(id: string, formData: FormData): Promise<Cre
     let blotterImage = currentBlotter.blotterImage;
 
     if (blotterImageFile) {
-      const uploadResult = await uploadImageToCloudinary(blotterImageFile, {
-        assetLabel: "Blotter image",
-        folder: "blotters",
-      });
-      blotterImage = uploadResult.secure_url;
+      blotterImage = await uploadBlotterImageIfPresent(blotterImageFile);
     } else if (!formData.get("blotterImageName")) {
       blotterImage = null;
     }
