@@ -1,9 +1,10 @@
 'use server'
 
 import prismaModule from "@/lib/prisma"
-import { mapOfficialRecord, type OfficialRecord } from "@/server/officials/officials"
+import { mapOfficialRecord } from "@/server/officials/officials"
 import { type CreateOfficialResult } from "@/server/actions/official.actions"
 import { type BlotterRecord } from "@/server/actions/blotter.actions"
+import { type PetRecord } from "@/server/actions/pet.action"
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -206,6 +207,83 @@ async function setVawcArchiveStatusAction(
       message: isArchive
         ? "An unexpected error occurred while archiving the VAWC record."
         : "An unexpected error occurred while restoring the VAWC record.",
+    };
+  }
+}
+
+export type PetArchiveResult = {
+  success: boolean;
+  message: string;
+  pet?: PetRecord;
+};
+
+export async function archivePetAction(id: string): Promise<PetArchiveResult> {
+  return setPetArchiveStatusAction(id, true);
+}
+
+export async function unarchivePetAction(id: string): Promise<PetArchiveResult> {
+  return setPetArchiveStatusAction(id, false);
+}
+
+async function setPetArchiveStatusAction(
+  id: string,
+  isArchive: boolean
+): Promise<PetArchiveResult> {
+  try {
+    const existingPet = await prisma.pet.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existingPet) {
+      return {
+        success: false,
+        message: "Pet record not found.",
+      };
+    }
+
+    const pet = await prisma.pet.update({
+      where: { id },
+      data: { isArchive },
+      include: {
+        owner: {
+          select: {
+            firstName: true,
+            middleName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      message: isArchive
+        ? "Pet archived successfully."
+        : "Pet restored successfully.",
+      pet: {
+        id: pet.id,
+        ownerId: pet.ownerId,
+        ownerName: [pet.owner.firstName, pet.owner.middleName, pet.owner.lastName]
+          .filter(Boolean)
+          .join(" "),
+        name: pet.name,
+        type: pet.type,
+        breed: pet.breed,
+        color: pet.color,
+        vaccinationDate: pet.vaccinationDate?.toISOString() ?? null,
+        createdAt: pet.createdAt.toISOString(),
+        isArchive: pet.isArchive,
+      },
+    };
+  } catch (error) {
+    console.error("update pet archive status failed", error);
+
+    return {
+      success: false,
+      message: isArchive
+        ? "An unexpected error occurred while archiving the pet."
+        : "An unexpected error occurred while restoring the pet.",
     };
   }
 }

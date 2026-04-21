@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import React, { useState } from 'react'
-import { Archive, Calendar, Megaphone, Scale, Search, Shield, ShieldAlert, Users } from 'lucide-react'
+import { Archive, Megaphone, PawPrint, Scale, Search, Shield, ShieldAlert, Users } from 'lucide-react'
 import ArchiveCard from '@/components/ui/Admin/ArchiveCard'
 import api from '@/lib/axios'
 import axios from 'axios'
@@ -12,8 +12,9 @@ import type { ResidentRecord } from '@/app/(Admin)/admin/resident/page'
 import type { OfficialRecord } from '@/server/officials/officials'
 import type { BlotterRecord } from '@/server/actions/blotter.actions'
 import type { VawcRecordType } from '@/server/actions/vawc.actions'
+import type { PetRecord } from '@/server/actions/pet.action'
 import { unarchiveResidentAction } from '@/server/actions/resident.actions'
-import { unarchiveOfficialAction, unarchiveBlotterAction, unarchiveVawcAction } from '@/server/actions/archive.actions'
+import { unarchiveOfficialAction, unarchiveBlotterAction, unarchivePetAction, unarchiveVawcAction } from '@/server/actions/archive.actions'
 import { unarchiveAnnouncementAction } from '@/server/actions/announcement.actions'
 
 async function fetchArchivedVawc(): Promise<VawcRecordType[]> {
@@ -81,26 +82,20 @@ async function fetchArchivedAnnouncements(): Promise<AnnouncementRecord[]> {
   }
 }
 
-const ARCHIVED_DATA = {
-  Residents: [
-    { id: 'RSD-2021-0042', name: 'Maria Clara Delos Santos', status: 'Relocated', archivedDate: '2024-05-12' },
-    { id: 'RSD-2019-0188', name: 'Jose Rizalino', status: 'Deceased', archivedDate: '2025-01-08' },
-  ],
-  Officials: [
-    { id: 'OFF-2018-01', name: 'Anita Dimaculangan', position: 'Barangay Kagawad', termEnded: '2023-11-30', archivedDate: '2023-12-05' },
-    { id: 'OFF-2018-05', name: 'Carlos Agoncillo', position: 'SK Chairperson', termEnded: '2023-11-30', archivedDate: '2023-12-05' },
-  ],
-  Announcements: [
-    { id: 'ANN-2022-89', title: 'Barangay Road Widening Project Schedule', postedDate: '2022-03-15', archivedDate: '2023-03-15' },
-    { id: 'ANN-2022-104', title: 'Typhoon Karding Relief Operations', postedDate: '2022-09-26', archivedDate: '2023-09-26' },
-  ],
-  Blotters: [
-    { id: 'BLT-2023-012', incident: 'Noise Complaint (Curfew Violation)', resolution: 'Resolved - Settled at Barangay Hall', archivedDate: '2024-02-20' },
-    { id: 'BLT-2023-045', incident: 'Minor Property Dispute', resolution: 'Dismissed - Escalated to Police', archivedDate: '2024-04-11' },
-  ],
-} as const
+type TabId = 'Residents' | 'Officials' | 'Announcements' | 'Blotters' | 'Pets' | 'VAWC'
 
-type TabId = keyof typeof ARCHIVED_DATA | 'VAWC'
+async function fetchArchivedPets(): Promise<PetRecord[]> {
+  try {
+    const response = await api.get<PetRecord[]>('/archives?type=pets')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { message?: string } | undefined)?.message
+      throw new Error(message ?? 'Failed to fetch archived pets.')
+    }
+    throw error
+  }
+}
 
 type TabDefinition = {
   id: TabId
@@ -184,6 +179,19 @@ function ArchivedPage() {
     onError: () => handleUnarchiveError('Failed to unarchive VAWC record'),
   })
 
+  const unarchivePet = useMutation({
+    mutationFn: unarchivePetAction,
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(res.message)
+        void queryClient.invalidateQueries({ queryKey: ['pets'] })
+        return
+      }
+      handleUnarchiveError(res.message)
+    },
+    onError: () => handleUnarchiveError('Failed to unarchive pet'),
+  })
+
   const {
     data: archivedOfficials = [],
     isLoading: isOfficialsLoading,
@@ -239,11 +247,23 @@ function ArchivedPage() {
     enabled: activeTab === 'VAWC',
   })
 
+  const {
+    data: archivedPets = [],
+    isLoading: isPetsLoading,
+    isError: isPetsError,
+    error: petsError,
+  } = useQuery({
+    queryKey: ['pets', 'archived'],
+    queryFn: fetchArchivedPets,
+    enabled: activeTab === 'Pets',
+  })
+
   const tabs: TabDefinition[] = [
     { id: 'Residents', label: 'Residents', icon: Users },
     { id: 'Officials', label: 'Officials', icon: Shield },
     { id: 'Announcements', label: 'Announcements', icon: Megaphone },
     { id: 'Blotters', label: 'Blotters', icon: Scale },
+    { id: 'Pets', label: 'Pets', icon: PawPrint },
     { id: 'VAWC', label: 'VAWC', icon: ShieldAlert },
   ]
 
@@ -417,6 +437,40 @@ function ArchivedPage() {
             archivedDate={item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : 'N/A'}
             onUnarchive={() => unarchiveVawc.mutate(item.id)}
             isUnarchiving={unarchiveVawc.isPending && unarchiveVawc.variables === item.id}
+          />
+        ))
+      case 'Pets':
+        if (isPetsLoading) {
+          return [
+            <div key="loading-pets" className="flex w-full flex-col items-center justify-center py-12 text-center">
+              <p className="font-medium text-slate-600">Loading archived pets...</p>
+            </div>
+          ]
+        }
+
+        if (isPetsError) {
+          return [
+            <div key="error-pets" className="flex w-full flex-col items-center justify-center py-12 text-center text-red-600">
+              <p className="font-medium">
+                {petsError instanceof Error ? petsError.message : 'Error loading pets'}
+              </p>
+            </div>
+          ]
+        }
+
+        if (archivedPets.length === 0) {
+          return []
+        }
+
+        return archivedPets.map((item) => (
+          <ArchiveCard
+            key={item.id}
+            title={item.name}
+            subtitle={`Owner: ${item.ownerName}`}
+            metadata={`Type: ${item.type}${item.breed ? ` | Breed: ${item.breed}` : ''}`}
+            archivedDate={item.createdAt}
+            onUnarchive={() => unarchivePet.mutate(item.id)}
+            isUnarchiving={unarchivePet.isPending && unarchivePet.variables === item.id}
           />
         ))
       default:

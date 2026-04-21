@@ -20,7 +20,10 @@ export async function GET(_: Request, { params }: RouteContext) {
     }
 
     const pets = await prisma.pet.findMany({
-      where: { ownerId: id },
+      where: {
+        ownerId: id,
+        isArchive: false,
+      },
       select: {
         id: true,
         name: true,

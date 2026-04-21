@@ -1,5 +1,4 @@
 import React from "react";
-import ResidentNavbar from "@/components/ui/ResidentNavbar";
 import { requireResidentSession } from "@/lib/resident-session";
 
 export default async function MyAccountLayout({

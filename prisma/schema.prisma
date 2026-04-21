@@ -169,6 +169,7 @@ model Pet {
   breed           String?
   color           String?
   vaccinationDate DateTime?
+  isArchive       Boolean  @default(false)
 
   createdAt DateTime @default(now())
 }
