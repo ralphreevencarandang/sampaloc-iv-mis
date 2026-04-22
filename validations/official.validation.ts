@@ -8,6 +8,12 @@ export const officialStatusSchema = z.enum(["Active", "Inactive"]);
 export const officialSchema = z
   .object({
     firstName: requiredString("First name"),
+    middleName: z
+      .string()
+      .trim()
+      .max(100, "Middle name must be 100 characters or less.")
+      .optional()
+      .nullable(),
     lastName: requiredString("Last name"),
     email: z.email("Enter a valid email address.").trim().toLowerCase(),
     status: officialStatusSchema,

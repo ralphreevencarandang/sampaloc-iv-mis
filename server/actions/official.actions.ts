@@ -50,6 +50,7 @@ function validateOfficialForm(formData: FormData): {
 
   const parsed = officialSchema.safeParse({
     firstName: getFormValue(formData, "firstName"),
+    middleName: getFormValue(formData, "middleName") || null,
     lastName: getFormValue(formData, "lastName"),
     email: getFormValue(formData, "email"),
     status: getFormValue(formData, "status"),
@@ -120,8 +121,8 @@ export async function createOfficial(formData: FormData): Promise<CreateOfficial
       data: {
         officialProfile,
         firstName: data.firstName,
+        middleName: data.middleName ?? null,
         lastName: data.lastName,
-        middleName: "",
         email: data.email,
         isActive,
         position: data.position,
@@ -131,6 +132,7 @@ export async function createOfficial(formData: FormData): Promise<CreateOfficial
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         lastName: true,
         email: true,
         officialProfile: true,
@@ -229,6 +231,7 @@ export async function updateOfficial(id: string, formData: FormData): Promise<Cr
       data: {
         officialProfile,
         firstName: data.firstName,
+        middleName: data.middleName ?? null,
         lastName: data.lastName,
         email: data.email,
         isActive,
@@ -239,6 +242,7 @@ export async function updateOfficial(id: string, formData: FormData): Promise<Cr
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         lastName: true,
         email: true,
         officialProfile: true,

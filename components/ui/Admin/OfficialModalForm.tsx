@@ -23,21 +23,17 @@ function RequiredMark() {
 }
 
 const positionOptions = [
-  "Barangay Captain",
-  "Barangay Kagawad - Health",
-  "Barangay Kagawad - Peace & Order",
-  "Barangay Kagawad - Education",
-  "Barangay Kagawad - Infrastructure",
-  "Barangay Kagawad - Environment",
-  "Barangay Kagawad - Agriculture",
-  "Barangay Kagawad - Finance",
+  "Punong Barangay",
+  "Barangay Kagawad",
+  "Barangay Secretary",
+  "Barangay Treasurer",
   "SK Chairperson",
   "SK Kagawad",
-  "Barangay Secretary",
 ];
 
 const defaultValues: OfficialFormInput = {
   firstName: "",
+  middleName: "",
   lastName: "",
   email: "",
   status: "Active",
@@ -76,6 +72,7 @@ const OfficialModalForm = ({
     if (isOpen) {
       if (initialData) {
         setValue("firstName", initialData.firstName);
+        setValue("middleName", initialData.middleName ?? "");
         setValue("lastName", initialData.lastName);
         setValue("email", initialData.email);
         setValue("status", initialData.status);
@@ -162,12 +159,13 @@ const OfficialModalForm = ({
     const submission = new FormData();
 
     submission.set("firstName", data.firstName);
+    submission.set("middleName", data.middleName ?? "");
     submission.set("lastName", data.lastName);
     submission.set("email", data.email);
     submission.set("status", data.status);
     submission.set("position", data.position);
     submission.set("termStart", data.termStart);
-    submission.set("termEnd", data.termEnd);
+    submission.set("termEnd", data.termEnd ?? "");
 
     // If user uploaded a new profile
     if (selectedProfile) {
@@ -265,7 +263,7 @@ const OfficialModalForm = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="flex flex-col gap-2">
               <label htmlFor="firstName" className="text-sm font-medium text-slate-700">
                 First Name<RequiredMark />
@@ -278,6 +276,20 @@ const OfficialModalForm = ({
                 className="rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
               />
               {errors.firstName && <p className="text-sm text-red-500">{errors.firstName.message}</p>}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="middleName" className="text-sm font-medium text-slate-700">
+                Middle Name <span className="text-slate-400 font-normal text-xs">(optional)</span>
+              </label>
+              <input
+                id="middleName"
+                type="text"
+                placeholder="Enter middle name"
+                {...register("middleName")}
+                className="rounded-lg border border-gray-200 px-4 py-2 focus:border-primary-500 focus:outline-none"
+              />
+              {errors.middleName && <p className="text-sm text-red-500">{errors.middleName.message}</p>}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -294,7 +306,7 @@ const OfficialModalForm = ({
               {errors.lastName && <p className="text-sm text-red-500">{errors.lastName.message}</p>}
             </div>
 
-            <div className="flex flex-col gap-2 md:col-span-2">
+            <div className="flex flex-col gap-2 md:col-span-3">
               <label htmlFor="email" className="text-sm font-medium text-slate-700">
                 Email<RequiredMark />
               </label>
@@ -309,7 +321,7 @@ const OfficialModalForm = ({
               {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
             </div>
 
-            <div className="flex flex-col gap-2 md:col-span-2">
+            <div className="flex flex-col gap-2 md:col-span-3">
               <label htmlFor="officialProfile" className="text-sm font-medium text-slate-700">
                 Official Profile Image
               </label>
@@ -337,7 +349,7 @@ const OfficialModalForm = ({
             </div>
 
             {profilePreview && (
-              <div className="flex flex-col gap-2 md:col-span-2">
+              <div className="flex flex-col gap-2 md:col-span-3">
                 <label className="text-sm font-medium text-slate-700">Profile Preview</label>
                 <div className="relative inline-block overflow-hidden rounded-lg bg-slate-50">
                   <Image
@@ -360,7 +372,7 @@ const OfficialModalForm = ({
               </div>
             )}
 
-            <div className="flex flex-col gap-2 md:col-span-2">
+            <div className="flex flex-col gap-2 md:col-span-3">
               <label htmlFor="status" className="text-sm font-medium text-slate-700">
                 Status<RequiredMark />
               </label>
@@ -376,7 +388,7 @@ const OfficialModalForm = ({
               {errors.status && <p className="text-sm text-red-500">{errors.status.message}</p>}
             </div>
             
-            <div className="flex flex-col gap-2 md:col-span-2">
+            <div className="flex flex-col gap-2 md:col-span-3">
               <label htmlFor="position" className="text-sm font-medium text-slate-700">
                 Position<RequiredMark />
               </label>

@@ -7,6 +7,7 @@ export type OfficialRecord = {
   id: string;
   name: string;
   firstName: string;
+  middleName: string | null;
   lastName: string;
   email: string;
   officialProfile: string | null;
@@ -20,6 +21,7 @@ export type OfficialRecord = {
 type OfficialEntity = {
   id: string;
   firstName: string;
+  middleName: string | null;
   lastName: string;
   email: string;
   officialProfile: string | null;
@@ -30,8 +32,9 @@ type OfficialEntity = {
   isArchive: boolean;
 };
 
-function buildOfficialName(firstName: string, lastName: string) {
-  return `${firstName.trim()} ${lastName.trim()}`.trim();
+function buildOfficialName(firstName: string, middleName: string | null, lastName: string) {
+  const initial = middleName?.trim() ? `${middleName.trim()[0]}.` : null;
+  return [firstName.trim(), initial, lastName.trim()].filter(Boolean).join(" ");
 }
 
 function mapOfficialRecord(
@@ -39,8 +42,9 @@ function mapOfficialRecord(
 ): OfficialRecord {
   return {
     id: official.id,
-    name: buildOfficialName(official.firstName, official.lastName),
+    name: buildOfficialName(official.firstName, official.middleName ?? null, official.lastName),
     firstName: official.firstName,
+    middleName: official.middleName ?? null,
     lastName: official.lastName,
     email: official.email,
     officialProfile: official.officialProfile ?? null,
@@ -61,6 +65,7 @@ export async function fetchOfficialsFromDb(options: { archived?: boolean } = {})
     select: {
       id: true,
       firstName: true,
+      middleName: true,
       lastName: true,
       email: true,
       officialProfile: true,

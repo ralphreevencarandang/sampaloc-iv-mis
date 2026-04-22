@@ -133,7 +133,7 @@ async function main() {
     console.log("Seeding Admin User...");
     const adminPassword = await bcrypt.hash("adminPassword", 10);
     await prisma.admin.upsert({
-        where: { email: "admin@samplociv.com" },
+        where: { email: "admin@sampalociv.com" },
         update: {},
         create: {
             name: "System Admin",
@@ -156,6 +156,103 @@ async function main() {
         },
     });
     console.log("Seeded health worker user successfully.");
+
+    console.log("Seeding Barangay Officials...");
+    const officialsData = [
+        {
+            email: "armando.movido@sampaloc4.gov.ph",
+            firstName: "Armando",
+            middleName: "M",
+            lastName: "Movido",
+            position: "Punong Barangay",
+        },
+        {
+            email: "belen.movido@sampaloc4.gov.ph",
+            firstName: "Belen",
+            middleName: "P",
+            lastName: "Movido",
+            position: "Barangay Secretary",
+        },
+        {
+            email: "imelda.villa@sampaloc4.gov.ph",
+            firstName: "Imelda",
+            middleName: "M",
+            lastName: "Villa",
+            position: "Barangay Treasurer",
+        },
+        {
+            email: "anabelle.movido@sampaloc4.gov.ph",
+            firstName: "Anabelle",
+            middleName: "A",
+            lastName: "Movido",
+            position: "Barangay Kagawad",
+        },
+        {
+            email: "dominador.alvaran@sampaloc4.gov.ph",
+            firstName: "Dominador",
+            middleName: "P",
+            lastName: "Alvaran Jr.",
+            position: "Barangay Kagawad",
+        },
+        {
+            email: "reynaldo.ancheta@sampaloc4.gov.ph",
+            firstName: "Reynaldo",
+            middleName: "B",
+            lastName: "Ancheta",
+            position: "Barangay Kagawad",
+        },
+        {
+            email: "alicejoy.lopez@sampaloc4.gov.ph",
+            firstName: "Alice Joy",
+            middleName: "J",
+            lastName: "Lopez",
+            position: "Barangay Kagawad",
+        },
+        {
+            email: "ernesto.atienza@sampaloc4.gov.ph",
+            firstName: "Ernesto",
+            middleName: "C",
+            lastName: "Atienza",
+            position: "Barangay Kagawad",
+        },
+        {
+            email: "jose.devera@sampaloc4.gov.ph",
+            firstName: "Jose",
+            middleName: "J",
+            lastName: "De Vera",
+            position: "Barangay Kagawad",
+        },
+        {
+            email: "ruel.ledesma@sampaloc4.gov.ph",
+            firstName: "Ruel",
+            middleName: "M",
+            lastName: "Ledesma",
+            position: "Barangay Kagawad",
+        },
+        {
+            email: "jedrick.narvaez@sampaloc4.gov.ph",
+            firstName: "Jedrick",
+            middleName: "A",
+            lastName: "Narvaez",
+            position: "SK Chairperson",
+        },
+    ];
+
+    for (const official of officialsData) {
+        await prisma.official.upsert({
+            where: { email: official.email },
+            update: {},
+            create: {
+                ...official,
+                isActive: true,
+                isArchive: false,
+                termStart: new Date("2023-11-06"),
+                termEnd: new Date("2026-11-05"),
+            },
+        });
+    }
+    console.log(`Seeded ${officialsData.length} officials successfully.`);
+
 }
 main()
     .catch((e) => {
