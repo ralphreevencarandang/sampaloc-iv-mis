@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: "Sampaloc IV - Barangay Information System",
   description: "Sampaloc IV - Barangay Information System",
   icons: {
-    icon: "/images/dasma-logo.png",
+    icon: "/images/sampaloc-logo.png",
   },
 };
 

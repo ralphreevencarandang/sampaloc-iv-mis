@@ -14,7 +14,7 @@ import {
   residentRegistrationSchema,
   type ResidentRegistrationInput,
 } from "@/validations/resident.validation";
-import logo from '@/public/images/dasma-logo.png'
+import logo from '@/public/images/sampaloc-logo.png'
 
 
 type RegisterFormState = Omit<ResidentRegistrationInput, "validIDImageName"> & {

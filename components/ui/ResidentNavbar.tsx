@@ -8,7 +8,7 @@ import { useResidentAuth } from "@/components/providers/resident-auth-provider";
 import { logoutResidentAction } from "@/server/actions/auth.actions";
 import { useMutation } from "@tanstack/react-query";
 import Image from "next/image";
-import logo from "@/public/images/dasma-logo.png";
+import logo from "@/public/images/sampaloc-logo.png";
 
 function ResidentProfileMenu({
   residentInitial,

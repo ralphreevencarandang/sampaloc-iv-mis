@@ -8,7 +8,7 @@ import { useResidentAuth } from "@/components/providers/resident-auth-provider";
 import { loginResidentAction } from "@/server/actions/auth.actions";
 import { getZodFieldErrors, residentLoginSchema } from "@/validations/auth.validation";
 import Image from "next/image";
-import logo from '@/public/images/dasma-logo.png'
+import logo from '@/public/images/sampaloc-logo.png'
 
 export default function LoginPage() {
   const router = useRouter();

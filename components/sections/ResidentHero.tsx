@@ -1,6 +1,6 @@
 import React from 'react'
 import { ArrowRight, ShieldCheck, Users, FileText } from 'lucide-react';
-import logo from '@/public/images/dasma-logo.png';
+import logo from '@/public/images/sampaloc-logo.png';
 import Image from 'next/image';
 const ResidentHero = () => {
   return (

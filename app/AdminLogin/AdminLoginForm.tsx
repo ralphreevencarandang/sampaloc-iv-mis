@@ -6,6 +6,8 @@ import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { loginAdminAction } from '@/server/actions/auth.actions'
 import { adminLoginSchema, getZodFieldErrors } from '@/validations/auth.validation'
+import logo from '@/public/images/sampaloc-logo.png'
+import Image from 'next/image'
 
 export function AdminLoginForm() {
   const router = useRouter()
@@ -56,8 +58,10 @@ export function AdminLoginForm() {
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-primary-600 to-primary-700 rounded-lg mb-4">
-            <LogIn className="w-8 h-8 text-white" />
+           <div className="mb-4 flex justify-center">
+
+
+            <Image className="w-auto h-auto" src={logo} alt="Logo" width={80} height={80} />
           </div>
           <h1 className="text-3xl font-bold text-slate-900">Admin Portal</h1>
           <p className="text-slate-600 mt-2">Sampaloc IV Barangay Management System</p>

@@ -2,11 +2,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight,  MapPin, Mail, Phone, Clock, ImageIcon } from 'lucide-react';
+import Image from 'next/image';
+import img1 from '@/public/images/gallery-1.jpg'
+import img2 from '@/public/images/gallery-2.jpg'
+import img3 from '@/public/images/gallery-3.jpg'
+import img4 from '@/public/images/gallery-4.jpg'
+import img5 from '@/public/images/gallery-5.jpg'
+import img6 from '@/public/images/gallery-6.jpg'
+import img7 from '@/public/images/gallery-7.jpg'
+import img8 from '@/public/images/gallery-8.jpg'
+import img9 from '@/public/images/gallery-9.jpg'
 
 const aboutImages = [
-  { id: 1, bg: "bg-primary-100", title: "Barangay Hall Facade" },
-  { id: 2, bg: "bg-emerald-100", title: "Covered Court & Plaza" },
-  { id: 3, bg: "bg-amber-100", title: "Health Center" }
+  { id: 1, title: "Barangay Hall Facade", src: img1 },
+  { id: 2, title: "Covered Court & Plaza", src: img2 },
+  { id: 3, title: "Health Center", src: img3 },
+  { id: 4, title: "Health Center", src: img4 },
+  { id: 5, title: "Health Center", src: img5 },
+  { id: 6, title: "Health Center", src: img6 },
+  { id: 7, title: "Health Center", src: img7 },
+  { id: 8, title: "Health Center", src: img8 },
+  { id: 9, title: "Health Center", src: img9 }
+
 ];
 const ResidentAboutUs = () => {
 
@@ -84,10 +101,15 @@ const ResidentAboutUs = () => {
                 style={{ transform: `translateX(-${currentImg * 100}%)` }}
               >
                 {aboutImages.map((img) => (
-                  <div key={img.id} className={`min-w-full h-full flex flex-col items-center justify-center ${img.bg}`}>
-                    <ImageIcon className="w-24 h-24 text-slate-400 opacity-50 mb-4" />
-                    <p className="text-slate-600 font-semibold">{img.title}</p>
-                    <p className="text-slate-400 text-sm">(Image Placeholder)</p>
+                  <div key={img.id} className={`min-w-full h-full relative group/item overflow-hidden`}>
+                    <Image 
+                      src={img.src} 
+                      alt={img.title} 
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover/item:scale-105"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                    />
+                   
                   </div>
                 ))}
               </div>
