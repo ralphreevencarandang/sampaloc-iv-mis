@@ -15,6 +15,17 @@ import {
   getCurrentAdminFromSession,
 } from "@/lib/admin-session";
 import type { AuthenticatedAdmin } from "@/lib/admin-auth";
+import {
+  clearHealthWorkerSession,
+  createHealthWorkerSession,
+  getCurrentHealthWorkerFromSession,
+  type AuthenticatedHealthWorker,
+} from "@/lib/health-worker-session";
+import {
+  healthWorkerLoginSchema,
+  getZodFieldErrors as getClinicFieldErrors,
+  type HealthWorkerLoginInput,
+} from "@/validations/clinic.validation";
 import { createResidentAccount, verifyPassword } from "@/server/actions/resident.actions";
 import {
   getZodFieldErrors,
@@ -218,4 +229,84 @@ export async function logoutAdminAction() {
 
 export async function getCurrentAdminAction() {
   return getCurrentAdminFromSession();
+}
+
+// ── Health Worker Auth ────────────────────────────────────────────
+
+export type HealthWorkerLoginResult = {
+  success: boolean;
+  message: string;
+  healthWorker?: AuthenticatedHealthWorker;
+  fieldErrors?: Record<string, string>;
+};
+
+export async function loginHealthWorkerAction(
+  input: HealthWorkerLoginInput
+): Promise<HealthWorkerLoginResult> {
+  const parsed = healthWorkerLoginSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Please correct the highlighted fields.",
+      fieldErrors: getClinicFieldErrors(parsed.error),
+    };
+  }
+
+  try {
+    const admin = await prisma.admin.findUnique({
+      where: { email: parsed.data.email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        name: true,
+        role: true,
+      },
+    });
+
+    if (!admin || !(await bcrypt.compare(parsed.data.password, admin.password))) {
+      return {
+        success: false,
+        message: "Invalid email or password.",
+        fieldErrors: { email: "Invalid email or password." },
+      };
+    }
+
+    if (admin.role !== AdminRole.HEALTH_WORKER) {
+      return {
+        success: false,
+        message: "Access denied. This portal is for Health Workers only.",
+      };
+    }
+
+    await createHealthWorkerSession(admin.id);
+
+    return {
+      success: true,
+      message: "Login successful.",
+      healthWorker: {
+        id: admin.id,
+        email: admin.email,
+        name: admin.name,
+        role: admin.role,
+      },
+    };
+  } catch (error) {
+    console.error("health worker login failed", error);
+
+    return {
+      success: false,
+      message: "An unexpected error occurred while signing in.",
+    };
+  }
+}
+
+export async function logoutHealthWorkerAction() {
+  await clearHealthWorkerSession();
+  return { success: true };
+}
+
+export async function getCurrentHealthWorkerAction() {
+  return getCurrentHealthWorkerFromSession();
 }
