@@ -1,11 +1,16 @@
+import { documentTypeRequiresPurpose, getDocumentFieldNames } from '@/lib/document-request-catalog'
 import { z } from 'zod'
 
 const requiredString = (label: string) => z.string().trim().min(1, `${label} is required.`)
+const optionalString = () => z.string().trim().optional().default('')
+const fileSchema = z
+  .instanceof(File)
+  .refine((file) => file.size > 0, 'Proof of payment is required.')
 
 export const documentRequestSchema = z
   .object({
     documentType: requiredString('Document type'),
-    purpose: requiredString('Purpose'),
+    purpose: optionalString(),
     requestedCopies: z
       .string()
       .trim()
@@ -13,15 +18,11 @@ export const documentRequestSchema = z
       .refine((value) => /^[1-5]$/.test(value), {
         message: 'Enter a copy count between 1 and 5.',
       }),
-    clearanceFor: z.string().trim().optional().default(''),
-    assistanceProgram: z.string().trim().optional().default(''),
-    yearsOfResidency: z.string().trim().optional().default(''),
-    cedulaYear: z.string().trim().optional().default(''),
-    annualIncome: z.string().trim().optional().default(''),
-    emergencyContactName: z.string().trim().optional().default(''),
-    emergencyContactNumber: z.string().trim().optional().default(''),
-    schoolOrTraining: z.string().trim().optional().default(''),
-    targetEmployer: z.string().trim().optional().default(''),
+    yearsOfResidency: optionalString(),
+    placeOfBirth: optionalString(),
+    emergencyContactPerson: optionalString(),
+    emergencyContactAddress: optionalString(),
+    emergencyContactNumber: optionalString(),
   })
   .superRefine((value, ctx) => {
     const requireField = (field: keyof typeof value, label: string) => {
@@ -34,50 +35,117 @@ export const documentRequestSchema = z
       }
     }
 
-    if (value.documentType === 'clearance') {
-      requireField('clearanceFor', 'Clearance for')
+    if (documentTypeRequiresPurpose(value.documentType)) {
+      requireField('purpose', 'Purpose')
     }
 
-    if (value.documentType === 'indigency') {
-      requireField('assistanceProgram', 'Assistance program / institution')
-    }
-
-    if (value.documentType === 'residency') {
+    if (['clearance', 'indigency', 'residency'].includes(value.documentType)) {
       requireField('yearsOfResidency', 'Years of residency')
     }
 
     if (value.documentType === 'cedula') {
-      requireField('cedulaYear', 'Cedula year')
-      requireField('annualIncome', 'Annual income')
+      requireField('placeOfBirth', 'Place of birth')
     }
 
     if (value.documentType === 'barangay-id') {
-      requireField('emergencyContactName', 'Emergency contact name')
+      requireField('placeOfBirth', 'Place of birth')
+      requireField('emergencyContactPerson', 'Emergency contact person')
+      requireField('emergencyContactAddress', 'Emergency contact address')
       requireField('emergencyContactNumber', 'Emergency contact number')
     }
 
     if (value.documentType === 'first-time-job-seeker') {
-      requireField('schoolOrTraining', 'School / training background')
-      requireField('targetEmployer', 'Target employer / industry')
+      requireField('yearsOfResidency', 'Years of residency')
     }
   })
 
+export const documentPaymentSchema = z.object({
+  requestId: requiredString('Request'),
+  paymentReferenceDigits: z
+    .string()
+    .trim()
+    .min(1, 'Payment reference digits is required.')
+    .refine((value) => /^\d{4}$/.test(value), {
+      message: 'Enter the last 4 digits of the payment reference number.',
+    }),
+  paymentProof: fileSchema,
+})
+
 export type DocumentRequestInput = z.input<typeof documentRequestSchema>
+export type DocumentRequestData = z.output<typeof documentRequestSchema>
+export type DocumentPaymentInput = z.input<typeof documentPaymentSchema>
+export type DocumentPaymentData = z.output<typeof documentPaymentSchema>
+
+export const requestStepFieldNames = [
+  'documentType',
+  'purpose',
+  'requestedCopies',
+  'yearsOfResidency',
+  'placeOfBirth',
+  'emergencyContactPerson',
+  'emergencyContactAddress',
+  'emergencyContactNumber',
+] as const
+
+export const paymentStepFieldNames = [
+  'requestId',
+  'paymentReferenceDigits',
+  'paymentProof',
+] as const
+
+export function getRelevantDocumentRequestFields(documentType: string) {
+  const relevant = new Set<string>(['documentType', 'requestedCopies'])
+
+  if (documentTypeRequiresPurpose(documentType)) {
+    relevant.add('purpose')
+  }
+
+  getDocumentFieldNames(documentType).forEach((fieldName) => {
+    relevant.add(fieldName)
+  })
+
+  return relevant
+}
+
+export function pickRelevantDocumentRequestData(data: DocumentRequestData) {
+  const relevantFields = getRelevantDocumentRequestFields(data.documentType)
+
+  return Object.fromEntries(
+    Object.entries(data).filter(([key, value]) => {
+      if (!relevantFields.has(key)) {
+        return false
+      }
+
+      return typeof value === 'string' ? value.trim().length > 0 : value !== undefined
+    })
+  )
+}
+
+function getFormDataString(formData: FormData, key: string) {
+  const value = formData.get(key)
+  return typeof value === 'string' ? value : undefined
+}
 
 export function parseDocumentRequestFormData(formData: FormData) {
   return documentRequestSchema.safeParse({
-    documentType: formData.get('documentType'),
-    purpose: formData.get('purpose'),
-    requestedCopies: formData.get('requestedCopies'),
-    clearanceFor: formData.get('clearanceFor'),
-    assistanceProgram: formData.get('assistanceProgram'),
-    yearsOfResidency: formData.get('yearsOfResidency'),
-    cedulaYear: formData.get('cedulaYear'),
-    annualIncome: formData.get('annualIncome'),
-    emergencyContactName: formData.get('emergencyContactName'),
-    emergencyContactNumber: formData.get('emergencyContactNumber'),
-    schoolOrTraining: formData.get('schoolOrTraining'),
-    targetEmployer: formData.get('targetEmployer'),
+    documentType: getFormDataString(formData, 'documentType'),
+    purpose: getFormDataString(formData, 'purpose'),
+    requestedCopies: getFormDataString(formData, 'requestedCopies'),
+    yearsOfResidency: getFormDataString(formData, 'yearsOfResidency'),
+    placeOfBirth: getFormDataString(formData, 'placeOfBirth'),
+    emergencyContactPerson: getFormDataString(formData, 'emergencyContactPerson'),
+    emergencyContactAddress: getFormDataString(formData, 'emergencyContactAddress'),
+    emergencyContactNumber: getFormDataString(formData, 'emergencyContactNumber'),
+  })
+}
+
+export function parseDocumentPaymentFormData(formData: FormData) {
+  const paymentProof = formData.get('paymentProof')
+
+  return documentPaymentSchema.safeParse({
+    requestId: getFormDataString(formData, 'requestId'),
+    paymentReferenceDigits: getFormDataString(formData, 'paymentReferenceDigits'),
+    paymentProof: paymentProof instanceof File ? paymentProof : undefined,
   })
 }
 

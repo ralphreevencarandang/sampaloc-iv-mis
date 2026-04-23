@@ -1,63 +1,51 @@
-import { NextResponse } from "next/server";
-import { getCurrentResidentFromSession } from "@/lib/resident-session";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from 'next/server'
+import { serializeResidentDocumentRequest } from '@/lib/document-request-utils'
+import { prisma } from '@/lib/prisma'
+import { getCurrentResidentFromSession } from '@/lib/resident-session'
 
 type RouteContext = {
-  params: Promise<{ id: string }>;
-};
+  params: Promise<{ id: string }>
+}
 
 export async function GET(_: Request, { params }: RouteContext) {
   try {
-    const currentResident = await getCurrentResidentFromSession();
-    const { id } = await params;
+    const currentResident = await getCurrentResidentFromSession()
+    const { id } = await params
 
     if (!currentResident) {
-      return NextResponse.json({ message: "Unauthorized." }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 })
     }
 
     if (currentResident.id !== id) {
-      return NextResponse.json({ message: "Forbidden." }, { status: 403 });
+      return NextResponse.json({ message: 'Forbidden.' }, { status: 403 })
     }
 
     const documentRequests = await prisma.documentRequest.findMany({
       where: { residentId: id },
       select: {
         id: true,
+        documentTypeId: true,
         type: true,
         purpose: true,
+        requestedCopies: true,
+        amount: true,
+        details: true,
+        paymentReferenceDigits: true,
+        paymentProofFileName: true,
         status: true,
         requestedAt: true,
-        releasedAt: true,
-        approvedBy: {
-          select: {
-            firstName: true,
-            lastName: true,
-          },
-        },
       },
       orderBy: {
-        requestedAt: "desc",
+        requestedAt: 'desc',
       },
-    });
+    })
 
-    return NextResponse.json(
-      documentRequests.map((record) => ({
-        id: record.id,
-        type: record.type,
-        purpose: record.purpose,
-        status: record.status,
-        requestedAt: record.requestedAt.toISOString(),
-        releasedAt: record.releasedAt ? record.releasedAt.toISOString() : null,
-        approvedByName: record.approvedBy
-          ? [record.approvedBy.firstName, record.approvedBy.lastName].filter(Boolean).join(" ")
-          : null,
-      }))
-    );
+    return NextResponse.json(documentRequests.map((record) => serializeResidentDocumentRequest(record)))
   } catch (error) {
-    console.error("Failed to fetch resident documents:", error);
+    console.error('Failed to fetch resident documents:', error)
     return NextResponse.json(
-      { message: "Failed to fetch resident documents." },
+      { message: 'Failed to fetch resident documents.' },
       { status: 500 }
-    );
+    )
   }
 }

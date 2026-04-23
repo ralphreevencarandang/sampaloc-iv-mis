@@ -5,21 +5,16 @@ export type DocumentFieldOption = {
 
 export type DocumentFieldDefinition = {
   name:
-    | 'clearanceFor'
-    | 'assistanceProgram'
     | 'yearsOfResidency'
-    | 'cedulaYear'
-    | 'annualIncome'
-    | 'emergencyContactName'
+    | 'placeOfBirth'
+    | 'emergencyContactPerson'
+    | 'emergencyContactAddress'
     | 'emergencyContactNumber'
-    | 'schoolOrTraining'
-    | 'targetEmployer'
   label: string
-  type: 'text' | 'tel' | 'number' | 'select'
+  type: 'text' | 'tel' | 'number'
   placeholder?: string
   required?: boolean
   description?: string
-  options?: DocumentFieldOption[]
 }
 
 export type DocumentTypeDefinition = {
@@ -27,9 +22,12 @@ export type DocumentTypeDefinition = {
   label: string
   shortLabel: string
   description: string
-  badge: string
+  
+  fee: number
   fields: DocumentFieldDefinition[]
 }
+
+const documentTypesWithPurpose = ['clearance', 'indigency', 'residency'] as const
 
 export const documentTypeCatalog: DocumentTypeDefinition[] = [
   {
@@ -37,20 +35,14 @@ export const documentTypeCatalog: DocumentTypeDefinition[] = [
     label: 'Barangay Clearance',
     shortLabel: 'Clearance',
     description: 'For employment, business permits, travel, or similar official transactions.',
-    badge: 'Most requested',
+    fee: 75,
     fields: [
       {
-        name: 'clearanceFor',
-        label: 'Clearance For',
-        type: 'select',
+        name: 'yearsOfResidency',
+        label: 'Years of Residency',
+        type: 'number',
         required: true,
-        options: [
-          { label: 'Employment', value: 'employment' },
-          { label: 'Business Permit', value: 'business-permit' },
-          { label: 'Travel', value: 'travel' },
-          { label: 'Scholarship', value: 'scholarship' },
-          { label: 'Other', value: 'other' },
-        ],
+        placeholder: 'Enter total years living in the barangay',
       },
     ],
   },
@@ -59,14 +51,15 @@ export const documentTypeCatalog: DocumentTypeDefinition[] = [
     label: 'Certificate of Indigency',
     shortLabel: 'Indigency',
     description: 'For medical, educational, burial, or social assistance applications.',
-    badge: 'Assistance',
+
+    fee: 50,
     fields: [
       {
-        name: 'assistanceProgram',
-        label: 'Assistance Program / Institution',
-        type: 'text',
+        name: 'yearsOfResidency',
+        label: 'Years of Residency',
+        type: 'number',
         required: true,
-        placeholder: 'e.g. Hospital bill assistance, scholarship office',
+        placeholder: 'Enter total years living in the barangay',
       },
     ],
   },
@@ -75,7 +68,7 @@ export const documentTypeCatalog: DocumentTypeDefinition[] = [
     label: 'Certificate of Residency',
     shortLabel: 'Residency',
     description: 'Proof of current address and duration of stay in Sampaloc IV.',
-    badge: 'Address proof',
+    fee: 50,
     fields: [
       {
         name: 'yearsOfResidency',
@@ -91,21 +84,14 @@ export const documentTypeCatalog: DocumentTypeDefinition[] = [
     label: 'Cedula Request',
     shortLabel: 'Cedula',
     description: 'Personal community tax certificate request details.',
-    badge: 'Tax record',
+    fee: 90,
     fields: [
       {
-        name: 'cedulaYear',
-        label: 'Cedula Year',
-        type: 'number',
-        required: true,
-        placeholder: 'e.g. 2026',
-      },
-      {
-        name: 'annualIncome',
-        label: 'Annual Income',
+        name: 'placeOfBirth',
+        label: 'Place of Birth',
         type: 'text',
         required: true,
-        placeholder: 'e.g. 180000',
+        placeholder: 'Enter place of birth',
       },
     ],
   },
@@ -114,14 +100,28 @@ export const documentTypeCatalog: DocumentTypeDefinition[] = [
     label: 'Barangay ID',
     shortLabel: 'Barangay ID',
     description: 'Request a barangay ID with emergency contact information.',
-    badge: 'ID card',
+    fee: 150,
     fields: [
       {
-        name: 'emergencyContactName',
-        label: 'Emergency Contact Name',
+        name: 'placeOfBirth',
+        label: 'Place of Birth',
         type: 'text',
         required: true,
-        placeholder: 'Enter contact person',
+        placeholder: 'Enter place of birth',
+      },
+      {
+        name: 'emergencyContactPerson',
+        label: 'Emergency Contact Person',
+        type: 'text',
+        required: true,
+        placeholder: 'Enter contact person name',
+      },
+      {
+        name: 'emergencyContactAddress',
+        label: 'Emergency Contact Address',
+        type: 'text',
+        required: true,
+        placeholder: 'Enter contact address',
       },
       {
         name: 'emergencyContactNumber',
@@ -137,21 +137,14 @@ export const documentTypeCatalog: DocumentTypeDefinition[] = [
     label: 'First Time Job Seeker Certificate',
     shortLabel: 'Job Seeker',
     description: 'For first-time applicants requesting employment-related barangay certification.',
-    badge: 'Employment',
+    fee: 0,
     fields: [
       {
-        name: 'schoolOrTraining',
-        label: 'School / Training Background',
-        type: 'text',
+        name: 'yearsOfResidency',
+        label: 'Years of Residency',
+        type: 'number',
         required: true,
-        placeholder: 'Enter your latest school or training program',
-      },
-      {
-        name: 'targetEmployer',
-        label: 'Target Employer / Industry',
-        type: 'text',
-        required: true,
-        placeholder: 'Enter target employer or industry',
+        placeholder: 'Enter total years living in the barangay',
       },
     ],
   },
@@ -159,4 +152,12 @@ export const documentTypeCatalog: DocumentTypeDefinition[] = [
 
 export function getDocumentDefinition(documentType: string) {
   return documentTypeCatalog.find((item) => item.id === documentType)
+}
+
+export function getDocumentFieldNames(documentType: string) {
+  return getDocumentDefinition(documentType)?.fields.map((field) => field.name) ?? []
+}
+
+export function documentTypeRequiresPurpose(documentType: string) {
+  return (documentTypesWithPurpose as readonly string[]).includes(documentType)
 }

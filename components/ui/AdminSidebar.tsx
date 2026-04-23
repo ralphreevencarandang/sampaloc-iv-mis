@@ -22,7 +22,8 @@ import {
   Venus,
 } from 'lucide-react';
 import { logoutAdminAction } from '@/server/actions/auth.actions';
-
+import Image from 'next/image';
+import logo from '@/public/images/sampaloc-logo.png'
 interface NavItem {
   label: string;
   href: string;
@@ -95,9 +96,13 @@ const AdminSidebar = () => {
             <span className="text-white font-bold text-lg">S</span>
           </div> */}
           {isOpen && (
-            <div className=" sm:block">
-              <p className="font-bold text-white text-sm">Sampaloc IV</p>
-              <p className="text-xs text-slate-400">Admin Panel</p>
+            <div className=" flex items-center gap-3">
+              <Image src={logo} alt="Logo" width={40} height={40} />
+              <div>
+
+                <p className="font-bold text-white text-sm">Sampaloc IV</p>
+                <p className="text-xs text-slate-400">Admin Panel</p>
+              </div>
             </div>
           )}
         </div>

@@ -2,12 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import prismaModule from '@/lib/prisma'
-import { getCurrentResidentFromSession } from '@/lib/resident-session'
 import { getDocumentDefinition } from '@/lib/document-request-catalog'
 import {
+  serializeResidentDocumentRequest,
+  type ResidentDocumentRequestRecord,
+} from '@/lib/document-request-utils'
+import { getCurrentResidentFromSession } from '@/lib/resident-session'
+import {
   getZodFieldErrors,
+  parseDocumentPaymentFormData,
   parseDocumentRequestFormData,
-  type DocumentRequestInput,
+  pickRelevantDocumentRequestData,
 } from '@/validations/document.validation'
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule
@@ -16,40 +21,14 @@ export type CreateResidentDocumentRequestResult = {
   success: boolean
   message: string
   fieldErrors?: Record<string, string>
+  request?: ResidentDocumentRequestRecord
 }
 
-function buildPurposeSummary(input: DocumentRequestInput) {
-  const definition = getDocumentDefinition(input.documentType)
-  const details: string[] = [`Purpose: ${input.purpose}`, `Copies: ${input.requestedCopies}`]
-
-  if (input.documentType === 'clearance' && input.clearanceFor) {
-    details.push(`Clearance for: ${input.clearanceFor}`)
-  }
-
-  if (input.documentType === 'indigency' && input.assistanceProgram) {
-    details.push(`Program / institution: ${input.assistanceProgram}`)
-  }
-
-  if (input.documentType === 'residency' && input.yearsOfResidency) {
-    details.push(`Years of residency: ${input.yearsOfResidency}`)
-  }
-
-  if (input.documentType === 'cedula') {
-    if (input.cedulaYear) details.push(`Cedula year: ${input.cedulaYear}`)
-    if (input.annualIncome) details.push(`Annual income: ${input.annualIncome}`)
-  }
-
-  if (input.documentType === 'barangay-id') {
-    if (input.emergencyContactName) details.push(`Emergency contact: ${input.emergencyContactName}`)
-    if (input.emergencyContactNumber) details.push(`Emergency number: ${input.emergencyContactNumber}`)
-  }
-
-  if (input.documentType === 'first-time-job-seeker') {
-    if (input.schoolOrTraining) details.push(`School / training: ${input.schoolOrTraining}`)
-    if (input.targetEmployer) details.push(`Target employer / industry: ${input.targetEmployer}`)
-  }
-
-  return `${definition?.label ?? input.documentType}\n${details.join('\n')}`
+export type SubmitResidentDocumentPaymentResult = {
+  success: boolean
+  message: string
+  fieldErrors?: Record<string, string>
+  request?: ResidentDocumentRequestRecord
 }
 
 export async function createResidentDocumentRequestAction(
@@ -90,11 +69,30 @@ export async function createResidentDocumentRequestAction(
   }
 
   try {
-    await prisma.documentRequest.create({
+    const relevantDetails = pickRelevantDocumentRequestData(parsed.data)
+    const createdRequest = await prisma.documentRequest.create({
       data: {
         residentId: resident.id,
+        documentTypeId: definition.id,
         type: definition.label,
-        purpose: buildPurposeSummary(parsed.data),
+        purpose: parsed.data.purpose.trim() || null,
+        requestedCopies: Number(parsed.data.requestedCopies),
+        amount: definition.fee,
+        details: relevantDetails,
+        status: 'PENDING_PAYMENT',
+      },
+      select: {
+        id: true,
+        documentTypeId: true,
+        type: true,
+        purpose: true,
+        requestedCopies: true,
+        amount: true,
+        details: true,
+        paymentReferenceDigits: true,
+        paymentProofFileName: true,
+        status: true,
+        requestedAt: true,
       },
     })
 
@@ -103,16 +101,127 @@ export async function createResidentDocumentRequestAction(
 
     return {
       success: true,
-      message: `${definition.label} request submitted successfully.`,
+      message: `${definition.label} request created. Continue to payment.`,
+      request: serializeResidentDocumentRequest(createdRequest),
     }
   } catch (error) {
     console.error('create resident document request failed', error)
 
     return {
       success: false,
-      message: 'An unexpected error occurred while submitting your request.',
+      message: 'An unexpected error occurred while creating your request.',
       fieldErrors: {
-        submit: 'An unexpected error occurred while submitting your request.',
+        submit: 'An unexpected error occurred while creating your request.',
+      },
+    }
+  }
+}
+
+export async function submitResidentDocumentPaymentAction(
+  formData: FormData
+): Promise<SubmitResidentDocumentPaymentResult> {
+  const resident = await getCurrentResidentFromSession()
+
+  if (!resident) {
+    return {
+      success: false,
+      message: 'Your session has expired. Please sign in again.',
+      fieldErrors: {
+        submit: 'Your session has expired. Please sign in again.',
+      },
+    }
+  }
+
+  const parsed = parseDocumentPaymentFormData(formData)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: 'Please correct the highlighted payment fields.',
+      fieldErrors: getZodFieldErrors(parsed.error),
+    }
+  }
+
+  const existingRequest = await prisma.documentRequest.findFirst({
+    where: {
+      id: parsed.data.requestId,
+      residentId: resident.id,
+    },
+    select: {
+      id: true,
+      documentTypeId: true,
+      type: true,
+      purpose: true,
+      requestedCopies: true,
+      amount: true,
+      details: true,
+      paymentReferenceDigits: true,
+      paymentProofFileName: true,
+      status: true,
+      requestedAt: true,
+    },
+  })
+
+  if (!existingRequest) {
+    return {
+      success: false,
+      message: 'Document request not found.',
+      fieldErrors: {
+        requestId: 'Document request not found.',
+      },
+    }
+  }
+
+  if (existingRequest.status !== 'PENDING_PAYMENT') {
+    return {
+      success: false,
+      message: 'This request is no longer awaiting payment.',
+      fieldErrors: {
+        requestId: 'This request is no longer awaiting payment.',
+      },
+    }
+  }
+
+  try {
+    const updatedRequest = await prisma.documentRequest.update({
+      where: { id: existingRequest.id },
+      data: {
+        paymentReferenceDigits: parsed.data.paymentReferenceDigits,
+        paymentProofFileName: parsed.data.paymentProof.name,
+        paymentProofMimeType: parsed.data.paymentProof.type || null,
+        status: 'SUBMITTED',
+      },
+      select: {
+        id: true,
+        documentTypeId: true,
+        type: true,
+        purpose: true,
+        requestedCopies: true,
+        amount: true,
+        details: true,
+        paymentReferenceDigits: true,
+        paymentProofFileName: true,
+        status: true,
+        requestedAt: true,
+      },
+    })
+
+    revalidatePath('/request-documents')
+    revalidatePath('/my-account')
+
+    return {
+      success: true,
+      message: `${updatedRequest.type} payment submitted successfully.`,
+      request: serializeResidentDocumentRequest(updatedRequest),
+    }
+  } catch (error) {
+    console.error('submit resident document payment failed', error)
+
+    return {
+      success: false,
+      message: 'An unexpected error occurred while submitting payment.',
+      fieldErrors: {
+        submit: 'An unexpected error occurred while submitting payment.',
       },
     }
   }
