@@ -3,9 +3,13 @@ import { z } from 'zod'
 
 const requiredString = (label: string) => z.string().trim().min(1, `${label} is required.`)
 const optionalString = () => z.string().trim().optional().default('')
+const MAX_PAYMENT_PROOF_SIZE_BYTES = 5 * 1024 * 1024
+const ALLOWED_PAYMENT_PROOF_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const fileSchema = z
   .instanceof(File)
   .refine((file) => file.size > 0, 'Proof of payment is required.')
+  .refine((file) => ALLOWED_PAYMENT_PROOF_TYPES.has(file.type), 'Proof of payment must be a JPG, PNG, or WebP image.')
+  .refine((file) => file.size <= MAX_PAYMENT_PROOF_SIZE_BYTES, 'Proof of payment size must be 5MB or less.')
 
 export const documentRequestSchema = z
   .object({
@@ -23,6 +27,8 @@ export const documentRequestSchema = z
     emergencyContactPerson: optionalString(),
     emergencyContactAddress: optionalString(),
     emergencyContactNumber: optionalString(),
+    referenceLast4: optionalString(),
+    paymentProof: fileSchema.optional(),
   })
   .superRefine((value, ctx) => {
     const requireField = (field: keyof typeof value, label: string) => {
@@ -59,22 +65,8 @@ export const documentRequestSchema = z
     }
   })
 
-export const documentPaymentSchema = z.object({
-  requestId: requiredString('Request'),
-  paymentReferenceDigits: z
-    .string()
-    .trim()
-    .min(1, 'Payment reference digits is required.')
-    .refine((value) => /^\d{4}$/.test(value), {
-      message: 'Enter the last 4 digits of the payment reference number.',
-    }),
-  paymentProof: fileSchema,
-})
-
 export type DocumentRequestInput = z.input<typeof documentRequestSchema>
 export type DocumentRequestData = z.output<typeof documentRequestSchema>
-export type DocumentPaymentInput = z.input<typeof documentPaymentSchema>
-export type DocumentPaymentData = z.output<typeof documentPaymentSchema>
 
 export const requestStepFieldNames = [
   'documentType',
@@ -85,11 +77,7 @@ export const requestStepFieldNames = [
   'emergencyContactPerson',
   'emergencyContactAddress',
   'emergencyContactNumber',
-] as const
-
-export const paymentStepFieldNames = [
-  'requestId',
-  'paymentReferenceDigits',
+  'referenceLast4',
   'paymentProof',
 ] as const
 
@@ -112,6 +100,10 @@ export function pickRelevantDocumentRequestData(data: DocumentRequestData) {
 
   return Object.fromEntries(
     Object.entries(data).filter(([key, value]) => {
+      if (key === 'documentType' || key === 'requestedCopies' || key === 'purpose') {
+        return false
+      }
+
       if (!relevantFields.has(key)) {
         return false
       }
@@ -127,24 +119,18 @@ function getFormDataString(formData: FormData, key: string) {
 }
 
 export function parseDocumentRequestFormData(formData: FormData) {
+  const paymentProof = formData.get('paymentProof')
+
   return documentRequestSchema.safeParse({
     documentType: getFormDataString(formData, 'documentType'),
     purpose: getFormDataString(formData, 'purpose'),
-    requestedCopies: getFormDataString(formData, 'requestedCopies'),
+    requestedCopies: getFormDataString(formData, 'requestedCopies') ?? '1',
     yearsOfResidency: getFormDataString(formData, 'yearsOfResidency'),
     placeOfBirth: getFormDataString(formData, 'placeOfBirth'),
     emergencyContactPerson: getFormDataString(formData, 'emergencyContactPerson'),
     emergencyContactAddress: getFormDataString(formData, 'emergencyContactAddress'),
     emergencyContactNumber: getFormDataString(formData, 'emergencyContactNumber'),
-  })
-}
-
-export function parseDocumentPaymentFormData(formData: FormData) {
-  const paymentProof = formData.get('paymentProof')
-
-  return documentPaymentSchema.safeParse({
-    requestId: getFormDataString(formData, 'requestId'),
-    paymentReferenceDigits: getFormDataString(formData, 'paymentReferenceDigits'),
+    referenceLast4: getFormDataString(formData, 'referenceLast4'),
     paymentProof: paymentProof instanceof File ? paymentProof : undefined,
   })
 }

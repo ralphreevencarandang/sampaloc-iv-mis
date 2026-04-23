@@ -1,7 +1,7 @@
 import { getDocumentDefinition } from '@/lib/document-request-catalog'
 
 export type DocumentRequestStatus =
-  | 'PENDING_PAYMENT'
+  | 'PENDING'
   | 'SUBMITTED'
   | 'APPROVED'
   | 'REJECTED'
@@ -10,6 +10,17 @@ export type DocumentRequestStatus =
 export type DocumentDetailLine = {
   label: string
   value: string
+}
+
+export type DocumentRequestDraftInput = {
+  documentType: string
+  requestedCopies?: string
+  purpose?: string
+  yearsOfResidency?: string
+  placeOfBirth?: string
+  emergencyContactPerson?: string
+  emergencyContactAddress?: string
+  emergencyContactNumber?: string
 }
 
 export type ResidentDocumentRequestRecord = {
@@ -21,10 +32,50 @@ export type ResidentDocumentRequestRecord = {
   amount: number
   status: DocumentRequestStatus
   detailLines: DocumentDetailLine[]
-  referenceDigits: string | null
-  proofOfPaymentName: string | null
-  proofOfPaymentPreview: string | null
+  referenceLast4: string | null
+  proofOfPaymentUrl: string | null
   submittedAt: string
+}
+
+export function buildRelevantDocumentRequestPayload(input: DocumentRequestDraftInput) {
+  const definition = getDocumentDefinition(input.documentType)
+
+  if (!definition) {
+    return {
+      documentType: input.documentType,
+      requestedCopies: input.requestedCopies?.trim() || '1',
+    }
+  }
+
+  const payload: Record<string, string> = {
+    documentType: definition.id,
+    requestedCopies: input.requestedCopies?.trim() || '1',
+  }
+
+  if (input.purpose?.trim()) {
+    payload.purpose = input.purpose.trim()
+  }
+
+  definition.fields.forEach((field) => {
+    const value = input[field.name]
+
+    if (typeof value === 'string' && value.trim()) {
+      payload[field.name] = value.trim()
+    }
+  })
+
+  return payload
+}
+
+export function createDocumentRequestFormData(input: DocumentRequestDraftInput) {
+  const payload = buildRelevantDocumentRequestPayload(input)
+  const formData = new FormData()
+
+  Object.entries(payload).forEach(([key, value]) => {
+    formData.set(key, value)
+  })
+
+  return formData
 }
 
 export function buildDocumentDetailLines(
@@ -73,12 +124,12 @@ export function serializeResidentDocumentRequest(record: {
   documentTypeId: string
   type: string
   purpose: string | null
-  requestedCopies: number
+  quantity: number
   amount: number
   status: DocumentRequestStatus
   details: unknown
-  paymentReferenceDigits: string | null
-  paymentProofFileName: string | null
+  referenceLast4: string | null
+  proofOfPaymentUrl: string | null
   requestedAt: Date
 }): ResidentDocumentRequestRecord {
   const details = (record.details ?? {}) as Record<string, string | undefined>
@@ -88,17 +139,16 @@ export function serializeResidentDocumentRequest(record: {
     documentType: record.documentTypeId,
     type: record.type,
     purpose: record.purpose,
-    requestedCopies: String(record.requestedCopies),
+    requestedCopies: String(record.quantity),
     amount: record.amount,
     status: record.status,
     detailLines: buildDocumentDetailLines(record.documentTypeId, {
       ...details,
-      requestedCopies: String(record.requestedCopies),
+      requestedCopies: String(record.quantity),
       purpose: record.purpose ?? details.purpose,
     }),
-    referenceDigits: record.paymentReferenceDigits,
-    proofOfPaymentName: record.paymentProofFileName,
-    proofOfPaymentPreview: null,
+    referenceLast4: record.referenceLast4,
+    proofOfPaymentUrl: record.proofOfPaymentUrl,
     submittedAt: record.requestedAt.toISOString(),
   }
 }

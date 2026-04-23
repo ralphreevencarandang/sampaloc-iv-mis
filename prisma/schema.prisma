@@ -33,7 +33,6 @@ enum TransactionType {
 
 enum RequestStatus {
   PENDING
-  PENDING_PAYMENT
   SUBMITTED
   APPROVED
   REJECTED
@@ -146,7 +145,6 @@ model Official {
   // Relationships
   announcements    Announcement[]    @relation("CreatedByOfficial")
   blottersHandled  Blotter[]         @relation("HandledByOfficial")
-  requestsApproved DocumentRequest[] @relation("ApprovedByOfficial")
 }
 
 model Announcement {
@@ -238,25 +236,22 @@ model DocumentRequest {
 
   residentId String
   resident   Resident @relation("RequestedByResident", fields: [residentId], references: [id])
-
+  yearsOfResidency Int
+  placeOfBirth String?
   documentTypeId String
   type           String
   purpose        String?
-  requestedCopies Int    @default(1)
+  quantity       Int    @default(1)
   amount          Int    @default(0)
   details         Json?
-  paymentReferenceDigits String?
-  paymentProofFileName   String?
-  paymentProofMimeType   String?
-
-  status RequestStatus @default(PENDING_PAYMENT)
-
-  approvedById String?
-  approvedBy   Official? @relation("ApprovedByOfficial", fields: [approvedById], references: [id])
-
+  referenceLast4         String? @map("paymentReferenceDigits")
+  proofOfPaymentUrl      String? @map("paymentProofFileName")
+  status RequestStatus @default(PENDING)
   requestedAt DateTime  @default(now())
   releasedAt  DateTime?
 }
+
+
 
 model MedicalRecord {
   id String @id @default(cuid())

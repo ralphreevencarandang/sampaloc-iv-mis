@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
@@ -15,6 +16,16 @@ import {
   Upload,
   User,
 } from "lucide-react";
+import {
+  createDocumentRequestFormData,
+  type DocumentDetailLine,
+  type DocumentRequestDraftInput,
+  type ResidentDocumentRequestRecord,
+} from "@/lib/document-request-utils";
+import { documentTypeCatalog, type DocumentTypeDefinition } from "@/lib/document-request-catalog";
+import {
+  createResidentDocumentRequestAction,
+} from "@/server/actions/document.actions";
 
 export type RequestResidentProfile = {
   id: string;
@@ -31,14 +42,6 @@ export type RequestResidentProfile = {
   precinctNumber: string | null;
 };
 
-type DocumentTypeId =
-  | "clearance"
-  | "indigency"
-  | "residency"
-  | "cedula"
-  | "barangay-id"
-  | "job-seeker";
-
 type EditableFieldKey =
   | "purpose"
   | "yearsOfResidency"
@@ -47,143 +50,19 @@ type EditableFieldKey =
   | "emergencyContactAddress"
   | "emergencyContactNumber";
 
-type DocumentDefinition = {
-  id: DocumentTypeId;
-  label: string;
-  description: string;
-  feeLabel: string;
-  readOnlyFields: Array<{
-    key: string;
-    label: string;
-    getValue: (profile: RequestResidentProfile) => string;
-  }>;
-  editableFields: Array<{
-    key: EditableFieldKey;
-    label: string;
-    placeholder: string;
-    type?: "text" | "tel" | "textarea" | "number";
-  }>;
-};
-
 type FormValues = Record<EditableFieldKey, string>;
-type FormErrors = Partial<Record<EditableFieldKey, string>>;
+type FormErrors = Partial<Record<EditableFieldKey | "submit", string>>;
 
 type SubmittedRequest = {
   id: string;
   documentType: string;
   submittedAt: string;
   amount: string;
-  summary: Array<{ label: string; value: string }>;
-  referenceDigits: string | null;
-  paymentProofName: string | null;
-  paymentPreviewUrl: string | null;
+  summary: DocumentDetailLine[];
+  referenceLast4: string | null;
+  proofOfPaymentUrl: string | null;
+  status: string;
 };
-
-const documentDefinitions: DocumentDefinition[] = [
-  {
-    id: "clearance",
-    label: "Barangay Clearance",
-    description: "For employment, permit processing, travel, and other official transactions.",
-    feeLabel: "PHP 75.00",
-    readOnlyFields: [
-      { key: "name", label: "Name", getValue: getFullName },
-      { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
-      { key: "address", label: "Address", getValue: getFullAddress },
-      { key: "age", label: "Age", getValue: (profile) => `${getAge(profile.birthDate)}` },
-      { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
-    ],
-    editableFields: [
-      { key: "purpose", label: "Purpose", placeholder: "State the purpose of your request.", type: "textarea" },
-      { key: "yearsOfResidency", label: "Year of Residency", placeholder: "Enter total years in the barangay", type: "number" },
-    ],
-  },
-  {
-    id: "indigency",
-    label: "Certificate of Indigency",
-    description: "For medical, burial, educational, and social assistance requirements.",
-    feeLabel: "PHP 50.00",
-    readOnlyFields: [
-      { key: "name", label: "Name", getValue: getFullName },
-      { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
-      { key: "address", label: "Address", getValue: getFullAddress },
-      { key: "age", label: "Age", getValue: (profile) => `${getAge(profile.birthDate)}` },
-      { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
-    ],
-    editableFields: [
-      { key: "purpose", label: "Purpose", placeholder: "Describe the assistance or requirement.", type: "textarea" },
-      { key: "yearsOfResidency", label: "Year of Residency", placeholder: "Enter total years in the barangay", type: "number" },
-    ],
-  },
-  {
-    id: "residency",
-    label: "Certificate of Residency",
-    description: "Proof of residence and length of stay within Barangay Sampaloc IV.",
-    feeLabel: "PHP 50.00",
-    readOnlyFields: [
-      { key: "name", label: "Name", getValue: getFullName },
-      { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
-      { key: "address", label: "Address", getValue: getFullAddress },
-      { key: "age", label: "Age", getValue: (profile) => `${getAge(profile.birthDate)}` },
-      { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
-    ],
-    editableFields: [
-      { key: "purpose", label: "Purpose", placeholder: "Explain how the residency certificate will be used.", type: "textarea" },
-      { key: "yearsOfResidency", label: "Year of Residency", placeholder: "Enter total years in the barangay", type: "number" },
-    ],
-  },
-  {
-    id: "cedula",
-    label: "Cedula",
-    description: "Community tax certificate request with resident details attached.",
-    feeLabel: "PHP 90.00",
-    readOnlyFields: [
-      { key: "name", label: "Name", getValue: getFullName },
-      { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
-      { key: "birthdate", label: "Birthdate", getValue: (profile) => formatDate(profile.birthDate) },
-      { key: "address", label: "Address", getValue: getFullAddress },
-      { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
-    ],
-    editableFields: [{ key: "placeOfBirth", label: "Place of Birth", placeholder: "Enter place of birth" }],
-  },
-  {
-    id: "barangay-id",
-    label: "Barangay ID",
-    description: "Barangay identification request with contact and emergency details.",
-    feeLabel: "PHP 150.00",
-    readOnlyFields: [
-      { key: "name", label: "Name", getValue: getFullName },
-      { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
-      { key: "address", label: "Address", getValue: getFullAddress },
-      { key: "birthdate", label: "Birthdate", getValue: (profile) => formatDate(profile.birthDate) },
-      { key: "place-of-birth-note", label: "Place of Birth", getValue: () => "To be provided below" },
-      { key: "contactNumber", label: "Contact Number", getValue: (profile) => profile.contactNumber ?? "Not provided" },
-      { key: "precinctNumber", label: "Voters Precinct No.", getValue: (profile) => profile.precinctNumber ?? "Not provided" },
-    ],
-    editableFields: [
-      { key: "placeOfBirth", label: "Place of Birth", placeholder: "Enter place of birth" },
-      { key: "emergencyContactPerson", label: "Emergency Contact Person", placeholder: "Full name" },
-      { key: "emergencyContactAddress", label: "Emergency Contact Address", placeholder: "Complete address" },
-      { key: "emergencyContactNumber", label: "Emergency Contact Number", placeholder: "09XXXXXXXXX", type: "tel" },
-    ],
-  },
-  {
-    id: "job-seeker",
-    label: "Job Seeker",
-    description: "Certificate for first-time job application requirements.",
-    feeLabel: "Free of charge",
-    readOnlyFields: [
-      { key: "completeName", label: "Complete Name", getValue: getFullName },
-      { key: "address", label: "Address", getValue: getFullAddress },
-      { key: "age", label: "Age", getValue: (profile) => `${getAge(profile.birthDate)}` },
-      { key: "birthdate", label: "Birthdate", getValue: (profile) => formatDate(profile.birthDate) },
-      { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
-      { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
-    ],
-    editableFields: [
-      { key: "yearsOfResidency", label: "Years of Residency", placeholder: "Enter total years in the barangay", type: "number" },
-    ],
-  },
-];
 
 const initialFormValues: FormValues = {
   purpose: "",
@@ -192,6 +71,60 @@ const initialFormValues: FormValues = {
   emergencyContactPerson: "",
   emergencyContactAddress: "",
   emergencyContactNumber: "",
+};
+
+const profileFieldMap: Record<
+  DocumentTypeDefinition["id"],
+  Array<{ key: string; label: string; getValue: (profile: RequestResidentProfile) => string }>
+> = {
+  clearance: [
+    { key: "name", label: "Name", getValue: getFullName },
+    { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
+    { key: "address", label: "Address", getValue: getFullAddress },
+    { key: "age", label: "Age", getValue: (profile) => `${getAge(profile.birthDate)}` },
+    { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
+  ],
+  indigency: [
+    { key: "name", label: "Name", getValue: getFullName },
+    { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
+    { key: "address", label: "Address", getValue: getFullAddress },
+    { key: "age", label: "Age", getValue: (profile) => `${getAge(profile.birthDate)}` },
+    { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
+  ],
+  residency: [
+    { key: "name", label: "Name", getValue: getFullName },
+    { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
+    { key: "address", label: "Address", getValue: getFullAddress },
+    { key: "age", label: "Age", getValue: (profile) => `${getAge(profile.birthDate)}` },
+    { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
+  ],
+  cedula: [
+    { key: "name", label: "Name", getValue: getFullName },
+    { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
+    { key: "birthdate", label: "Birthdate", getValue: (profile) => formatDate(profile.birthDate) },
+    { key: "address", label: "Address", getValue: getFullAddress },
+    { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
+  ],
+  "barangay-id": [
+    { key: "name", label: "Name", getValue: getFullName },
+    { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
+    { key: "address", label: "Address", getValue: getFullAddress },
+    { key: "birthdate", label: "Birthdate", getValue: (profile) => formatDate(profile.birthDate) },
+    { key: "contactNumber", label: "Contact Number", getValue: (profile) => profile.contactNumber ?? "Not provided" },
+    {
+      key: "precinctNumber",
+      label: "Voters Precinct No.",
+      getValue: (profile) => profile.precinctNumber ?? "Not provided",
+    },
+  ],
+  "first-time-job-seeker": [
+    { key: "completeName", label: "Complete Name", getValue: getFullName },
+    { key: "address", label: "Address", getValue: getFullAddress },
+    { key: "age", label: "Age", getValue: (profile) => `${getAge(profile.birthDate)}` },
+    { key: "birthdate", label: "Birthdate", getValue: (profile) => formatDate(profile.birthDate) },
+    { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
+    { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
+  ],
 };
 
 function getFullName(profile: RequestResidentProfile) {
@@ -233,16 +166,29 @@ function formatDateTime(value: string) {
   });
 }
 
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
 function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
 }
 
-function generateId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `request-${Date.now()}`;
+function mapRequestRecord(record: ResidentDocumentRequestRecord): SubmittedRequest {
+  return {
+    id: record.id,
+    documentType: record.type,
+    submittedAt: record.submittedAt,
+    amount: formatCurrency(record.amount),
+    summary: record.detailLines,
+    referenceLast4: record.referenceLast4,
+    proofOfPaymentUrl: record.proofOfPaymentUrl,
+    status: record.status,
+  };
 }
 
 function LoadingShell() {
@@ -404,7 +350,7 @@ function GCashQrCard() {
         </g>
       </svg>
       <p className="mt-4 text-sm font-semibold text-slate-900">Sampaloc IV GCash</p>
-      <p className="mt-1 text-center text-xs text-slate-500">UI-only QR placeholder for payment proof submission.</p>
+      <p className="mt-1 text-center text-xs text-slate-500">Scan this QR code using your GCash app.</p>
     </div>
   );
 }
@@ -416,18 +362,19 @@ export default function RequestDocumentsClient({
   residentProfile: RequestResidentProfile | null;
   initialError?: string;
 }) {
+  const queryClient = useQueryClient();
   const [isBootLoading, setIsBootLoading] = useState(true);
-  const [selectedDocumentId, setSelectedDocumentId] = useState<DocumentTypeId>("clearance");
+  const [selectedDocumentId, setSelectedDocumentId] = useState<DocumentTypeDefinition["id"]>("clearance");
   const [formValues, setFormValues] = useState<FormValues>(initialFormValues);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentReferenceDigits, setPaymentReferenceDigits] = useState("");
+  const [quantity, setQuantity] = useState<number>(1);
+  const [submissionMessage, setSubmissionMessage] = useState("");
+  const [submissionError, setSubmissionError] = useState("");
+  const [referenceLast4, setReferenceLast4] = useState("");
   const [paymentReferenceError, setPaymentReferenceError] = useState("");
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofError, setPaymentProofError] = useState("");
   const [paymentPreviewUrl, setPaymentPreviewUrl] = useState<string | null>(null);
-  const [paymentSaved, setPaymentSaved] = useState(false);
-  const [submittedRequest, setSubmittedRequest] = useState<SubmittedRequest | null>(null);
   const [requestHistory, setRequestHistory] = useState<SubmittedRequest[]>([]);
 
   useEffect(() => {
@@ -435,8 +382,16 @@ export default function RequestDocumentsClient({
     return () => window.clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (paymentPreviewUrl) {
+        URL.revokeObjectURL(paymentPreviewUrl);
+      }
+    };
+  }, [paymentPreviewUrl]);
+
   const selectedDocument = useMemo(
-    () => documentDefinitions.find((item) => item.id === selectedDocumentId) ?? documentDefinitions[0],
+    () => documentTypeCatalog.find((item) => item.id === selectedDocumentId) ?? documentTypeCatalog[0],
     [selectedDocumentId]
   );
 
@@ -445,58 +400,161 @@ export default function RequestDocumentsClient({
       return [];
     }
 
-    return selectedDocument.readOnlyFields.map((field) => ({
+    return profileFieldMap[selectedDocument.id].map((field) => ({
       key: field.key,
       label: field.label,
       value: field.getValue(residentProfile),
     }));
-  }, [residentProfile, selectedDocument]);
+  }, [residentProfile, selectedDocument.id]);
 
-  const requestSummary = useMemo(() => {
-    if (!residentProfile) {
-      return [];
-    }
+  const createRequestMutation = useMutation({
+    mutationFn: async (formData: FormData) => createResidentDocumentRequestAction(formData),
+    onSuccess: async (result) => {
+      if (!result.success) {
+        const nextErrors: FormErrors = {};
 
-    const summary: Array<{ label: string; value: string }> = [
-      { label: "Resident", value: getFullName(residentProfile) },
-      { label: "Address", value: getFullAddress(residentProfile) },
-    ];
+        Object.entries(result.fieldErrors ?? {}).forEach(([field, message]) => {
+          if (field in initialFormValues) {
+            nextErrors[field as EditableFieldKey] = message;
+          } else if (field === "submit") {
+            nextErrors.submit = message;
+          }
+        });
 
-    selectedDocument.editableFields.forEach((field) => {
-      const value = formValues[field.key].trim();
-      if (value) {
-        summary.push({ label: field.label, value });
+        setFormErrors(nextErrors);
+        setSubmissionError(result.message);
+        setSubmissionMessage("");
+        return;
       }
-    });
 
-    return summary;
-  }, [formValues, residentProfile, selectedDocument]);
+      if (!result.request) {
+        setSubmissionError("The request was created, but the response payload was incomplete.");
+        return;
+      }
+
+      const nextRequest = mapRequestRecord(result.request);
+
+      setFormErrors({});
+      setSubmissionError("");
+      setSubmissionMessage(result.message);
+      setRequestHistory((current) => [nextRequest, ...current.filter((item) => item.id !== nextRequest.id)]);
+      setFormValues(initialFormValues);
+      setQuantity(1);
+      setReferenceLast4("");
+      setPaymentReferenceError("");
+      setPaymentProofError("");
+      setPaymentProofFile(null);
+      setPaymentPreviewUrl(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents", "user"] }),
+        queryClient.invalidateQueries({ queryKey: ["documents", "all"] }),
+        queryClient.invalidateQueries({ queryKey: ["resident-documents", residentProfile?.id] }),
+        queryClient.invalidateQueries({ queryKey: ["resident-document-requests", residentProfile?.id] }),
+      ]);
+    },
+    onError: (error) => {
+      setSubmissionMessage("");
+      setSubmissionError(
+        error instanceof Error ? error.message : "An unexpected error occurred while creating your request."
+      );
+    },
+  });
+
 
   if (isBootLoading) {
     return <LoadingShell />;
   }
 
+  const handleDocumentTypeChange = (nextDocumentId: DocumentTypeDefinition["id"]) => {
+    setSelectedDocumentId(nextDocumentId);
+    setFormValues(initialFormValues);
+    setFormErrors({});
+    setQuantity(1);
+    setSubmissionMessage("");
+    setSubmissionError("");
+    setReferenceLast4("");
+    setPaymentReferenceError("");
+    setPaymentProofError("");
+    setPaymentProofFile(null);
+    setPaymentPreviewUrl(null);
+  };
+
+  const handleRequestSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmissionMessage("");
+    setSubmissionError("");
+
+    const nextErrors: FormErrors = {};
+
+    selectedDocument.fields.forEach((field) => {
+      const value = formValues[field.name as EditableFieldKey];
+      if (field.required && !value.trim()) {
+        nextErrors[field.name as EditableFieldKey] = `${field.label} is required.`;
+      }
+    });
+
+    if (["clearance", "indigency", "residency"].includes(selectedDocument.id) && !formValues.purpose.trim()) {
+      nextErrors.purpose = "Purpose is required.";
+    }
+
+    let blocked = false;
+
+    if (selectedDocument.fee > 0) {
+      if (!paymentProofFile) {
+        setPaymentProofError("Proof of payment is required.");
+        blocked = true;
+      }
+      if (!/^\d{4}$/.test(referenceLast4)) {
+        setPaymentReferenceError("Enter exactly 4 digits.");
+        blocked = true;
+      }
+    }
+
+    setFormErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0 || blocked) {
+      return;
+    }
+
+    const payload: DocumentRequestDraftInput = {
+      documentType: selectedDocument.id,
+      requestedCopies: quantity.toString(),
+      ...formValues,
+    };
+
+    const formData = createDocumentRequestFormData(payload);
+    
+    if (selectedDocument.fee > 0) {
+      if (paymentProofFile) {
+        formData.append("paymentProof", paymentProofFile);
+      }
+      formData.append("referenceLast4", referenceLast4);
+    }
+
+    await createRequestMutation.mutateAsync(formData);
+  };
+
   return (
     <div className="max-container w-full padding-x py-6 sm:py-8 lg:py-10">
       <div className="space-y-6">
         <div className="max-w-3xl space-y-3">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-slate-900">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-slate-900"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back to home
           </Link>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-600">Resident Services</p>
           <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">Document Request</h1>
           <p className="text-sm leading-6 text-slate-600 sm:text-base">
-            Request barangay documents in one form, review your auto-filled profile, then continue to the GCash payment step.
+            Complete the form and upload your payment proof to submit your document request.
           </p>
         </div>
 
         {initialError ? (
-          <PlaceholderState
-            title="Unable to load resident information"
-            description={initialError}
-            tone="rose"
-          />
+          <PlaceholderState title="Unable to load resident information" description={initialError} tone="rose" />
         ) : null}
 
         {!initialError && !residentProfile ? (
@@ -515,30 +573,19 @@ export default function RequestDocumentsClient({
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Choose a Document</h2>
-                  <p className="text-sm text-slate-600">The form below updates based on the selected request type.</p>
+                  <p className="text-sm text-slate-600">The request fields and payload are filtered by document type.</p>
                 </div>
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {documentDefinitions.map((document) => {
+                {documentTypeCatalog.map((document) => {
                   const isSelected = document.id === selectedDocumentId;
 
                   return (
                     <button
                       key={document.id}
                       type="button"
-                      onClick={() => {
-                        setSelectedDocumentId(document.id);
-                        setFormValues(initialFormValues);
-                        setFormErrors({});
-                        setSubmittedRequest(null);
-                        setPaymentSaved(false);
-                        setPaymentReferenceDigits("");
-                        setPaymentReferenceError("");
-                        setPaymentProofError("");
-                        setPaymentProofFile(null);
-                        setPaymentPreviewUrl(null);
-                      }}
+                      onClick={() => handleDocumentTypeChange(document.id)}
                       className={cn(
                         "rounded-[24px] border p-4 text-left transition-all",
                         isSelected
@@ -548,7 +595,9 @@ export default function RequestDocumentsClient({
                     >
                       <p className="text-base font-semibold text-slate-900">{document.label}</p>
                       <p className="mt-2 text-sm leading-6 text-slate-600">{document.description}</p>
-                      <p className="mt-4 text-sm font-semibold text-slate-900">{document.feeLabel}</p>
+                      <p className="mt-4 text-sm font-semibold text-slate-900">
+                        {document.fee === 0 ? "Free of charge" : formatCurrency(document.fee)}
+                      </p>
                     </button>
                   );
                 })}
@@ -562,7 +611,9 @@ export default function RequestDocumentsClient({
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Resident Profile</h2>
-                  <p className="text-sm text-slate-600">Auto-populated and read-only. These fields are merged directly into the request form.</p>
+                  <p className="text-sm text-slate-600">
+                    Auto-populated and locked. These fields are merged into the unified request form.
+                  </p>
                 </div>
               </div>
 
@@ -580,54 +631,28 @@ export default function RequestDocumentsClient({
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Request Details</h2>
-                  <p className="text-sm text-slate-600">Complete only the fields required by the selected document type.</p>
+                  <p className="text-sm text-slate-600">
+                    The server action receives only the fields relevant to the selected document type.
+                  </p>
                 </div>
               </div>
 
-              <form
-                className="mt-6 space-y-6"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  setIsSubmitting(true);
+              <form className="mt-6 space-y-6" onSubmit={handleRequestSubmit}>
+                {submissionMessage ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>{submissionMessage}</span>
+                    </div>
+                  </div>
+                ) : null}
 
-                  const nextErrors: FormErrors = {};
+                {submissionError ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {submissionError}
+                  </div>
+                ) : null}
 
-                  selectedDocument.editableFields.forEach((field) => {
-                    if (!formValues[field.key].trim()) {
-                      nextErrors[field.key] = `${field.label} is required.`;
-                    }
-                  });
-
-                  setFormErrors(nextErrors);
-
-                  if (Object.keys(nextErrors).length > 0) {
-                    setIsSubmitting(false);
-                    return;
-                  }
-
-                  window.setTimeout(() => {
-                    const nextRequest: SubmittedRequest = {
-                      id: generateId(),
-                      documentType: selectedDocument.label,
-                      submittedAt: new Date().toISOString(),
-                      amount: selectedDocument.feeLabel,
-                      summary: requestSummary,
-                      referenceDigits: null,
-                      paymentProofName: null,
-                      paymentPreviewUrl: null,
-                    };
-
-                    setSubmittedRequest(nextRequest);
-                    setPaymentSaved(false);
-                    setPaymentReferenceDigits("");
-                    setPaymentReferenceError("");
-                    setPaymentProofError("");
-                    setPaymentProofFile(null);
-                    setPaymentPreviewUrl(null);
-                    setIsSubmitting(false);
-                  }, 600);
-                }}
-              >
                 <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -636,76 +661,186 @@ export default function RequestDocumentsClient({
                       <p className="mt-2 text-sm leading-6 text-slate-600">{selectedDocument.description}</p>
                     </div>
                     <div className="rounded-2xl border border-primary-200 bg-white px-4 py-3 text-right">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fee</p>
-                      <p className="mt-1 text-lg font-bold text-slate-900">{selectedDocument.feeLabel}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Fee</p>
+                      <p className="mt-1 text-lg font-bold text-slate-900">
+                        {selectedDocument.fee * quantity === 0 ? "Free" : formatCurrency(selectedDocument.fee * quantity)}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid gap-5 md:grid-cols-2">
-                  {selectedDocument.editableFields.map((field) =>
-                    field.type === "textarea" ? (
-                      <TextAreaField
-                        key={field.key}
+                  {["clearance", "indigency", "residency"].includes(selectedDocument.id) ? (
+                    <TextAreaField
+                      label="Purpose"
+                      value={formValues.purpose}
+                      onChange={(value) => {
+                        setFormValues((current) => ({ ...current, purpose: value }));
+                        setFormErrors((current) => ({ ...current, purpose: undefined, submit: undefined }));
+                      }}
+                      placeholder="State the purpose of your request."
+                      error={formErrors.purpose}
+                    />
+                  ) : null}
+
+                  {selectedDocument.fields.map((field) => (
+                    <div key={field.name} className={field.name === "emergencyContactAddress" ? "md:col-span-2" : ""}>
+                      <TextField
                         label={field.label}
-                        value={formValues[field.key]}
+                        value={formValues[field.name as EditableFieldKey]}
                         onChange={(value) => {
-                          setFormValues((current) => ({ ...current, [field.key]: value }));
-                          setFormErrors((current) => ({ ...current, [field.key]: undefined }));
+                          setFormValues((current) => ({ ...current, [field.name]: value }));
+                          setFormErrors((current) => ({
+                            ...current,
+                            [field.name]: undefined,
+                            submit: undefined,
+                          }));
                         }}
-                        placeholder={field.placeholder}
-                        error={formErrors[field.key]}
+                        placeholder={field.placeholder ?? `Enter ${field.label.toLowerCase()}`}
+                        error={formErrors[field.name as EditableFieldKey]}
+                        type={field.type === "tel" || field.type === "number" ? field.type : "text"}
                       />
-                    ) : (
-                      <div key={field.key} className={field.key === "emergencyContactAddress" ? "md:col-span-2" : ""}>
-                        <TextField
-                          label={field.label}
-                          value={formValues[field.key]}
-                          onChange={(value) => {
-                            setFormValues((current) => ({ ...current, [field.key]: value }));
-                            setFormErrors((current) => ({ ...current, [field.key]: undefined }));
-                          }}
-                          placeholder={field.placeholder}
-                          error={formErrors[field.key]}
-                          type={field.type === "tel" || field.type === "number" ? field.type : "text"}
-                        />
-                      </div>
-                    )
-                  )}
+                    </div>
+                  ))}
 
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Resident Email</label>
+                    <label className="text-sm font-medium text-slate-700">Quantity</label>
                     <input
-                      disabled
-                      readOnly
-                      value={residentProfile.email}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={quantity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 1) {
+                          setQuantity(val);
+                        } else if (e.target.value === "") {
+                          // Allow temporary empty state while typing, or default to 1 on blur
+                          setQuantity(e.target.value as unknown as number);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!quantity || quantity < 1) {
+                          setQuantity(1);
+                        }
+                      }}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 outline-none transition-colors focus:border-primary-500"
                     />
                   </div>
+                 
+                </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-slate-700">Form Status</label>
-                    <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                      {submittedRequest ? "Ready for payment upload" : "Waiting for submission"}
+                {selectedDocument.fee > 0 ? (
+                  <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-start gap-3 border-b border-slate-100 pb-5">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-700">
+                        <CreditCard className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-slate-900">GCash Payment</h2>
+                        <p className="text-sm text-slate-600">
+                          Please pay {formatCurrency(selectedDocument.fee * quantity)} via GCash and upload the receipt.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 grid gap-6 lg:grid-cols-[240px_1fr]">
+                      <GCashQrCard />
+
+                      <div className="space-y-5">
+                        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                          <p className="text-sm font-semibold text-slate-900">Upload proof of payment</p>
+                          <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white px-6 py-8 text-center transition-colors hover:border-primary-400 hover:bg-primary-50/30">
+                            <Upload className="h-6 w-6 text-primary-700" />
+                            <p className="mt-3 text-sm font-medium text-slate-900">Choose a payment screenshot</p>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp,image/gif"
+                              className="sr-only"
+                              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                                const file = event.target.files?.[0] ?? null;
+                                setPaymentProofError("");
+
+                                if (!file) {
+                                  return;
+                                }
+
+                                if (!file.type.startsWith("image/")) {
+                                  setPaymentProofFile(null);
+                                  setPaymentPreviewUrl(null);
+                                  setPaymentProofError("Please upload an image file for proof of payment.");
+                                  return;
+                                }
+
+                                if (paymentPreviewUrl) {
+                                  URL.revokeObjectURL(paymentPreviewUrl);
+                                }
+
+                                setPaymentProofFile(file);
+                                setPaymentPreviewUrl(URL.createObjectURL(file));
+                              }}
+                            />
+                          </label>
+
+                          {paymentProofError ? <p className="mt-3 text-xs text-rose-500">{paymentProofError}</p> : null}
+
+                          {paymentPreviewUrl ? (
+                            <div className="mt-4 rounded-[24px] border border-slate-200 bg-white p-4">
+                                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                  <FileImage className="h-4 w-4 text-primary-700" />
+                                  <span>{paymentProofFile?.name}</span>
+                                </div>
+                                <Image
+                                  src={paymentPreviewUrl}
+                                alt="Proof of payment preview"
+                                width={1200}
+                                height={900}
+                                unoptimized
+                                className="mt-4 max-h-72 w-full rounded-2xl object-cover"
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-slate-700">
+                            Last 4 Digits of Reference Number <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            inputMode="numeric"
+                            maxLength={4}
+                            value={referenceLast4}
+                            onChange={(event) => {
+                              setReferenceLast4(event.target.value.replace(/\D/g, "").slice(0, 4));
+                              setPaymentReferenceError("");
+                            }}
+                            placeholder="1234"
+                            className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-primary-500"
+                          />
+                          {paymentReferenceError ? (
+                            <p className="mt-2 text-xs text-rose-500">{paymentReferenceError}</p>
+                          ) : null}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : null}
 
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row">
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={createRequestMutation.isPending}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSubmitting ? (
+                    {createRequestMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Preparing payment step...
+                        Creating request...
                       </>
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        Continue to Payment
+                        Submit Request
                       </>
                     )}
                   </button>
@@ -713,154 +848,7 @@ export default function RequestDocumentsClient({
               </form>
             </section>
 
-            {submittedRequest ? (
-              <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-700">
-                    <CreditCard className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">GCash Payment</h2>
-                    <p className="text-sm text-slate-600">After request submission, upload your payment proof and enter the last 4 digits of the reference number.</p>
-                  </div>
-                </div>
 
-                <div className="mt-6 grid gap-6 lg:grid-cols-[240px_1fr]">
-                  <GCashQrCard />
-
-                  <div className="space-y-5">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Document</p>
-                        <p className="mt-2 text-sm font-semibold text-slate-900">{submittedRequest.documentType}</p>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Amount Due</p>
-                        <p className="mt-2 text-sm font-semibold text-slate-900">{submittedRequest.amount}</p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                      <p className="text-sm font-semibold text-slate-900">Upload proof of payment</p>
-                      <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white px-6 py-8 text-center transition-colors hover:border-primary-400 hover:bg-primary-50/30">
-                        <Upload className="h-6 w-6 text-primary-700" />
-                        <p className="mt-3 text-sm font-medium text-slate-900">Choose a payment screenshot</p>
-                        <p className="mt-1 text-xs text-slate-500">PNG, JPG, WEBP, or GIF with local preview</p>
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp,image/gif"
-                          className="sr-only"
-                          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                            const file = event.target.files?.[0] ?? null;
-                            setPaymentProofError("");
-
-                            if (!file) {
-                              return;
-                            }
-
-                            if (!file.type.startsWith("image/")) {
-                              setPaymentProofFile(null);
-                              setPaymentPreviewUrl(null);
-                              setPaymentProofError("Please upload an image file for proof of payment.");
-                              return;
-                            }
-
-                            setPaymentProofFile(file);
-                            setPaymentPreviewUrl(URL.createObjectURL(file));
-                          }}
-                        />
-                      </label>
-
-                      {paymentProofError ? (
-                        <p className="mt-3 text-xs text-rose-500">{paymentProofError}</p>
-                      ) : null}
-
-                      {paymentPreviewUrl ? (
-                        <div className="mt-4 rounded-[24px] border border-slate-200 bg-white p-4">
-                          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                            <FileImage className="h-4 w-4 text-primary-700" />
-                            <span>{paymentProofFile?.name}</span>
-                          </div>
-                          <Image
-                            src={paymentPreviewUrl}
-                            alt="Proof of payment preview"
-                            width={1200}
-                            height={900}
-                            unoptimized
-                            className="mt-4 max-h-72 w-full rounded-2xl object-cover"
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-slate-700">
-                        Last 4 Digits of Reference Number <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={paymentReferenceDigits}
-                        onChange={(event) => {
-                          setPaymentReferenceDigits(event.target.value.replace(/\D/g, "").slice(0, 4));
-                          setPaymentReferenceError("");
-                        }}
-                        placeholder="1234"
-                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-primary-500"
-                      />
-                      {paymentReferenceError ? (
-                        <p className="mt-2 text-xs text-rose-500">{paymentReferenceError}</p>
-                      ) : null}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        let blocked = false;
-
-                        if (!paymentProofFile) {
-                          setPaymentProofError("Proof of payment is required.");
-                          blocked = true;
-                        }
-
-                        if (!/^\d{4}$/.test(paymentReferenceDigits)) {
-                          setPaymentReferenceError("Enter exactly 4 digits.");
-                          blocked = true;
-                        }
-
-                        if (blocked) {
-                          return;
-                        }
-
-                        const paidRequest: SubmittedRequest = {
-                          ...submittedRequest,
-                          referenceDigits: paymentReferenceDigits,
-                          paymentProofName: paymentProofFile?.name ?? null,
-                          paymentPreviewUrl,
-                        };
-
-                        setSubmittedRequest(paidRequest);
-                        setRequestHistory((current) => [paidRequest, ...current.filter((item) => item.id !== paidRequest.id)]);
-                        setPaymentSaved(true);
-                      }}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-                    >
-                      <Upload className="h-4 w-4" />
-                      Save Payment Details
-                    </button>
-
-                    {paymentSaved ? (
-                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Payment details captured locally. No backend submission has been made yet.
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </section>
-            ) : null}
 
             <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
               <div className="flex items-start gap-3">
@@ -869,7 +857,9 @@ export default function RequestDocumentsClient({
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Request Preview Log</h2>
-                  <p className="text-sm text-slate-600">This section stays local to the page and acts as the UI-only request history placeholder.</p>
+                  <p className="text-sm text-slate-600">
+                    The latest created request appears here immediately after the mutation succeeds.
+                  </p>
                 </div>
               </div>
 
@@ -882,7 +872,7 @@ export default function RequestDocumentsClient({
                       </div>
                       <h3 className="mt-4 text-base font-semibold text-slate-900">No requests yet</h3>
                       <p className="mt-2 text-sm text-slate-600">
-                        Your first document request will appear here after you complete the payment details step.
+                        Your document request will appear here after the create mutation succeeds.
                       </p>
                     </div>
                   </div>
@@ -905,7 +895,10 @@ export default function RequestDocumentsClient({
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Details</p>
                             <dl className="mt-3 space-y-3 text-sm">
                               {request.summary.map((item) => (
-                                <div key={`${request.id}-${item.label}`} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                                <div
+                                  key={`${request.id}-${item.label}`}
+                                  className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+                                >
                                   <dt className="font-medium text-slate-500">{item.label}</dt>
                                   <dd className="text-slate-900 sm:max-w-[60%] sm:text-right">{item.value}</dd>
                                 </div>
@@ -915,24 +908,27 @@ export default function RequestDocumentsClient({
 
                           <div className="space-y-4">
                             <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                              <p className="mt-2 text-sm font-semibold text-slate-900">{request.status}</p>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
                               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reference Number</p>
                               <p className="mt-2 text-sm font-semibold text-slate-900">
-                                {request.referenceDigits ? `**** ${request.referenceDigits}` : "Awaiting input"}
+                                {request.referenceLast4 ? `**** ${request.referenceLast4}` : "Awaiting input"}
                               </p>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-white p-4">
                               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proof of Payment</p>
-                              {request.paymentPreviewUrl ? (
+                              {request.proofOfPaymentUrl ? (
                                 <div className="mt-3">
                                   <Image
-                                    src={request.paymentPreviewUrl}
+                                    src={request.proofOfPaymentUrl}
                                     alt="Uploaded payment proof"
                                     width={1200}
                                     height={900}
-                                    unoptimized
                                     className="h-36 w-full rounded-2xl object-cover"
                                   />
-                                  <p className="mt-2 text-sm text-slate-600">{request.paymentProofName}</p>
+                                  <p className="mt-2 text-sm text-slate-600">Stored in Cloudinary</p>
                                 </div>
                               ) : (
                                 <p className="mt-2 text-sm text-slate-500">No upload attached</p>
