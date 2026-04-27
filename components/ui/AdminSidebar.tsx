@@ -32,8 +32,10 @@ interface NavItem {
 
 const AdminSidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
-  const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const pathname = usePathname();
+  const [expandedMenu, setExpandedMenu] = useState<string | null>(() =>
+    pathname.startsWith('/admin/documents') ? 'documents' : null
+  );
   const router = useRouter();
 
   const logoutMutation = useMutation({
@@ -50,7 +52,7 @@ const AdminSidebar = () => {
     { label: 'Residency', href: '/admin/documents/residency' },
     { label: 'Cedula', href: '/admin/documents/cedula' },
     { label: 'Barangay ID', href: '/admin/documents/barangay-id' },
-    { label: 'First Time Job Seeker', href: '/admin/documents/first-time-job-seeker' },
+    { label: 'First Time Job Seeker', href: '/admin/documents/job-seeker' },
   ];
 
   const navItems: NavItem[] = [

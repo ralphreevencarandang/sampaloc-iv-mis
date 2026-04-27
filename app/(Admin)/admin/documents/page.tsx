@@ -1,9 +1,5 @@
-import React from 'react'
+import { redirect } from 'next/navigation'
 
-const page = () => {
-  return (
-    <div>Documents</div>
-  )
+export default function DocumentsPage() {
+  redirect('/admin/documents/clearance')
 }
-
-export default page

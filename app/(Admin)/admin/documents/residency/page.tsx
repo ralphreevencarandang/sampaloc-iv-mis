@@ -1,9 +1,5 @@
-import React from 'react'
+import AdminDocumentRequestsPage from '@/components/document-requests/admin-document-requests-page'
 
-const page = () => {
-  return (
-    <div>Residency</div>
-  )
+export default function ResidencyDocumentRequestsPage() {
+  return <AdminDocumentRequestsPage documentType="residency" />
 }
-
-export default page

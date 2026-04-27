@@ -1,17 +1,19 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { getCurrentAdminFromSession } from '@/lib/admin-session'
 import { uploadImageToCloudinary } from '@/lib/cloudinary'
 import prismaModule from '@/lib/prisma'
 import { getDocumentDefinition } from '@/lib/document-request-catalog'
 import {
+  serializeAdminDocumentRequest,
   serializeResidentDocumentRequest,
+  type AdminDocumentRequestRecord,
   type ResidentDocumentRequestRecord,
 } from '@/lib/document-request-utils'
 import { getCurrentResidentFromSession } from '@/lib/resident-session'
 import {
   getZodFieldErrors,
-  parseDocumentPaymentFormData,
   parseDocumentRequestFormData,
   pickRelevantDocumentRequestData,
 } from '@/validations/document.validation'
@@ -23,6 +25,14 @@ export type CreateResidentDocumentRequestResult = {
   message: string
   fieldErrors?: Record<string, string>
   request?: ResidentDocumentRequestRecord
+}
+
+type AdminDocumentRequestStatus = 'APPROVED' | 'REJECTED'
+
+export type UpdateAdminDocumentRequestStatusResult = {
+  success: boolean
+  message: string
+  request?: AdminDocumentRequestRecord
 }
 
 export async function createResidentDocumentRequestAction(
@@ -123,6 +133,123 @@ export async function createResidentDocumentRequestAction(
       fieldErrors: {
         submit: 'An unexpected error occurred while creating your request.',
       },
+    }
+  }
+}
+
+const adminDocumentRequestRevalidationPaths = [
+  '/admin/documents',
+  '/admin/documents/clearance',
+  '/admin/documents/indigency',
+  '/admin/documents/residency',
+  '/admin/documents/cedula',
+  '/admin/documents/barangay-id',
+  '/admin/documents/job-seeker',
+  '/my-account',
+]
+
+export async function updateAdminDocumentRequestStatusAction(input: {
+  requestId: string
+  status: AdminDocumentRequestStatus
+}): Promise<UpdateAdminDocumentRequestStatusResult> {
+  const currentAdmin = await getCurrentAdminFromSession()
+
+  if (!currentAdmin) {
+    return {
+      success: false,
+      message: 'Your admin session has expired. Please sign in again.',
+    }
+  }
+
+  try {
+    const existingRequest = await prisma.documentRequest.findUnique({
+      where: {
+        id: input.requestId,
+      },
+      select: {
+        id: true,
+        documentTypeId: true,
+        type: true,
+        purpose: true,
+        quantity: true,
+        amount: true,
+        details: true,
+        referenceLast4: true,
+        proofOfPaymentUrl: true,
+        status: true,
+        requestedAt: true,
+        resident: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            houseNumber: true,
+            street: true,
+          },
+        },
+      },
+    })
+
+    if (!existingRequest) {
+      return {
+        success: false,
+        message: 'Document request not found.',
+      }
+    }
+
+    const updatedRequest = await prisma.documentRequest.update({
+      where: {
+        id: input.requestId,
+      },
+      data: {
+        status: input.status,
+      },
+      select: {
+        id: true,
+        documentTypeId: true,
+        type: true,
+        purpose: true,
+        quantity: true,
+        amount: true,
+        details: true,
+        referenceLast4: true,
+        proofOfPaymentUrl: true,
+        status: true,
+        requestedAt: true,
+        resident: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            houseNumber: true,
+            street: true,
+          },
+        },
+      },
+    })
+
+    for (const path of adminDocumentRequestRevalidationPaths) {
+      revalidatePath(path)
+    }
+
+    return {
+      success: true,
+      message:
+        input.status === 'APPROVED'
+          ? `${updatedRequest.type} request approved successfully.`
+          : `${updatedRequest.type} request rejected successfully.`,
+      request: serializeAdminDocumentRequest(updatedRequest),
+    }
+  } catch (error) {
+    console.error('update admin document request status failed', error)
+
+    return {
+      success: false,
+      message: 'An unexpected error occurred while updating the document request.',
     }
   }
 }

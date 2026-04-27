@@ -244,6 +244,50 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function TableShell({
+  columns,
+  children,
+}: {
+  columns: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto">
+        <table className="min-w-full">
+          <thead className="bg-slate-50">
+            <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+              {columns.split("|").map((column) => (
+                <th key={column} className="px-5 py-4">
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function RequestStatusBadge({ status }: { status: string }) {
+  const toneClass =
+    status === "APPROVED" || status === "RELEASED"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : status === "REJECTED"
+        ? "border-rose-200 bg-rose-50 text-rose-700"
+        : "border-amber-200 bg-amber-50 text-amber-700";
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${toneClass}`}
+    >
+      {status}
+    </span>
+  );
+}
+
 function TextField({
   label,
   value,
@@ -877,23 +921,52 @@ export default function RequestDocumentsClient({
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <TableShell columns="Document|Created|Amount|Status|Reference|Proof of Payment|Details">
                     {requestHistory.map((request) => (
-                      <article key={request.id} className="rounded-[24px] border border-slate-200 bg-slate-50/50 p-5">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                          <div>
-                            <h3 className="text-lg font-semibold text-slate-900">{request.documentType}</h3>
-                            <p className="mt-2 text-sm text-slate-500">Created {formatDateTime(request.submittedAt)}</p>
+                      <tr key={request.id} className="border-b border-slate-100 align-top last:border-b-0">
+                        <td className="px-5 py-4">
+                          <div className="min-w-[180px]">
+                            <p className="text-sm font-semibold text-slate-900">{request.documentType}</p>
+                            <p className="mt-1 text-xs text-slate-500">Preview log entry</p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                            {request.amount}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-slate-600">
+                          <div className="min-w-[160px]">{formatDateTime(request.submittedAt)}</div>
+                        </td>
+                        <td className="px-5 py-4 text-sm font-medium text-slate-900">
+                          <div className="min-w-[110px]">{request.amount}</div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="min-w-[120px]">
+                            <RequestStatusBadge status={request.status} />
                           </div>
-                        </div>
-
-                        <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Details</p>
-                            <dl className="mt-3 space-y-3 text-sm">
+                        </td>
+                        <td className="px-5 py-4 text-sm text-slate-700">
+                          <div className="min-w-[120px] font-medium">
+                            {request.referenceLast4 ? `**** ${request.referenceLast4}` : "Awaiting input"}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="min-w-[220px]">
+                            {request.proofOfPaymentUrl ? (
+                              <div className="space-y-3">
+                                <Image
+                                  src={request.proofOfPaymentUrl}
+                                  alt="Uploaded payment proof"
+                                  width={1200}
+                                  height={900}
+                                  className="h-28 w-full rounded-2xl object-cover"
+                                />
+                                <p className="text-xs text-slate-500">Stored in Cloudinary</p>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-500">No upload attached</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="min-w-[260px]">
+                            <dl className="space-y-3 text-sm">
                               {request.summary.map((item) => (
                                 <div
                                   key={`${request.id}-${item.label}`}
@@ -905,40 +978,10 @@ export default function RequestDocumentsClient({
                               ))}
                             </dl>
                           </div>
-
-                          <div className="space-y-4">
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
-                              <p className="mt-2 text-sm font-semibold text-slate-900">{request.status}</p>
-                            </div>
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reference Number</p>
-                              <p className="mt-2 text-sm font-semibold text-slate-900">
-                                {request.referenceLast4 ? `**** ${request.referenceLast4}` : "Awaiting input"}
-                              </p>
-                            </div>
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proof of Payment</p>
-                              {request.proofOfPaymentUrl ? (
-                                <div className="mt-3">
-                                  <Image
-                                    src={request.proofOfPaymentUrl}
-                                    alt="Uploaded payment proof"
-                                    width={1200}
-                                    height={900}
-                                    className="h-36 w-full rounded-2xl object-cover"
-                                  />
-                                  <p className="mt-2 text-sm text-slate-600">Stored in Cloudinary</p>
-                                </div>
-                              ) : (
-                                <p className="mt-2 text-sm text-slate-500">No upload attached</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </article>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
+                  </TableShell>
                 )}
               </div>
             </section>

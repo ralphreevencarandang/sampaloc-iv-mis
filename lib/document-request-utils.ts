@@ -37,6 +37,13 @@ export type ResidentDocumentRequestRecord = {
   submittedAt: string
 }
 
+export type AdminDocumentRequestRecord = ResidentDocumentRequestRecord & {
+  residentId: string
+  requesterName: string
+  requesterEmail: string
+  requesterAddress: string
+}
+
 export function buildRelevantDocumentRequestPayload(input: DocumentRequestDraftInput) {
   const definition = getDocumentDefinition(input.documentType)
 
@@ -150,5 +157,45 @@ export function serializeResidentDocumentRequest(record: {
     referenceLast4: record.referenceLast4,
     proofOfPaymentUrl: record.proofOfPaymentUrl,
     submittedAt: record.requestedAt.toISOString(),
+  }
+}
+
+export function serializeAdminDocumentRequest(record: {
+  id: string
+  documentTypeId: string
+  type: string
+  purpose: string | null
+  quantity: number
+  amount: number
+  status: DocumentRequestStatus
+  details: unknown
+  referenceLast4: string | null
+  proofOfPaymentUrl: string | null
+  requestedAt: Date
+  resident: {
+    id: string
+    email: string
+    firstName: string
+    middleName: string | null
+    lastName: string
+    houseNumber: string
+    street: string
+  }
+}): AdminDocumentRequestRecord {
+  const residentRequest = serializeResidentDocumentRequest(record)
+  const requesterName = [
+    record.resident.firstName,
+    record.resident.middleName,
+    record.resident.lastName,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return {
+    ...residentRequest,
+    residentId: record.resident.id,
+    requesterName,
+    requesterEmail: record.resident.email,
+    requesterAddress: [record.resident.houseNumber, record.resident.street].filter(Boolean).join(', '),
   }
 }

@@ -27,6 +27,8 @@ export type DocumentTypeDefinition = {
   fields: DocumentFieldDefinition[]
 }
 
+export type DocumentTypeId = DocumentTypeDefinition['id']
+
 const documentTypesWithPurpose = ['clearance', 'indigency', 'residency'] as const
 
 export const documentTypeCatalog: DocumentTypeDefinition[] = [
@@ -150,8 +152,14 @@ export const documentTypeCatalog: DocumentTypeDefinition[] = [
   },
 ]
 
+export const documentTypeIds = documentTypeCatalog.map((item) => item.id) as DocumentTypeId[]
+
 export function getDocumentDefinition(documentType: string) {
   return documentTypeCatalog.find((item) => item.id === documentType)
+}
+
+export function isDocumentTypeId(documentType: string): documentType is DocumentTypeId {
+  return documentTypeIds.includes(documentType as DocumentTypeId)
 }
 
 export function getDocumentFieldNames(documentType: string) {
