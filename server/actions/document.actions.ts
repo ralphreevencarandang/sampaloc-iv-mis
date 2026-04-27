@@ -27,7 +27,7 @@ export type CreateResidentDocumentRequestResult = {
   request?: ResidentDocumentRequestRecord
 }
 
-type AdminDocumentRequestStatus = 'APPROVED' | 'REJECTED'
+type AdminDocumentRequestStatus = 'APPROVED' | 'REVIEW'
 
 export type UpdateAdminDocumentRequestStatusResult = {
   success: boolean
@@ -99,7 +99,7 @@ export async function createResidentDocumentRequestAction(
         details: relevantDetails,
         referenceLast4: parsed.data.referenceLast4 || null,
         proofOfPaymentUrl,
-        status: 'SUBMITTED',
+        status: 'PENDING',
       },
       select: {
         id: true,
@@ -199,6 +199,17 @@ export async function updateAdminDocumentRequestStatusAction(input: {
       }
     }
 
+    if (existingRequest.status === input.status) {
+      return {
+        success: true,
+        message:
+          input.status === 'APPROVED'
+            ? `${existingRequest.type} request is already approved.`
+            : `${existingRequest.type} request is already under review.`,
+        request: serializeAdminDocumentRequest(existingRequest),
+      }
+    }
+
     const updatedRequest = await prisma.documentRequest.update({
       where: {
         id: input.requestId,
@@ -241,7 +252,7 @@ export async function updateAdminDocumentRequestStatusAction(input: {
       message:
         input.status === 'APPROVED'
           ? `${updatedRequest.type} request approved successfully.`
-          : `${updatedRequest.type} request rejected successfully.`,
+          : `${updatedRequest.type} request moved to review successfully.`,
       request: serializeAdminDocumentRequest(updatedRequest),
     }
   } catch (error) {

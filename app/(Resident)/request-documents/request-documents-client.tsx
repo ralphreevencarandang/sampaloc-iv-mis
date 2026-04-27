@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
@@ -23,6 +23,7 @@ import {
   type ResidentDocumentRequestRecord,
 } from "@/lib/document-request-utils";
 import { documentTypeCatalog, type DocumentTypeDefinition } from "@/lib/document-request-catalog";
+import { fetchResidentDocumentRequests } from "@/lib/document-requests-api";
 import {
   createResidentDocumentRequestAction,
 } from "@/server/actions/document.actions";
@@ -273,7 +274,7 @@ function TableShell({
 
 function RequestStatusBadge({ status }: { status: string }) {
   const toneClass =
-    status === "APPROVED" || status === "RELEASED"
+    status === "APPROVED"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : status === "REJECTED"
         ? "border-rose-200 bg-rose-50 text-rose-700"
@@ -419,7 +420,6 @@ export default function RequestDocumentsClient({
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofError, setPaymentProofError] = useState("");
   const [paymentPreviewUrl, setPaymentPreviewUrl] = useState<string | null>(null);
-  const [requestHistory, setRequestHistory] = useState<SubmittedRequest[]>([]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIsBootLoading(false), 450);
@@ -451,6 +451,24 @@ export default function RequestDocumentsClient({
     }));
   }, [residentProfile, selectedDocument.id]);
 
+  const requestHistoryQuery = useQuery({
+    queryKey: ["resident-document-requests", residentProfile?.id],
+    queryFn: async () => {
+      if (!residentProfile?.id) {
+        throw new Error("Resident session is missing.");
+      }
+
+      return fetchResidentDocumentRequests();
+    },
+    enabled: Boolean(residentProfile?.id),
+    staleTime: 60 * 1000,
+  });
+
+  const requestHistory = useMemo(
+    () => (requestHistoryQuery.data ?? []).map(mapRequestRecord),
+    [requestHistoryQuery.data]
+  );
+
   const createRequestMutation = useMutation({
     mutationFn: async (formData: FormData) => createResidentDocumentRequestAction(formData),
     onSuccess: async (result) => {
@@ -476,12 +494,11 @@ export default function RequestDocumentsClient({
         return;
       }
 
-      const nextRequest = mapRequestRecord(result.request);
+      const nextResidentRecord = result.request;
 
       setFormErrors({});
       setSubmissionError("");
       setSubmissionMessage(result.message);
-      setRequestHistory((current) => [nextRequest, ...current.filter((item) => item.id !== nextRequest.id)]);
       setFormValues(initialFormValues);
       setQuantity(1);
       setReferenceLast4("");
@@ -489,6 +506,14 @@ export default function RequestDocumentsClient({
       setPaymentProofError("");
       setPaymentProofFile(null);
       setPaymentPreviewUrl(null);
+
+      queryClient.setQueryData<ResidentDocumentRequestRecord[]>(
+        ["resident-document-requests", residentProfile?.id],
+        (current = []) => [
+          nextResidentRecord,
+          ...current.filter((item) => item.id !== nextResidentRecord.id),
+        ]
+      );
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents", "user"] }),
@@ -631,7 +656,7 @@ export default function RequestDocumentsClient({
                       type="button"
                       onClick={() => handleDocumentTypeChange(document.id)}
                       className={cn(
-                        "rounded-[24px] border p-4 text-left transition-all",
+                        "rounded-3xl border p-4 text-left transition-all",
                         isSelected
                           ? "border-primary-500 bg-primary-50 shadow-sm"
                           : "border-slate-200 bg-white hover:border-primary-300 hover:bg-slate-50"
@@ -697,7 +722,7 @@ export default function RequestDocumentsClient({
                   </div>
                 ) : null}
 
-                <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">Selected Document</p>
@@ -775,7 +800,7 @@ export default function RequestDocumentsClient({
                 </div>
 
                 {selectedDocument.fee > 0 ? (
-                  <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex items-start gap-3 border-b border-slate-100 pb-5">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-700">
                         <CreditCard className="h-5 w-5" />
@@ -792,9 +817,9 @@ export default function RequestDocumentsClient({
                       <GCashQrCard />
 
                       <div className="space-y-5">
-                        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                           <p className="text-sm font-semibold text-slate-900">Upload proof of payment</p>
-                          <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white px-6 py-8 text-center transition-colors hover:border-primary-400 hover:bg-primary-50/30">
+                          <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-8 text-center transition-colors hover:border-primary-400 hover:bg-primary-50/30">
                             <Upload className="h-6 w-6 text-primary-700" />
                             <p className="mt-3 text-sm font-medium text-slate-900">Choose a payment screenshot</p>
                             <input
@@ -829,7 +854,7 @@ export default function RequestDocumentsClient({
                           {paymentProofError ? <p className="mt-3 text-xs text-rose-500">{paymentProofError}</p> : null}
 
                           {paymentPreviewUrl ? (
-                            <div className="mt-4 rounded-[24px] border border-slate-200 bg-white p-4">
+                            <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
                                 <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
                                   <FileImage className="h-4 w-4 text-primary-700" />
                                   <span>{paymentProofFile?.name}</span>
@@ -902,21 +927,35 @@ export default function RequestDocumentsClient({
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Request Preview Log</h2>
                   <p className="text-sm text-slate-600">
-                    The latest created request appears here immediately after the mutation succeeds.
+                    Your submitted document requests are fetched from the server and refreshed after each new submission.
                   </p>
                 </div>
               </div>
 
               <div className="mt-5">
-                {requestHistory.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                {requestHistoryQuery.isLoading ? (
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 px-6 py-12 text-center text-sm text-slate-600">
+                    Loading request history...
+                  </div>
+                ) : requestHistoryQuery.isError ? (
+                  <PlaceholderState
+                    title="Unable to load request history"
+                    description={
+                      requestHistoryQuery.error instanceof Error
+                        ? requestHistoryQuery.error.message
+                        : "The request history could not be loaded right now."
+                    }
+                    tone="rose"
+                  />
+                ) : requestHistory.length === 0 ? (
+                  <div className="flex min-h-55 items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
                     <div className="max-w-md">
                       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm">
                         <FileText className="h-6 w-6" />
                       </div>
                       <h3 className="mt-4 text-base font-semibold text-slate-900">No requests yet</h3>
                       <p className="mt-2 text-sm text-slate-600">
-                        Your document request will appear here after the create mutation succeeds.
+                        Your document request history will appear here once requests are submitted.
                       </p>
                     </div>
                   </div>
@@ -925,29 +964,29 @@ export default function RequestDocumentsClient({
                     {requestHistory.map((request) => (
                       <tr key={request.id} className="border-b border-slate-100 align-top last:border-b-0">
                         <td className="px-5 py-4">
-                          <div className="min-w-[180px]">
+                          <div className="min-w-45">
                             <p className="text-sm font-semibold text-slate-900">{request.documentType}</p>
                             <p className="mt-1 text-xs text-slate-500">Preview log entry</p>
                           </div>
                         </td>
                         <td className="px-5 py-4 text-sm text-slate-600">
-                          <div className="min-w-[160px]">{formatDateTime(request.submittedAt)}</div>
+                          <div className="min-w-40">{formatDateTime(request.submittedAt)}</div>
                         </td>
                         <td className="px-5 py-4 text-sm font-medium text-slate-900">
-                          <div className="min-w-[110px]">{request.amount}</div>
+                          <div className="min-w-27.5">{request.amount}</div>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="min-w-[120px]">
+                          <div className="min-w-30">
                             <RequestStatusBadge status={request.status} />
                           </div>
                         </td>
                         <td className="px-5 py-4 text-sm text-slate-700">
-                          <div className="min-w-[120px] font-medium">
+                          <div className="min-w-30 font-medium">
                             {request.referenceLast4 ? `**** ${request.referenceLast4}` : "Awaiting input"}
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="min-w-[220px]">
+                          <div className="min-w-55">
                             {request.proofOfPaymentUrl ? (
                               <div className="space-y-3">
                                 <Image
@@ -957,7 +996,6 @@ export default function RequestDocumentsClient({
                                   height={900}
                                   className="h-28 w-full rounded-2xl object-cover"
                                 />
-                                <p className="text-xs text-slate-500">Stored in Cloudinary</p>
                               </div>
                             ) : (
                               <p className="text-sm text-slate-500">No upload attached</p>
@@ -965,7 +1003,7 @@ export default function RequestDocumentsClient({
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <div className="min-w-[260px]">
+                          <div className="min-w-55">
                             <dl className="space-y-3 text-sm">
                               {request.summary.map((item) => (
                                 <div

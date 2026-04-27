@@ -22,9 +22,10 @@ import {
 } from "lucide-react";
 import { useResidentAuth } from "@/components/providers/resident-auth-provider";
 import apiClient from "@/lib/axios";
+import { fetchResidentDocumentRequests } from "@/lib/document-requests-api";
+import type { ResidentDocumentRequestRecord } from "@/lib/document-request-utils";
 
 type ResidentStatus = "PENDING" | "APPROVED" | "DECLINED";
-type RequestStatus = "PENDING" | "APPROVED" | "RELEASED";
 type BlotterStatus = "OPEN" | "RESOLVED";
 
 type ResidentProfile = {
@@ -47,16 +48,6 @@ type ResidentProfile = {
   validIDImage: string | null;
   status: ResidentStatus;
   createdAt: string;
-};
-
-type DocumentRequestRecord = {
-  id: string;
-  type: string;
-  purpose: string;
-  status: RequestStatus;
-  requestedAt: string;
-  releasedAt: string | null;
-  approvedByName: string | null;
 };
 
 type BlotterRecord = {
@@ -132,6 +123,18 @@ function formatAge(birthDate: string) {
 
 function fullName(profile: Pick<ResidentProfile, "firstName" | "middleName" | "lastName">) {
   return [profile.firstName, profile.middleName, profile.lastName].filter(Boolean).join(" ");
+}
+
+function getDocumentStatusTone(status: ResidentDocumentRequestRecord["status"]) {
+  if (status === "APPROVED") {
+    return "emerald";
+  }
+
+  if (status === "REVIEW") {
+    return "primary";
+  }
+
+  return "amber";
 }
 
 function Badge({
@@ -250,11 +253,6 @@ function TableShell({
 
 async function fetchResidentProfile(residentId: string) {
   const { data } = await apiClient.get<ResidentProfile>(`/residents/${residentId}`);
-  return data;
-}
-
-async function fetchResidentDocuments(residentId: string) {
-  const { data } = await apiClient.get<DocumentRequestRecord[]>(`/residents/${residentId}/documents`);
   return data;
 }
 
@@ -460,13 +458,13 @@ export default function MyAccountPage() {
   });
 
   const documentsQuery = useQuery({
-    queryKey: ["resident-documents", residentId],
+    queryKey: ["resident-document-requests", residentId],
     queryFn: async () => {
       if (!residentId) {
         throw new Error("Resident session is missing.");
       }
 
-      return fetchResidentDocuments(residentId);
+      return fetchResidentDocumentRequests();
     },
     enabled: Boolean(residentId && activeTab === "documents"),
     staleTime: 5 * 60 * 1000,
@@ -626,19 +624,21 @@ export default function MyAccountPage() {
                     }}
                   />
                 ) : documentsQuery.data && documentsQuery.data.length > 0 ? (
-                  <TableShell columns="Document Type|Purpose|Status|Requested|Released|Approved By">
+                  <TableShell columns="Document Type|Purpose|Copies|Amount|Status|Submitted">
                     {documentsQuery.data.map((record) => (
                       <tr key={record.id} className="border-b border-slate-100 last:border-b-0">
                         <td className="px-5 py-4 text-sm font-medium text-slate-900">{record.type}</td>
-                        <td className="px-5 py-4 text-sm text-slate-600">{record.purpose}</td>
+                        <td className="px-5 py-4 text-sm text-slate-600">{record.purpose ?? "Not provided"}</td>
+                        <td className="px-5 py-4 text-sm text-slate-600">{record.requestedCopies}</td>
+                        <td className="px-5 py-4 text-sm text-slate-600">
+                          PHP {record.amount.toLocaleString("en-PH")}
+                        </td>
                         <td className="px-5 py-4 text-sm">
-                          <Badge tone={record.status === "APPROVED" || record.status === "RELEASED" ? "emerald" : "amber"}>
+                          <Badge tone={getDocumentStatusTone(record.status)}>
                             {record.status}
                           </Badge>
                         </td>
-                        <td className="px-5 py-4 text-sm text-slate-600">{formatDateTime(record.requestedAt)}</td>
-                        <td className="px-5 py-4 text-sm text-slate-600">{formatDateTime(record.releasedAt)}</td>
-                        <td className="px-5 py-4 text-sm text-slate-600">{record.approvedByName ?? "Pending"}</td>
+                        <td className="px-5 py-4 text-sm text-slate-600">{formatDateTime(record.submittedAt)}</td>
                       </tr>
                     ))}
                   </TableShell>

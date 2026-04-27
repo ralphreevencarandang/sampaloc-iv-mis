@@ -2,10 +2,8 @@ import { getDocumentDefinition } from '@/lib/document-request-catalog'
 
 export type DocumentRequestStatus =
   | 'PENDING'
-  | 'SUBMITTED'
+  | 'REVIEW'
   | 'APPROVED'
-  | 'REJECTED'
-  | 'RELEASED'
 
 export type DocumentDetailLine = {
   label: string

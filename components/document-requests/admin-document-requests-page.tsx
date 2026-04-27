@@ -9,7 +9,6 @@ import {
   Loader2,
   MoreVertical,
   Search,
-  XCircle,
 } from 'lucide-react'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
@@ -26,7 +25,7 @@ type PageProps = {
   documentType: DocumentTypeId
 }
 
-type AdminFilter = 'ALL' | 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'RELEASED'
+type AdminFilter = 'ALL' | 'PENDING' | 'REVIEW' | 'APPROVED'
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ')
@@ -44,23 +43,15 @@ function formatDateTime(value: string) {
 
 function getAdminStatusLabel(status: DocumentRequestStatus) {
   if (status === 'PENDING') {
-    return 'Pending Payment'
+    return 'Pending'
   }
 
-  if (status === 'SUBMITTED') {
-    return 'Pending Review'
+  if (status === 'REVIEW') {
+    return 'In Review'
   }
 
   if (status === 'APPROVED') {
     return 'Approved'
-  }
-
-  if (status === 'REJECTED') {
-    return 'Rejected'
-  }
-
-  if (status === 'RELEASED') {
-    return 'Released'
   }
 
   return status
@@ -73,10 +64,8 @@ function getFilterLabel(filter: AdminFilter) {
 function StatusBadge({ status }: { status: DocumentRequestStatus }) {
   const styles = {
     PENDING: 'border-amber-200 bg-amber-50 text-amber-700',
-    SUBMITTED: 'border-sky-200 bg-sky-50 text-sky-700',
+    REVIEW: 'border-sky-200 bg-sky-50 text-sky-700',
     APPROVED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    REJECTED: 'border-rose-200 bg-rose-50 text-rose-700',
-    RELEASED: 'border-violet-200 bg-violet-50 text-violet-700',
   } as const
 
   return (
@@ -138,29 +127,27 @@ function QueryErrorState({
   )
 }
 
-function canReview(status: DocumentRequestStatus) {
-  return status === 'SUBMITTED' || status === 'PENDING'
-}
-
 function RowActionMenu({
   isOpen,
-  isReviewable,
+  canApprove,
+  canMoveToReview,
   isApproving,
-  isRejecting,
+  isReviewing,
   isMutating,
   onToggle,
   onApprove,
-  onReject,
+  onReview,
   onArchive,
 }: {
   isOpen: boolean
-  isReviewable: boolean
+  canApprove: boolean
+  canMoveToReview: boolean
   isApproving: boolean
-  isRejecting: boolean
+  isReviewing: boolean
   isMutating: boolean
   onToggle: () => void
   onApprove: () => void
-  onReject: () => void
+  onReview: () => void
   onArchive: () => void
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -198,7 +185,7 @@ function RowActionMenu({
         <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-gray-100 bg-white p-2 shadow-xl">
           <button
             type="button"
-            disabled={!isReviewable || isMutating}
+            disabled={!canApprove || isMutating}
             onClick={onApprove}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -211,16 +198,16 @@ function RowActionMenu({
           </button>
           <button
             type="button"
-            disabled={!isReviewable || isMutating}
-            onClick={onReject}
+            disabled={!canMoveToReview || isMutating}
+            onClick={onReview}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isRejecting ? (
+            {isReviewing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <XCircle className="h-4 w-4 text-rose-600" />
+              <FileText className="h-4 w-4 text-sky-600" />
             )}
-            Reject
+            Review
           </button>
           <button
             type="button"
@@ -242,6 +229,7 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<AdminFilter>('ALL')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const {
     data: requests = [],
@@ -257,21 +245,61 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
 
   const reviewMutation = useMutation({
     mutationFn: updateAdminDocumentRequestStatusAction,
+    onMutate: async (variables) => {
+      setActionError(null)
+      setOpenMenuId(null)
+
+      await queryClient.cancelQueries({ queryKey: ['documents', documentType] })
+
+      const previousRequests = queryClient.getQueryData<
+        Awaited<ReturnType<typeof fetchAdminDocumentRequests>>
+      >(['documents', documentType])
+
+      queryClient.setQueryData<Awaited<ReturnType<typeof fetchAdminDocumentRequests>>>(
+        ['documents', documentType],
+        (current = []) =>
+          current.map((request) =>
+            request.id === variables.requestId
+              ? {
+                  ...request,
+                  status: variables.status,
+                }
+              : request
+          )
+      )
+
+      return { previousRequests }
+    },
     onSuccess: async (result) => {
       if (!result.success) {
+        setActionError(result.message)
         toast.error(result.message)
         return
       }
 
       toast.success(result.message)
-      await queryClient.invalidateQueries({ queryKey: ['documents', documentType] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['documents'] }),
+        queryClient.invalidateQueries({ queryKey: ['documents', documentType] }),
+        queryClient.invalidateQueries({ queryKey: ['resident-documents'] }),
+        queryClient.invalidateQueries({ queryKey: ['resident-document-requests'] }),
+      ])
     },
-    onError: (mutationError) => {
-      toast.error(
+    onError: (mutationError, _variables, context) => {
+      if (context?.previousRequests) {
+        queryClient.setQueryData(['documents', documentType], context.previousRequests)
+      }
+
+      const message =
         mutationError instanceof Error
           ? mutationError.message
           : 'Failed to update the document request.'
-      )
+
+      setActionError(message)
+      toast.error(message)
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['documents', documentType] })
     },
   })
 
@@ -302,7 +330,15 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
     return matchesSearch && matchesStatus
   })
 
-  const pendingCount = requests.filter((item) => canReview(item.status)).length
+  const pendingCount = requests.filter((item) => item.status === 'PENDING').length
+
+  function confirmStatusChange(nextStatus: 'APPROVED' | 'REVIEW') {
+    return window.confirm(
+      nextStatus === 'APPROVED'
+        ? 'Approve this document request?'
+        : 'Move this document request to review?'
+    )
+  }
 
   if (isLoading) {
     return (
@@ -345,20 +381,8 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
 
       <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4  lg:items-center lg:justify-between">
-          <div className="relative w-full max-w-xl">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by requester, email, address, or reference digits"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition-colors focus:border-primary-500"
-            />
-          </div>
-
           <div className="flex flex-wrap gap-2">
-            {(
-              ['ALL', 'PENDING', 'SUBMITTED', 'APPROVED', 'REJECTED', 'RELEASED'] as AdminFilter[]
-            ).map((filter) => (
+            {(['ALL', 'PENDING', 'REVIEW', 'APPROVED'] as AdminFilter[]).map((filter) => (
               <button
                 key={filter}
                 type="button"
@@ -374,9 +398,24 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
               </button>
             ))}
           </div>
+          <div className="relative w-full ">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by requester, email, address, or reference digits"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition-colors focus:border-primary-500"
+            />
+          </div>
         </div>
 
         <div className="mt-6">
+          {actionError ? (
+            <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              {actionError}
+            </div>
+          ) : null}
+
           {filteredRequests.length === 0 ? (
             <EmptyState
               title="No requests found"
@@ -399,16 +438,17 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
                   </thead>
                   <tbody>
                     {filteredRequests.map((request) => {
-                      const isReviewable = canReview(request.status)
+                      const canApprove = request.status !== 'APPROVED'
+                      const canMoveToReview = request.status !== 'REVIEW'
                       const isMenuOpen = openMenuId === request.id
                       const isApproving =
                         reviewMutation.isPending &&
                         reviewMutation.variables?.requestId === request.id &&
                         reviewMutation.variables?.status === 'APPROVED'
-                      const isRejecting =
+                      const isReviewing =
                         reviewMutation.isPending &&
                         reviewMutation.variables?.requestId === request.id &&
-                        reviewMutation.variables?.status === 'REJECTED'
+                        reviewMutation.variables?.status === 'REVIEW'
 
                       return (
                         <tr key={request.id} className="border-t border-slate-100 align-top">
@@ -468,31 +508,38 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
                           <td className="px-4 py-4 text-center sm:px-5">
                             <RowActionMenu
                               isOpen={isMenuOpen}
-                              isReviewable={isReviewable}
+                              canApprove={canApprove}
+                              canMoveToReview={canMoveToReview}
                               isApproving={isApproving}
-                              isRejecting={isRejecting}
+                              isReviewing={isReviewing}
                               isMutating={reviewMutation.isPending}
                               onToggle={() => {
                                 setOpenMenuId((current) => (current === request.id ? null : request.id))
                               }}
                               onApprove={() => {
-                                setOpenMenuId(null)
+                                if (!confirmStatusChange('APPROVED')) {
+                                  return
+                                }
+
                                 reviewMutation.mutate({
                                   requestId: request.id,
                                   status: 'APPROVED',
                                 })
                               }}
-                              onReject={() => {
-                                setOpenMenuId(null)
+                              onReview={() => {
+                                if (!confirmStatusChange('REVIEW')) {
+                                  return
+                                }
+
                                 reviewMutation.mutate({
                                   requestId: request.id,
-                                  status: 'REJECTED',
+                                  status: 'REVIEW',
                                 })
                               }}
                               onArchive={() => {
                                 setOpenMenuId(null)
                                 toast('Archive action is not available yet.', {
-                                  icon: '🗂️',
+                                  icon: '📦',
                                 })
                               }}
                             />
