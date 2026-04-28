@@ -1,6 +1,7 @@
 'use client'
 
-import { CalendarClock, CirclePlus, ClipboardList, FileStack, HeartPulse, Users } from 'lucide-react'
+import { CalendarClock, ChevronRight, CirclePlus, ClipboardList, FileStack, HeartPulse, Users } from 'lucide-react'
+import Link from 'next/link'
 import React, { useMemo, useState } from 'react'
 import MedicalRecordModalForm from '@/components/ui/Clinic/MedicalRecordModalForm'
 
@@ -24,19 +25,11 @@ type SummaryGroup = {
   items: string[]
 }
 
-type ActivityItem = {
-  id: string
-  title: string
-  description: string
-  time: string
-}
-
 type ClinicDashboardProps = {
   healthWorkerName: string
   stats: StatCard[]
   patients: Patient[]
   summary: SummaryGroup[]
-  activity: ActivityItem[]
 }
 
 const statIcons = [Users, ClipboardList, CalendarClock, FileStack]
@@ -46,10 +39,8 @@ export default function ClinicDashboard({
   stats,
   patients,
   summary,
-  activity,
 }: ClinicDashboardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [recentActivity, setRecentActivity] = useState(activity)
 
   const patientOptions = useMemo(
     () =>
@@ -114,7 +105,9 @@ export default function ClinicDashboard({
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Patient Snapshot</h2>
-                <p className="mt-1 text-sm text-slate-600">Mock resident data for the dashboard layout and record-entry workflow.</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Current residents and their latest clinic visit information.
+                </p>
               </div>
             </div>
 
@@ -157,13 +150,15 @@ export default function ClinicDashboard({
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <div id="medical-records" className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Medical Records</h2>
-                <p className="mt-1 text-sm text-slate-600">Server-action form flow with Zod validation, prepared for future persistence.</p>
-              </div>
+        <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Medical Records Workspace</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Manage consultation records from the dedicated records page with search, pagination, and live refresh after new entries.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
@@ -172,31 +167,13 @@ export default function ClinicDashboard({
                 <CirclePlus className="h-4 w-4" />
                 New record
               </button>
-            </div>
-
-            <div className="mt-5 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">Prepared fields</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Patient selection, diagnosis, notes, consultation date, and optional attachments are already wired to a dedicated server action so we can connect Prisma storage later without replacing the UI contract.
-              </p>
-            </div>
-          </div>
-
-          <div id="recent-activity" className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-900">Recent Activity</h2>
-            <p className="mt-1 text-sm text-slate-600">Latest mock activity, plus any new records created from this dashboard session.</p>
-            <div className="mt-5 space-y-4">
-              {recentActivity.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-slate-900">{item.title}</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{item.description}</p>
-                    </div>
-                    <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-400">{item.time}</span>
-                  </div>
-                </div>
-              ))}
+              <Link
+                href="/clinic/medical-records"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                View Medical Records
+                <ChevronRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
         </section>
@@ -206,17 +183,6 @@ export default function ClinicDashboard({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         patients={patientOptions}
-        onRecordCreated={(record) => {
-          setRecentActivity((current) => [
-            {
-              id: `activity-${Date.now()}`,
-              title: `Medical record drafted for ${record.patientName}`,
-              description: `${record.diagnosis} was submitted through the clinic modal for ${record.date}.`,
-              time: 'Just now',
-            },
-            ...current,
-          ])
-        }}
       />
     </>
   )

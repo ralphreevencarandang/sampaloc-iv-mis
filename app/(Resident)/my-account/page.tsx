@@ -126,7 +126,7 @@ function fullName(profile: Pick<ResidentProfile, "firstName" | "middleName" | "l
 }
 
 function getDocumentStatusTone(status: ResidentDocumentRequestRecord["status"]) {
-  if (status === "APPROVED") {
+  if (status === "APPROVED" || status === "GENERATED") {
     return "emerald";
   }
 

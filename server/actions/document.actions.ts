@@ -1,8 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import type { Prisma } from '@/app/generated/prisma/client'
 import { getCurrentAdminFromSession } from '@/lib/admin-session'
 import { uploadImageToCloudinary } from '@/lib/cloudinary'
+import { sendDocumentRequestPdfEmail } from '@/lib/nodemailer'
 import prismaModule from '@/lib/prisma'
 import { getDocumentDefinition } from '@/lib/document-request-catalog'
 import {
@@ -11,6 +13,10 @@ import {
   type AdminDocumentRequestRecord,
   type ResidentDocumentRequestRecord,
 } from '@/lib/document-request-utils'
+import {
+  DocumentRequestPdfGenerationError,
+  generateStoredDocumentRequestPdf,
+} from '@/lib/pdf/document-request-delivery'
 import { getCurrentResidentFromSession } from '@/lib/resident-session'
 import {
   getZodFieldErrors,
@@ -32,6 +38,13 @@ type AdminDocumentRequestStatus = 'APPROVED' | 'REVIEW'
 export type UpdateAdminDocumentRequestStatusResult = {
   success: boolean
   message: string
+  request?: AdminDocumentRequestRecord
+}
+
+export type SendAdminDocumentRequestEmailResult = {
+  success: boolean
+  message: string
+  serialNumber?: string | null
   request?: AdminDocumentRequestRecord
 }
 
@@ -96,7 +109,7 @@ export async function createResidentDocumentRequestAction(
         yearsOfResidency: parsed.data.yearsOfResidency ? parseInt(parsed.data.yearsOfResidency, 10) : 0,
         placeOfBirth: parsed.data.placeOfBirth || null,
         amount: definition.fee,
-        details: relevantDetails,
+        details: relevantDetails as Prisma.InputJsonValue,
         referenceLast4: parsed.data.referenceLast4 || null,
         proofOfPaymentUrl,
         status: 'PENDING',
@@ -111,6 +124,9 @@ export async function createResidentDocumentRequestAction(
         details: true,
         referenceLast4: true,
         proofOfPaymentUrl: true,
+        serialNumber: true,
+        generatedFileUrl: true,
+        generatedAt: true,
         status: true,
         requestedAt: true,
       },
@@ -176,6 +192,9 @@ export async function updateAdminDocumentRequestStatusAction(input: {
         details: true,
         referenceLast4: true,
         proofOfPaymentUrl: true,
+        serialNumber: true,
+        generatedFileUrl: true,
+        generatedAt: true,
         status: true,
         requestedAt: true,
         resident: {
@@ -227,6 +246,9 @@ export async function updateAdminDocumentRequestStatusAction(input: {
         details: true,
         referenceLast4: true,
         proofOfPaymentUrl: true,
+        serialNumber: true,
+        generatedFileUrl: true,
+        generatedAt: true,
         status: true,
         requestedAt: true,
         resident: {
@@ -261,6 +283,66 @@ export async function updateAdminDocumentRequestStatusAction(input: {
     return {
       success: false,
       message: 'An unexpected error occurred while updating the document request.',
+    }
+  }
+}
+
+export async function sendAdminDocumentRequestEmailAction(input: {
+  requestId: string
+}): Promise<SendAdminDocumentRequestEmailResult> {
+  const currentAdmin = await getCurrentAdminFromSession()
+
+  if (!currentAdmin) {
+    return {
+      success: false,
+      message: 'Your admin session has expired. Please sign in again.',
+    }
+  }
+
+  try {
+    const generatedDocument = await generateStoredDocumentRequestPdf(input.requestId)
+    const emailResult = await sendDocumentRequestPdfEmail({
+      email: generatedDocument.documentRequest.resident.email,
+      firstName: generatedDocument.documentRequest.resident.firstName,
+      documentLabel: generatedDocument.documentRequest.type,
+      serialNumber: generatedDocument.serialNumber,
+      fileName: generatedDocument.fileName,
+      pdfBuffer: generatedDocument.pdfBuffer,
+    })
+    const serializedRequest = serializeAdminDocumentRequest(generatedDocument.documentRequest)
+
+    for (const path of adminDocumentRequestRevalidationPaths) {
+      revalidatePath(path)
+    }
+
+    if (!emailResult.success) {
+      return {
+        success: false,
+        message: 'The PDF was generated, but the email could not be sent.',
+        serialNumber: generatedDocument.serialNumber,
+        request: serializedRequest,
+      }
+    }
+
+    return {
+      success: true,
+      message: `${generatedDocument.documentRequest.type} PDF sent to ${generatedDocument.documentRequest.resident.email}.`,
+      serialNumber: generatedDocument.serialNumber,
+      request: serializedRequest,
+    }
+  } catch (error) {
+    if (error instanceof DocumentRequestPdfGenerationError) {
+      return {
+        success: false,
+        message: error.message,
+      }
+    }
+
+    console.error('send admin document request email failed', error)
+
+    return {
+      success: false,
+      message: 'An unexpected error occurred while sending the document email.',
     }
   }
 }

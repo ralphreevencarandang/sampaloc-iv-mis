@@ -5,6 +5,7 @@ import { getBlottersFromDb } from "@/server/actions/blotter.actions";
 import { getVawcFromDb } from "@/server/actions/vawc.actions";
 import { getPetsFromDb } from "@/server/actions/pet.action";
 import { prisma } from "@/lib/prisma";
+import { serializeClinicMedicalRecord } from "@/lib/clinic-utils";
 
 export async function GET(request: Request) {
   try {
@@ -64,6 +65,41 @@ export async function GET(request: Request) {
     if (type === "pets") {
       const pets = await getPetsFromDb({ archived: true });
       return NextResponse.json(pets);
+    }
+
+    if (type === "medical-records") {
+      const medicalRecords = await prisma.medicalRecord.findMany({
+        where: {
+          isArchive: true,
+        },
+        select: {
+          id: true,
+          patientId: true,
+          symptoms: true,
+          diagnosis: true,
+          treatment: true,
+          prescription: true,
+          date: true,
+          isArchive: true,
+          patient: {
+            select: {
+              firstName: true,
+              middleName: true,
+              lastName: true,
+            },
+          },
+          checkedBy: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          date: "desc",
+        },
+      });
+
+      return NextResponse.json(medicalRecords.map((record) => serializeClinicMedicalRecord(record)));
     }
     
     // Fallback for other mock entities at the moment

@@ -1,10 +1,13 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, FileUp, Loader2, X } from 'lucide-react'
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { submitMedicalRecordAction } from '@/server/actions/clinic.actions'
+import toast from 'react-hot-toast'
+import type { ClinicMedicalRecordListItem } from '@/lib/clinic-utils'
+import { submitMedicalRecordAction, updateMedicalRecordAction } from '@/server/actions/clinic.actions'
 import { medicalRecordSchema, type MedicalRecordFormInput } from '@/validations/clinic.validation'
 
 type PatientOption = {
@@ -19,12 +22,8 @@ type MedicalRecordModalFormProps = {
   onClose: () => void
   patients: PatientOption[]
   defaultPatientId?: string
-  onRecordCreated?: (record: {
-    patientId: string
-    patientName: string
-    diagnosis: string
-    date: string
-  }) => void
+  initialData?: ClinicMedicalRecordListItem | null
+  onRecordCreated?: () => void
 }
 
 type MedicalRecordFormValues = MedicalRecordFormInput & {
@@ -38,15 +37,17 @@ export default function MedicalRecordModalForm({
   onClose,
   patients,
   defaultPatientId,
+  initialData,
   onRecordCreated,
 }: MedicalRecordModalFormProps) {
+  const isEditMode = Boolean(initialData)
   const {
     register,
     handleSubmit,
     reset,
     setError,
     clearErrors,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<MedicalRecordFormValues>({
     resolver: zodResolver(medicalRecordSchema),
     defaultValues: {
@@ -56,11 +57,59 @@ export default function MedicalRecordModalForm({
       date: today,
     },
   })
+  const queryClient = useQueryClient()
 
-  const patientMap = useMemo(
-    () => new Map(patients.map((patient) => [patient.id, patient])),
-    [patients]
-  )
+  const submitMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      return isEditMode && initialData
+        ? updateMedicalRecordAction(initialData.id, formData)
+        : submitMedicalRecordAction(formData)
+    },
+    onSuccess: async (result) => {
+      if (!result.success) {
+        const fieldErrors = result.fieldErrors ?? {}
+
+        Object.entries(fieldErrors).forEach(([field, message]) => {
+          if (field === 'patientId' || field === 'diagnosis' || field === 'notes' || field === 'date') {
+            setError(field, { type: 'server', message })
+          }
+        })
+
+        if (fieldErrors.submit) {
+          setError('root', { type: 'server', message: fieldErrors.submit })
+        }
+
+        toast.error(result.message)
+        return
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['medical-records'] })
+      if (initialData?.id) {
+        await queryClient.invalidateQueries({ queryKey: ['medical-record', initialData.id] })
+      }
+      reset({
+        patientId: defaultPatientId ?? '',
+        diagnosis: '',
+        notes: '',
+        date: today,
+        attachments: undefined,
+      })
+      toast.success(result.message)
+      onRecordCreated?.()
+      onClose()
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : isEditMode
+            ? 'Failed to update the medical record.'
+            : 'Failed to create the medical record.'
+
+      setError('root', { type: 'server', message })
+      toast.error(message)
+    },
+  })
 
   useEffect(() => {
     if (!isOpen) {
@@ -68,21 +117,26 @@ export default function MedicalRecordModalForm({
     }
 
     reset({
-      patientId: defaultPatientId ?? '',
-      diagnosis: '',
-      notes: '',
-      date: today,
+      patientId: initialData?.patientId ?? defaultPatientId ?? '',
+      diagnosis: initialData?.diagnosis ?? '',
+      notes: initialData?.notes ?? '',
+      date: initialData?.date ? new Date(initialData.date).toISOString().split('T')[0] : today,
       attachments: undefined,
     })
     clearErrors()
-  }, [clearErrors, defaultPatientId, isOpen, reset])
+  }, [clearErrors, defaultPatientId, initialData, isOpen, reset])
 
   const onSubmit = handleSubmit(async (values) => {
+    clearErrors()
+
     const formData = new FormData()
     formData.append('patientId', values.patientId)
     formData.append('diagnosis', values.diagnosis)
     formData.append('notes', values.notes)
     formData.append('date', values.date)
+    if (initialData?.attachments.length) {
+      formData.append('existingAttachments', JSON.stringify(initialData.attachments))
+    }
 
     const attachments = Array.from(values.attachments ?? []) as File[]
 
@@ -92,41 +146,7 @@ export default function MedicalRecordModalForm({
       }
     })
 
-    const result = await submitMedicalRecordAction(formData)
-
-    if (!result.success) {
-      const fieldErrors = result.fieldErrors ?? {}
-
-      Object.entries(fieldErrors).forEach(([field, message]) => {
-        if (field === 'patientId' || field === 'diagnosis' || field === 'notes' || field === 'date') {
-          setError(field, { type: 'server', message })
-        }
-      })
-
-      if (fieldErrors.submit) {
-        setError('root', { type: 'server', message: fieldErrors.submit })
-      }
-
-      return
-    }
-
-    const selectedPatient = patientMap.get(values.patientId)
-
-    onRecordCreated?.({
-      patientId: values.patientId,
-      patientName: selectedPatient?.name ?? result.record?.patientName ?? 'Resident',
-      diagnosis: values.diagnosis,
-      date: values.date,
-    })
-
-    reset({
-      patientId: defaultPatientId ?? '',
-      diagnosis: '',
-      notes: '',
-      date: today,
-      attachments: undefined,
-    })
-    onClose()
+    await submitMutation.mutateAsync(formData)
   })
 
   if (!isOpen) {
@@ -138,15 +158,19 @@ export default function MedicalRecordModalForm({
       <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">New Medical Record</h2>
+            <h2 className="text-2xl font-bold text-slate-900">
+              {isEditMode ? 'Edit Medical Record' : 'New Medical Record'}
+            </h2>
             <p className="mt-1 text-sm text-slate-600">
-              Log a consultation entry using the same workflow we can later connect to Prisma.
+              {isEditMode
+                ? 'Update the consultation entry details below.'
+                : 'Log a consultation entry using the same workflow we can later connect to Prisma.'}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            disabled={isSubmitting}
+            disabled={submitMutation.isPending}
             className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             aria-label="Close medical record form"
           >
@@ -232,6 +256,20 @@ export default function MedicalRecordModalForm({
                 Attachments
                 <span className="ml-2 text-xs font-medium text-slate-500">Optional</span>
               </label>
+              {initialData?.attachments.length ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Existing Attachments
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    {initialData.attachments.map((attachment) => (
+                      <p key={`${attachment.name}-${attachment.size}`} className="text-sm text-slate-600">
+                        {attachment.name}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
                 <div className="mb-3 flex items-center gap-3 text-slate-700">
                   <div className="rounded-xl bg-white p-2 shadow-sm">
@@ -239,7 +277,11 @@ export default function MedicalRecordModalForm({
                   </div>
                   <div>
                     <p className="text-sm font-semibold">Upload supporting files</p>
-                    <p className="text-xs text-slate-500">Photos, referral slips, or scanned notes can be attached later in the real backend flow.</p>
+                    <p className="text-xs text-slate-500">
+                      {isEditMode
+                        ? 'Uploading new files will append them to the current attachment list.'
+                        : 'Photos, referral slips, or scanned notes can be attached later in the real backend flow.'}
+                    </p>
                   </div>
                 </div>
                 <input
@@ -257,23 +299,23 @@ export default function MedicalRecordModalForm({
             <button
               type="button"
               onClick={onClose}
-              disabled={isSubmitting}
+              disabled={submitMutation.isPending}
               className="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={submitMutation.isPending}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-3 font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? (
+              {submitMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving record...
+                  {isEditMode ? 'Saving changes...' : 'Saving record...'}
                 </>
               ) : (
-                'Save Medical Record'
+                isEditMode ? 'Save Changes' : 'Save Medical Record'
               )}
             </button>
           </div>

@@ -4,6 +4,7 @@ export type DocumentRequestStatus =
   | 'PENDING'
   | 'REVIEW'
   | 'APPROVED'
+  | 'GENERATED'
 
 export type DocumentDetailLine = {
   label: string
@@ -32,6 +33,9 @@ export type ResidentDocumentRequestRecord = {
   detailLines: DocumentDetailLine[]
   referenceLast4: string | null
   proofOfPaymentUrl: string | null
+  serialNumber: string | null
+  generatedFileUrl: string | null
+  generatedAt: string | null
   submittedAt: string
 }
 
@@ -135,6 +139,9 @@ export function serializeResidentDocumentRequest(record: {
   details: unknown
   referenceLast4: string | null
   proofOfPaymentUrl: string | null
+  serialNumber: string | null
+  generatedFileUrl: string | null
+  generatedAt: Date | null
   requestedAt: Date
 }): ResidentDocumentRequestRecord {
   const details = (record.details ?? {}) as Record<string, string | undefined>
@@ -154,6 +161,9 @@ export function serializeResidentDocumentRequest(record: {
     }),
     referenceLast4: record.referenceLast4,
     proofOfPaymentUrl: record.proofOfPaymentUrl,
+    serialNumber: record.serialNumber,
+    generatedFileUrl: record.generatedFileUrl,
+    generatedAt: record.generatedAt?.toISOString() ?? null,
     submittedAt: record.requestedAt.toISOString(),
   }
 }
@@ -169,6 +179,9 @@ export function serializeAdminDocumentRequest(record: {
   details: unknown
   referenceLast4: string | null
   proofOfPaymentUrl: string | null
+  serialNumber: string | null
+  generatedFileUrl: string | null
+  generatedAt: Date | null
   requestedAt: Date
   resident: {
     id: string

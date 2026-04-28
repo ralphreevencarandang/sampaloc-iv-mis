@@ -1,6 +1,15 @@
 'use client'
 
-import { Activity, LayoutDashboard, LogOut, Menu, Stethoscope, UserRound, X } from 'lucide-react'
+import {
+  Activity,
+  ClipboardPlus,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Stethoscope,
+  UserRound,
+  X,
+} from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import React, { useState, useTransition } from 'react'
@@ -16,6 +25,11 @@ const navItems = [
     label: 'Dashboard',
     href: '/clinic',
     icon: LayoutDashboard,
+  },
+  {
+    label: 'Medical Records',
+    href: '/clinic/medical-records',
+    icon: ClipboardPlus,
   },
 ]
 

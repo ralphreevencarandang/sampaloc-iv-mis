@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import React, { useState } from 'react'
-import { Archive, Megaphone, PawPrint, Scale, Search, Shield, ShieldAlert, Users } from 'lucide-react'
+import { Archive, HeartPulse, Megaphone, PawPrint, Scale, Search, Shield, ShieldAlert, Users } from 'lucide-react'
 import ArchiveCard from '@/components/ui/Admin/ArchiveCard'
 import api from '@/lib/axios'
 import axios from 'axios'
@@ -13,9 +13,11 @@ import type { OfficialRecord } from '@/server/officials/officials'
 import type { BlotterRecord } from '@/server/actions/blotter.actions'
 import type { VawcRecordType } from '@/server/actions/vawc.actions'
 import type { PetRecord } from '@/server/actions/pet.action'
+import type { ClinicMedicalRecordListItem } from '@/lib/clinic-utils'
 import { unarchiveResidentAction } from '@/server/actions/resident.actions'
 import { unarchiveOfficialAction, unarchiveBlotterAction, unarchivePetAction, unarchiveVawcAction } from '@/server/actions/archive.actions'
 import { unarchiveAnnouncementAction } from '@/server/actions/announcement.actions'
+import { unarchiveMedicalRecordAction } from '@/server/actions/clinic.actions'
 
 async function fetchArchivedVawc(): Promise<VawcRecordType[]> {
   try {
@@ -82,7 +84,7 @@ async function fetchArchivedAnnouncements(): Promise<AnnouncementRecord[]> {
   }
 }
 
-type TabId = 'Residents' | 'Officials' | 'Announcements' | 'Blotters' | 'Pets' | 'VAWC'
+type TabId = 'Residents' | 'Officials' | 'Announcements' | 'Blotters' | 'Pets' | 'VAWC' | 'Medical Records'
 
 async function fetchArchivedPets(): Promise<PetRecord[]> {
   try {
@@ -92,6 +94,19 @@ async function fetchArchivedPets(): Promise<PetRecord[]> {
     if (axios.isAxiosError(error)) {
       const message = (error.response?.data as { message?: string } | undefined)?.message
       throw new Error(message ?? 'Failed to fetch archived pets.')
+    }
+    throw error
+  }
+}
+
+async function fetchArchivedMedicalRecords(): Promise<ClinicMedicalRecordListItem[]> {
+  try {
+    const response = await api.get<ClinicMedicalRecordListItem[]>('/archives?type=medical-records')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { message?: string } | undefined)?.message
+      throw new Error(message ?? 'Failed to fetch archived medical records.')
     }
     throw error
   }
@@ -192,6 +207,22 @@ function ArchivedPage() {
     onError: () => handleUnarchiveError('Failed to unarchive pet'),
   })
 
+  const unarchiveMedicalRecord = useMutation({
+    mutationFn: unarchiveMedicalRecordAction,
+    onSuccess: async (res, id) => {
+      if (!res.success) {
+        handleUnarchiveError(res.message)
+        return
+      }
+
+      toast.success(res.message)
+      await queryClient.invalidateQueries({ queryKey: ['archivedData', 'medical-records'] })
+      await queryClient.invalidateQueries({ queryKey: ['medical-records'] })
+      await queryClient.invalidateQueries({ queryKey: ['medical-record', id] })
+    },
+    onError: () => handleUnarchiveError('Failed to unarchive medical record'),
+  })
+
   const {
     data: archivedOfficials = [],
     isLoading: isOfficialsLoading,
@@ -258,11 +289,23 @@ function ArchivedPage() {
     enabled: activeTab === 'Pets',
   })
 
+  const {
+    data: archivedMedicalRecords = [],
+    isLoading: isMedicalRecordsLoading,
+    isError: isMedicalRecordsError,
+    error: medicalRecordsError,
+  } = useQuery({
+    queryKey: ['archivedData', 'medical-records'],
+    queryFn: fetchArchivedMedicalRecords,
+    enabled: activeTab === 'Medical Records',
+  })
+
   const tabs: TabDefinition[] = [
     { id: 'Residents', label: 'Residents', icon: Users },
     { id: 'Officials', label: 'Officials', icon: Shield },
     { id: 'Announcements', label: 'Announcements', icon: Megaphone },
     { id: 'Blotters', label: 'Blotters', icon: Scale },
+    { id: 'Medical Records', label: 'Medical Records', icon: HeartPulse },
     { id: 'Pets', label: 'Pets', icon: PawPrint },
     { id: 'VAWC', label: 'VAWC', icon: ShieldAlert },
   ]
@@ -471,6 +514,40 @@ function ArchivedPage() {
             archivedDate={item.createdAt}
             onUnarchive={() => unarchivePet.mutate(item.id)}
             isUnarchiving={unarchivePet.isPending && unarchivePet.variables === item.id}
+          />
+        ))
+      case 'Medical Records':
+        if (isMedicalRecordsLoading) {
+          return [
+            <div key="loading-medical-records" className="flex w-full flex-col items-center justify-center py-12 text-center">
+              <p className="font-medium text-slate-600">Loading archived medical records...</p>
+            </div>
+          ]
+        }
+
+        if (isMedicalRecordsError) {
+          return [
+            <div key="error-medical-records" className="flex w-full flex-col items-center justify-center py-12 text-center text-red-600">
+              <p className="font-medium">
+                {medicalRecordsError instanceof Error ? medicalRecordsError.message : 'Error loading medical records'}
+              </p>
+            </div>
+          ]
+        }
+
+        if (archivedMedicalRecords.length === 0) {
+          return []
+        }
+
+        return archivedMedicalRecords.map((item) => (
+          <ArchiveCard
+            key={item.id}
+            title={item.patientName}
+            subtitle={item.diagnosis}
+            metadata={`Date: ${new Date(item.date).toLocaleDateString()} | By: ${item.createdByName}`}
+            archivedDate={new Date(item.date).toISOString().split('T')[0]}
+            onUnarchive={() => unarchiveMedicalRecord.mutate(item.id)}
+            isUnarchiving={unarchiveMedicalRecord.isPending && unarchiveMedicalRecord.variables === item.id}
           />
         ))
       default:
