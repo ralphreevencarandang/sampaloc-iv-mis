@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barangay Clearance - Norito A. Cabansag Jr</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            background-color: #525659; /* PDF viewer background */
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* A4 Page Styling */
+        .page {
+            background-color: #ffffff;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm 20mm;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            position: relative;
+            color: #000000;
+        }
+
+        /* Header Section */
+        .header {
+            text-align: center;
+            line-height: 1.3;
+            margin-bottom: 30px;
+            font-family: Arial, sans-serif;
+        }
+        .header p {
+            font-size: 11pt;
+            margin-bottom: 2px;
+        }
+        .header .office-title {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-top: 15px;
+            text-transform: uppercase;
+        }
+
+        /* Metadata (Date and Serial) */
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 35px;
+            font-size: 11pt;
+            font-family: Arial, sans-serif;
+        }
+        .meta-info .serial {
+            font-weight: bold;
+        }
+        .meta-info .date {
+            font-weight: bold;
+        }
+
+        /* Document Title */
+        .doc-title {
+            text-align: center;
+            font-size: 26pt;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-bottom: 35px;
+            font-family: Arial, sans-serif;
+            letter-spacing: 1px;
+        }
+
+        /* Salutation */
+        .salutation {
+            font-size: 12pt;
+            margin-bottom: 20px;
+        }
+
+        /* Body Paragraphs */
+        .body-text {
+            font-size: 12pt;
+            text-align: justify;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+        .indent {
+            text-indent: 40px;
+        }
+        .name {
+            font-size: 14pt;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        /* Footer Metadata */
+        .footer-meta {
+            margin-top: 40px;
+            font-size: 10px;
+            line-height: 1.6;
+            font-family: Arial, sans-serif;
+        }
+        .footer-meta p {
+            margin-bottom: 5px;
+        }
+        .note {
+            font-style: italic;
+            margin-top: 15px !important;
+            font-size: 8pt;
+        }
+
+        /* Signatures Layout */
+        .signatures {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Left Signature Box */
+        .left-sig {
+            width: 45%;
+        }
+        .contact-no {
+            margin-top: 5px;
+            font-size: 10pt;
+        }
+
+        /* Right Signature Box */
+        .right-sig {
+            width: 45%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .thumb-box {
+            width: 90px;
+            height: 90px;
+            border: 1px solid #000;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9pt;
+            text-align: center;
+            padding: 5px;
+        }
+
+        /* Reusable Signature Line */
+        .sig-container {
+            width: 100%;
+            text-align: center;
+        }
+        .sig-name {
+            font-weight: bold;
+            font-size: 12pt;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 2px;
+            /* display: inline-block; */
+           
+        }
+        .sig-title {
+            font-size: 10pt;
+            text-align: center;
+        }
+        .captain-sig {
+            display: flex;
+            flex-direction: column;
+            align-items: end;
+            
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page">
+        <div class="header">
+            <p>Republic of the Philippines</p>
+            <p>Province of Cavite</p>
+            <p><strong>CITY OF DASMARIÑAS</strong></p>
+            <p><strong>Barangay Sampaloc IV</strong></p>
+            <div class="office-title">OFFICE OF THE PUNONG BARANGAY</div>
+        </div>
+
+        <div class="meta-info">
+            <div class="serial">Serial No. SIV-2-0026</div>
+            <div class="date">Date: 13-Apr-26</div>
+        </div>
+
+        <div class="doc-title">BARANGAY CLEARANCE</div>
+
+        <p class="salutation">To Whom It May Concern:</p>
+
+        <p class="body-text indent">
+            <strong>THIS IS TO CERTIFY THAT <span class="name">NORITO A. CABANSAG JR</span></strong> of 
+            Block 27 Lot 18 Zone 3 Bautista, Barangay Sampaloc IV, Dasmariñas City, Cavite; 
+            is a bona fide resident of this barangay and who is personally known to me to be law abiding citizen and 
+            has a good moral character.
+        </p>
+        
+        <p class="body-text indent">
+            That of my own personal knowledge, he/ she has not committed, nor been involved in, any unlawful activities in this barangay.
+        </p>
+
+        <p class="body-text indent">
+            Issued upon the request of the above-named person or establishment for 
+            <strong>NBI CLEARANCE - FIRST TIME JOB SEEKER</strong> purposes.
+        </p>
+
+        <div class="captain-sig" >
+                <div class="sig-name">HON. ARMANDO M. MOVIDO</div>
+                <p class="sig-title" >Punong Barangay</p>
+        </div>
+
+        <div class="footer-meta">
+            <p>CTC No. ________________</p>
+            <p>Issued at: ________________</p>
+            <p>Issued on: ________________</p>
+            <p class="note">Note: Valid only for (3) months from the date of issuance.</p>
+        </div>
+
+        <div class="signatures">
+                        <div class="right-sig">
+                <div class="thumb-box">
+                    Right Thumb Print
+                </div>
+             
+            </div>
+            <div class="left-sig">
+                <div class="sig-container" style="text-align: left; margin-top: 100px; text-align: center;">
+                    <div style="border-bottom: 1px solid #000; width: 80%; margin-bottom: 5px;"></div>
+                    <p class="sig-title">Applicant's Signature</p>
+                    <div class="contact-no">Contact No. 0968-215-2805</div>
+                </div>
+            </div>
+
+
+            <div class="right-sig">
+                <div class="thumb-box">
+                    
+                </div>
+             
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

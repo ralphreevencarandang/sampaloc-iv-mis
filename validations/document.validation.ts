@@ -3,13 +3,6 @@ import { z } from 'zod'
 
 const requiredString = (label: string) => z.string().trim().min(1, `${label} is required.`)
 const optionalString = () => z.string().trim().optional().default('')
-const MAX_PAYMENT_PROOF_SIZE_BYTES = 5 * 1024 * 1024
-const ALLOWED_PAYMENT_PROOF_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
-const fileSchema = z
-  .instanceof(File)
-  .refine((file) => file.size > 0, 'Proof of payment is required.')
-  .refine((file) => ALLOWED_PAYMENT_PROOF_TYPES.has(file.type), 'Proof of payment must be a JPG, PNG, or WebP image.')
-  .refine((file) => file.size <= MAX_PAYMENT_PROOF_SIZE_BYTES, 'Proof of payment size must be 5MB or less.')
 
 export const documentRequestSchema = z
   .object({
@@ -27,8 +20,6 @@ export const documentRequestSchema = z
     emergencyContactPerson: optionalString(),
     emergencyContactAddress: optionalString(),
     emergencyContactNumber: optionalString(),
-    referenceLast4: optionalString(),
-    paymentProof: fileSchema.optional(),
   })
   .superRefine((value, ctx) => {
     const requireField = (field: keyof typeof value, label: string) => {
@@ -77,8 +68,6 @@ export const requestStepFieldNames = [
   'emergencyContactPerson',
   'emergencyContactAddress',
   'emergencyContactNumber',
-  'referenceLast4',
-  'paymentProof',
 ] as const
 
 export function getRelevantDocumentRequestFields(documentType: string) {
@@ -119,8 +108,6 @@ function getFormDataString(formData: FormData, key: string) {
 }
 
 export function parseDocumentRequestFormData(formData: FormData) {
-  const paymentProof = formData.get('paymentProof')
-
   return documentRequestSchema.safeParse({
     documentType: getFormDataString(formData, 'documentType'),
     purpose: getFormDataString(formData, 'purpose'),
@@ -130,8 +117,6 @@ export function parseDocumentRequestFormData(formData: FormData) {
     emergencyContactPerson: getFormDataString(formData, 'emergencyContactPerson'),
     emergencyContactAddress: getFormDataString(formData, 'emergencyContactAddress'),
     emergencyContactNumber: getFormDataString(formData, 'emergencyContactNumber'),
-    referenceLast4: getFormDataString(formData, 'referenceLast4'),
-    paymentProof: paymentProof instanceof File ? paymentProof : undefined,
   })
 }
 

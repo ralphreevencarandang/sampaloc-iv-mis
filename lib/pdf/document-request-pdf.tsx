@@ -44,15 +44,15 @@ type PdfDetailLine = {
 
 function getBrandingConfig(): BrandingConfig {
   return {
-    republicName: process.env.BARANGAY_REPUBLIC_NAME ?? 'Republic of the Philippines',
-    provinceName: process.env.BARANGAY_PROVINCE_NAME ?? 'Province of Cavite',
-    cityName: process.env.BARANGAY_CITY_NAME ?? 'City of Dasmarinas',
-    barangayName: process.env.BARANGAY_NAME ?? 'Barangay Sampaloc IV',
-    officeName: process.env.BARANGAY_OFFICE_NAME ?? 'Office of the Punong Barangay',
-    captainName: process.env.BARANGAY_CAPTAIN_NAME ?? 'Authorized Signatory',
-    captainTitle: process.env.BARANGAY_CAPTAIN_TITLE ?? 'Punong Barangay',
-    secretaryName: process.env.BARANGAY_SECRETARY_NAME ?? 'Barangay Secretary',
-    secretaryTitle: process.env.BARANGAY_SECRETARY_TITLE ?? 'Barangay Secretary',
+    republicName: 'Republic of the Philippines',
+    provinceName:  'Province of Cavite',
+    cityName:  'City of Dasmarinas',
+    barangayName: 'Barangay Sampaloc IV',
+    officeName: 'Office of the Punong Barangay',
+    captainName: 'Authorized Signatory',
+    captainTitle: 'Punong Barangay',
+    secretaryName: 'Barangay Secretary',
+    secretaryTitle:  'Barangay Secretary',
   }
 }
 
@@ -153,178 +153,205 @@ function createDocumentRequestHtml(request: PdfDocumentRequest) {
   const residentName = getResidentFullName(request.resident)
   const residentAddress = getResidentAddress(request.resident)
   return `<!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <title>${escapeHtml(`${request.type} - ${request.serialNumber}`)}</title>
-        <style>
-          @page { size: A4; margin: 20mm 18mm 20mm 18mm; }
-          * { box-sizing: border-box; }
-          body {
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barangay Clearance - Norito A. Cabansag Jr</title>
+    <style>
+        @page {
+            size: A4;
             margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #0f172a;
-            background: #ffffff;
-            font-size: 12px;
-            line-height: 1.55;
-          }
-          .page { min-height: 100%; }
-          .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 14px; }
-          .header p { margin: 0; }
-          .header-eyebrow { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #475569; }
-          .header-title { font-size: 28px; font-weight: 700; letter-spacing: 0.04em; margin-top: 6px; }
-          .header-subtitle { margin-top: 4px; font-size: 13px; font-weight: 600; }
-          .meta-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 18px;
-          }
-          .meta-card {
-            border: 1px solid #cbd5e1;
-            border-radius: 12px;
-            padding: 10px 12px;
-            background: #f8fafc;
-          }
-          .meta-label {
-            display: block;
-            color: #475569;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-          }
-          .meta-value { font-size: 13px; font-weight: 600; color: #0f172a; }
-          .document-title {
-            margin-top: 24px;
-            text-align: center;
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-          }
-          .body-copy { margin-top: 24px; }
-          .body-copy p { margin: 0 0 14px; text-align: justify; text-indent: 36px; }
-          .detail-panel {
-            margin-top: 22px;
-            border: 1px solid #cbd5e1;
-            border-radius: 14px;
-            padding: 16px;
-            background: #ffffff;
-          }
-          .detail-panel-title {
-            margin: 0 0 12px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: #334155;
-          }
-          .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px 18px;
-          }
-          .detail-item { border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
-          .detail-item-label { display: block; color: #64748b; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
-          .detail-item-value { margin-top: 2px; font-size: 12px; font-weight: 600; color: #0f172a; }
-          .signature-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 28px;
-            margin-top: 42px;
-            align-items: end;
-          }
-          .signature-block { text-align: center; }
-          .signature-line {
-            border-bottom: 1px solid #0f172a;
-            min-height: 42px;
+        }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
             display: flex;
-            align-items: end;
             justify-content: center;
-            padding-bottom: 8px;
-          }
-          .signature-name { font-size: 13px; font-weight: 700; text-transform: uppercase; }
-          .signature-title { margin-top: 8px; color: #475569; font-size: 11px; }
-          .footer-note {
-            margin-top: 28px;
-            border-top: 1px solid #cbd5e1;
-            padding-top: 12px;
-            font-size: 10px;
-            color: #64748b;
-          }
-        </style>
-      </head>
-      <body>
-        <main class="page">
-          <header class="header">
-            <p class="header-eyebrow">${escapeHtml(branding.republicName)}</p>
-            <p class="header-eyebrow">${escapeHtml(branding.provinceName)}</p>
-            <p class="header-eyebrow">${escapeHtml(branding.cityName)}</p>
-            <p class="header-title">${escapeHtml(branding.barangayName)}</p>
-            <p class="header-subtitle">${escapeHtml(branding.officeName)}</p>
-          </header>
+        }
+        .sheet {
+            background: white;
+            width: 210mm;
+            height: 297mm;
+            padding: 20mm;
+            box-sizing: border-box;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .header {
+            text-align: center;
+            line-height: 1.2;
+            margin-bottom: 40px;
+        }
+        .header h3 {
+            margin: 0;
+            font-weight: normal;
+            font-size: 14pt;
+        }
+        .header h2 {
+            margin: 0;
+            font-weight: bold;
+            font-size: 16pt;
+            text-transform: uppercase;
+        }
+        .office-title {
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 12pt;
+            text-decoration: underline;
+        }
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 50px;
+            font-size: 11pt;
+        }
+        .document-title {
+            text-align: center;
+            font-size: 24pt;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+        }
+        .salutation {
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+        .content-body {
+            text-align: justify;
+            line-height: 1.8;
+            font-size: 12pt;
+            text-indent: 50px;
+        }
+        .certify-line {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14pt;
+            margin: 20px 0;
+            letter-spacing: 5px;
+        }
+        .name-highlight {
+            display: block;
+            text-align: center;
+            font-size: 18pt;
+            font-weight: bold;
+            text-decoration: underline;
+            margin: 10px 0;
+        }
+        .address-line {
+            display: block;
+            text-align: center;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+        .purpose-section {
+            margin-top: 30px;
+            text-indent: 0;
+        }
+        .validity-note {
+            margin-top: 50px;
+            font-weight: bold;
+            font-style: italic;
+        }
+        .footer-signatures {
+            margin-top: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .thumbprint-box {
+            border: 1px solid black;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8pt;
+            text-align: center;
+        }
+        .official-sign {
+            text-align: center;
+        }
+        .official-sign .name {
+            font-weight: bold;
+            text-decoration: underline;
+            font-size: 13pt;
+        }
+        .signature-line {
+            border-top: 1px solid black;
+            width: 200px;
+            margin-top: 40px;
+            text-align: center;
+            font-size: 10pt;
+        }
+        .contact-info {
+            position: absolute;
+            bottom: 20mm;
+            left: 20mm;
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="sheet">
+        <div class="header">
+            <h3>Republic of the Philippines</h3>
+            <h3>Province of Cavite</h3>
+            <h2>CITY OF DASMARIÑAS</h2>
+            <h3>Barangay Sampaloc IV</h3>
+            <div class="office-title">OFFICE OF THE PUNONG BARANGAY</div>
+        </div>
 
-          <section class="meta-grid">
-            <div class="meta-card">
-              <span class="meta-label">Serial Number</span>
-              <span class="meta-value">${escapeHtml(request.serialNumber)}</span>
-            </div>
-            <div class="meta-card">
-              <span class="meta-label">Issue Date</span>
-              <span class="meta-value">${escapeHtml(issueDate)}</span>
-            </div>
-            <div class="meta-card">
-              <span class="meta-label">Resident Name</span>
-              <span class="meta-value">${escapeHtml(residentName)}</span>
-            </div>
-            <div class="meta-card">
-              <span class="meta-label">Address</span>
-              <span class="meta-value">${escapeHtml(residentAddress)}</span>
-            </div>
-          </section>
+        <div class="meta-info">
+            <div>Date: 13-Apr-26</div>
+            <div>Serial No. SIV-2-0026</div>
+        </div>
 
-          <h1 class="document-title">${escapeHtml(request.type)}</h1>
+        <div class="document-title">BARANGAY CLEARANCE</div>
 
-          <section class="body-copy">${renderParagraphs(bodyParagraphs)}</section>
+        <div class="salutation">To Whom It May Concern:</div>
 
-          <section class="detail-panel">
-            <h2 class="detail-panel-title">Request Details</h2>
-            <div class="detail-grid">
-              <div class="detail-item">
-                <span class="detail-item-label">Request Filed</span>
-                <span class="detail-item-value">${escapeHtml(requestedDate)}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-item-label">Copies Requested</span>
-                <span class="detail-item-value">${escapeHtml(String(request.quantity))}</span>
-              </div>
-              ${renderDetailItems(detailLines)}
+        <div class="certify-line">THIS IS TO CERTIFY</div>
+
+        <div class="content-body">
+            THAT <span class="name-highlight">NORITO A. CABANSAG JR</span>
+            <span class="address-line">of Block 27 Lot 18 Zone 3 Bautista, Barangay Sampaloc IV, Dasmariñas City, Cavite;</span>
+            is a bona fide resident of this barangay and who is personally known to me to be law abiding citizen and has a good moral character.
+            <br><br>
+            That of my own personal knowledge, he/ she has not committed, nor been involved in, any unlawful activities in this barangay.
+            
+            <div class="purpose-section">
+                Issued upon the request of the above-named person or establishment for 
+                <strong>NBI CLEARANCE - FIRST TIME JOB SEEKER</strong> purposes.
             </div>
-          </section>
 
-          <section class="signature-row">
-            <div class="signature-block">
-              <div class="signature-line">
-                <span class="signature-name">${escapeHtml(branding.secretaryName)}</span>
-              </div>
-              <p class="signature-title">${escapeHtml(branding.secretaryTitle)}</p>
+            <div class="validity-note">
+                Note: Valid only for (3) months from the date of issuance.
             </div>
-            <div class="signature-block">
-              <div class="signature-line">
-                <span class="signature-name">${escapeHtml(branding.captainName)}</span>
-              </div>
-              <p class="signature-title">${escapeHtml(branding.captainTitle)}</p>
-            </div>
-          </section>
+        </div>
 
-          <p class="footer-note">
-            This document was generated electronically by the Barangay Management System.
-          </p>
-        </main>
-      </body>
-    </html>`
+        <div class="footer-signatures">
+            <div>
+                <div class="thumbprint-box">Right Thumb Print</div>
+                <div class="signature-line">Applicant's Signature</div>
+            </div>
+            
+            <div class="official-sign">
+                <div class="name">HON. ARMANDO M. MOVIDO</div>
+                <div>Punong Barangay</div>
+            </div>
+        </div>
+
+        <div class="contact-info">
+            Contact No. 0968-215-2805
+        </div>
+    </div>
+</body>
+</html>`
+
 }
 
 export async function generateDocumentRequestPdfBuffer(request: PdfDocumentRequest) {

@@ -30,8 +30,6 @@ export async function GET(_: Request, { params }: RouteContext) {
         quantity: true,
         amount: true,
         details: true,
-        referenceLast4: true,
-        proofOfPaymentUrl: true,
         serialNumber: true,
         generatedFileUrl: true,
         generatedAt: true,

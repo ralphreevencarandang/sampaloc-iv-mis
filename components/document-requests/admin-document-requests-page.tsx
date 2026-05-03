@@ -12,7 +12,6 @@ import {
   MoreVertical,
   Search,
 } from 'lucide-react'
-import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
@@ -431,7 +430,6 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
       item.requesterName,
       item.requesterEmail,
       item.requesterAddress,
-      item.referenceLast4 ?? '',
     ]
       .join(' ')
       .toLowerCase()
@@ -482,7 +480,7 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
           </p>
           <h1 className="mt-2 text-3xl font-bold text-slate-900">{definition.label}</h1>
           <p className="mt-2 text-slate-600">
-            Review resident submissions, inspect payment proof, and update request status.
+            Review resident submissions and update request status.
           </p>
         </div>
         <div className="rounded-[24px] border border-primary-200 bg-primary-50 px-5 py-4 text-sm text-slate-700">
@@ -515,7 +513,7 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
             <input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by requester, email, address, or reference digits"
+              placeholder="Search by requester, email, or address"
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition-colors focus:border-primary-500"
             />
           </div>
@@ -542,8 +540,6 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
                       <th className="px-4 py-4 sm:px-5">Requester</th>
                       <th className="px-4 py-4 sm:px-5">Document Type</th>
                       <th className="px-4 py-4 sm:px-5">Details</th>
-                      <th className="px-4 py-4 sm:px-5">Proof of Payment</th>
-                      <th className="px-4 py-4 sm:px-5">Reference</th>
                       <th className="px-4 py-4 sm:px-5">Status</th>
                       <th className="px-4 py-4 text-center sm:px-5">Actions</th>
                     </tr>
@@ -601,39 +597,14 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
                             </div>
                           </td>
                           <td className="px-4 py-4 sm:px-5">
-                            {request.proofOfPaymentUrl ? (
-                              <a
-                                href={request.proofOfPaymentUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="block w-36"
-                              >
-                                <Image
-                                  src={request.proofOfPaymentUrl}
-                                  alt="Payment proof preview"
-                                  width={320}
-                                  height={220}
-                                  unoptimized
-                                  className="h-24 w-full rounded-2xl object-cover"
-                                />
-                                <p className="mt-2 text-xs text-slate-600">View attachment</p>
-                              </a>
-                            ) : (
-                              <p className="text-sm text-slate-500">No attachment</p>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-slate-700 sm:px-5">
                             <div className="space-y-1">
-                              <p>{request.referenceLast4 ? `**** ${request.referenceLast4}` : 'Pending'}</p>
+                              <StatusBadge status={request.status} />
                               {request.serialNumber ? (
                                 <p className="text-xs font-medium text-primary-700">
                                   Serial: {request.serialNumber}
                                 </p>
                               ) : null}
                             </div>
-                          </td>
-                          <td className="px-4 py-4 sm:px-5">
-                            <StatusBadge status={request.status} />
                           </td>
                           <td className="px-4 py-4 text-center sm:px-5">
                             <div className="flex items-center justify-center gap-2">

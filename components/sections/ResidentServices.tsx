@@ -12,7 +12,7 @@ const ResidentServices = () => {
     "Certificate of Indigency",
     "Certificate of Residency",
     "Cedula (CTC)",
-    "Barangay ID",
+    // "Barangay ID",
     "First Time Job Seeker"
   ];
   return (

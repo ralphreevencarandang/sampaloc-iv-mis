@@ -77,9 +77,9 @@ export async function sendDocumentRequestPdfEmail(input: {
       React.createElement(EmailTemplate, {
         firstName: input.firstName,
         heading: 'Your Document Request Is Ready',
-        intro: `Your ${input.documentLabel} has been processed by the barangay administration.`,
+        intro: `Your ${input.documentLabel} has been successfully processed and is now ready.`,
         paragraphs: [
-          `We have attached your PDF copy with serial number ${input.serialNumber} to this email.`,
+          `You may claim your document at the barangay hall. Please present a valid ID and provide your serial number: ${input.serialNumber}.`,
           'You can also review your request status in the Sampaloc IV MIS resident portal.',
         ],
         ctaLabel: 'Open My Account',
@@ -94,13 +94,13 @@ export async function sendDocumentRequestPdfEmail(input: {
       to: input.email,
       subject: `${input.documentLabel} PDF Copy`,
       html,
-      attachments: [
-        {
-          filename: input.fileName,
-          content: input.pdfBuffer,
-          contentType: 'application/pdf',
-        },
-      ],
+      // attachments: [
+      //   {
+      //     filename: input.fileName,
+      //     content: input.pdfBuffer,
+      //     contentType: 'application/pdf',
+      //   },
+      // ],
     })
 
     console.log('Document request email sent successfully via Nodemailer:', info.messageId)

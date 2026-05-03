@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Indigency</title>
+    <style>
+        /* Base page styling to simulate A4 paper in a browser */
+        body {
+            background-color: #525659;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            font-family: 'Times New Roman', Times, serif;
+            margin: 0;
+        }
+
+        .page {
+            background-color: white;
+            width: 210mm;          /* A4 width */
+            min-height: 297mm;     /* A4 height */
+            padding: 25.4mm;       /* 1 inch margins */
+            box-sizing: border-box;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* Content Styling */
+        .header {
+            text-align: center;
+            margin-bottom: 40pt;
+            font-size: 11pt;
+            line-height: 1.2;
+        }
+
+        .header p {
+            margin: 2pt 0;
+        }
+
+        .office {
+            margin-top: 15pt;
+            font-weight: bold;
+            border-bottom: 1.5px solid #000;
+            padding-bottom: 8pt;
+            text-transform: uppercase;
+        }
+
+        .title-container {
+            text-align: center;
+            margin: 50pt 0;
+        }
+
+        .title {
+            font-size: 22pt;
+            font-weight: bold;
+            letter-spacing: 1.5pt;
+        }
+
+        .salutation {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 20pt;
+        }
+
+        .content {
+            font-size: 11pt;
+            line-height: 1.8;
+            text-align: justify;
+        }
+
+        .content p {
+            margin-bottom: 15pt;
+            text-indent: 40pt; /* Paragraph indentation */
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        .signature-block {
+            margin-top: 80pt;
+            text-align: right;
+            padding-right: 20pt;
+        }
+
+        .signatory-name {
+            font-weight: bold;
+            font-size: 12pt;
+            text-decoration: underline;
+            margin-bottom: 2pt;
+        }
+
+        .signatory-pos {
+            font-size: 11pt;
+            margin-top: 0;
+            padding-right: 15pt;
+        }
+
+        /* Print Media Query so it prints properly without background margins */
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+            .page {
+                box-shadow: none;
+                margin: 0;
+                width: 100%;
+                min-height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <p>Republic of the Philippines</p>
+            <p>Region IV-A CALABARZON</p>
+            <p>Province of Cavite</p>
+            <p>City of Dasmariñas</p>
+            <p>BARANGAY SAMPALOC IV</p>
+            <p>Barangay Hall Annex Zone XI Bautista</p>
+            <p class="office">OFFICE OF THE PUNONG BARANGAY</p>
+        </div>
+
+        <div class="title-container">
+            <div class="title">CERTIFICATE OF INDIGENCY</div>
+        </div>
+
+        <div class="salutation">To Whom It May Concern;</div>
+
+        <div class="content">
+            <p>This is to certify that <span class="bold">NENITA V. COLINA</span> a resident of Block 55 Lot 7 Bahay Pangarap, Barangay Sampaloc IV, City of Dasmariñas, Cavite.</p>
+            
+            <p>As I have personally known the above-named person, they had no means of income or any property that could provide medical purposes. In regards to this matter may we request at your good office medical assistance on the person named/stated above.</p>
+            
+            <p>This certification is given this <span class="bold">10th day of April, 2026</span> to the above-named person for whatever legal purposes it may serve best.</p>
+        </div>
+
+        <div class="signature-block">
+            <p class="signatory-name">HON. ARMANDO M. MOVIDO</p>
+            <p class="signatory-pos">Punong Barangay</p>
+        </div>
+    </div>
+</body>
+</html>

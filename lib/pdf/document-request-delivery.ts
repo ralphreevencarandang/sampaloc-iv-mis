@@ -23,8 +23,6 @@ export type GeneratedDocumentRequestPdfRecord = {
   quantity: number
   amount: number
   details: unknown
-  referenceLast4: string | null
-  proofOfPaymentUrl: string | null
   yearsOfResidency: number
   placeOfBirth: string | null
   serialNumber: string
@@ -97,8 +95,6 @@ export async function generateStoredDocumentRequestPdf(
         quantity: true,
         amount: true,
         details: true,
-        referenceLast4: true,
-        proofOfPaymentUrl: true,
         yearsOfResidency: true,
         placeOfBirth: true,
         serialNumber: true,

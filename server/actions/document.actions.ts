@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache'
 import type { Prisma } from '@/app/generated/prisma/client'
 import { getCurrentAdminFromSession } from '@/lib/admin-session'
-import { uploadImageToCloudinary } from '@/lib/cloudinary'
 import { sendDocumentRequestPdfEmail } from '@/lib/nodemailer'
 import prismaModule from '@/lib/prisma'
 import { getDocumentDefinition } from '@/lib/document-request-catalog'
@@ -87,17 +86,8 @@ export async function createResidentDocumentRequestAction(
 
   try {
     const relevantDetails = pickRelevantDocumentRequestData(parsed.data)
-    
-    let proofOfPaymentUrl = null
-
-    if (parsed.data.paymentProof) {
-      const uploadResult = await uploadImageToCloudinary(parsed.data.paymentProof, {
-        folder: 'document-requests/payments',
-        publicIdPrefix: resident.id,
-        assetLabel: 'Proof of payment',
-      })
-      proofOfPaymentUrl = uploadResult.secure_url
-    }
+    const requestedCopies = Number(parsed.data.requestedCopies)
+    const totalAmount = definition.fee * requestedCopies
 
     const createdRequest = await prisma.documentRequest.create({
       data: {
@@ -105,13 +95,11 @@ export async function createResidentDocumentRequestAction(
         documentTypeId: definition.id,
         type: definition.label,
         purpose: parsed.data.purpose.trim() || null,
-        quantity: Number(parsed.data.requestedCopies),
+        quantity: requestedCopies,
         yearsOfResidency: parsed.data.yearsOfResidency ? parseInt(parsed.data.yearsOfResidency, 10) : 0,
         placeOfBirth: parsed.data.placeOfBirth || null,
-        amount: definition.fee,
+        amount: totalAmount,
         details: relevantDetails as Prisma.InputJsonValue,
-        referenceLast4: parsed.data.referenceLast4 || null,
-        proofOfPaymentUrl,
         status: 'PENDING',
       },
       select: {
@@ -122,8 +110,6 @@ export async function createResidentDocumentRequestAction(
         quantity: true,
         amount: true,
         details: true,
-        referenceLast4: true,
-        proofOfPaymentUrl: true,
         serialNumber: true,
         generatedFileUrl: true,
         generatedAt: true,
@@ -190,8 +176,6 @@ export async function updateAdminDocumentRequestStatusAction(input: {
         quantity: true,
         amount: true,
         details: true,
-        referenceLast4: true,
-        proofOfPaymentUrl: true,
         serialNumber: true,
         generatedFileUrl: true,
         generatedAt: true,
@@ -244,8 +228,6 @@ export async function updateAdminDocumentRequestStatusAction(input: {
         quantity: true,
         amount: true,
         details: true,
-        referenceLast4: true,
-        proofOfPaymentUrl: true,
         serialNumber: true,
         generatedFileUrl: true,
         generatedAt: true,

@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   try {
     const generatedDocument = await generateStoredDocumentRequestPdf(requestId)
 
-    return new Response(generatedDocument.pdfBuffer, {
+    return new Response(new Uint8Array(generatedDocument.pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${generatedDocument.fileName}"`,
