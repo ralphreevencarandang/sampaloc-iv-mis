@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Indigency - {{name}}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            padding: 0;
+            font-family: 'Times New Roman', Times, serif;
+            margin: 0;
+        }
+
+        .page {
+            background-color: white;
+            width: 210mm;
+            height: 297mm;
+            padding: 25.4mm;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40pt;
+            font-size: 11pt;
+            line-height: 1.2;
+        }
+
+        .header p {
+            margin: 2pt 0;
+        }
+
+        .office {
+            margin-top: 15pt;
+            font-weight: bold;
+            border-bottom: 1.5px solid #000;
+            padding-bottom: 8pt;
+            text-transform: uppercase;
+        }
+
+        .title-container {
+            text-align: center;
+            margin: 50pt 0;
+        }
+
+        .title {
+            font-size: 22pt;
+            font-weight: bold;
+            letter-spacing: 1.5pt;
+        }
+
+        .salutation {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 20pt;
+        }
+
+        .content {
+            font-size: 11pt;
+            line-height: 1.8;
+            text-align: justify;
+        }
+
+        .content p {
+            margin-bottom: 15pt;
+            text-indent: 40pt;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        .signature-block {
+            margin-top: 80pt;
+            text-align: right;
+            padding-right: 20pt;
+        }
+
+        .signatory-name {
+            font-weight: bold;
+            font-size: 12pt;
+            text-decoration: underline;
+            margin-bottom: 2pt;
+        }
+
+        .signatory-pos {
+            font-size: 11pt;
+            margin-top: 0;
+            padding-right: 15pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <p>Republic of the Philippines</p>
+            <p>Region IV-A CALABARZON</p>
+            <p>Province of Cavite</p>
+            <p>City of Dasmari&ntilde;as</p>
+            <p>BARANGAY SAMPALOC IV</p>
+            <p>Barangay Hall Annex Zone XI Bautista</p>
+            <p class="office">OFFICE OF THE PUNONG BARANGAY</p>
+        </div>
+
+        <div class="title-container">
+            <div class="title">CERTIFICATE OF INDIGENCY</div>
+        </div>
+
+        <div class="salutation">To Whom It May Concern;</div>
+
+        <div class="content">
+            <p>This is to certify that <span class="bold">{{nameUpper}}</span> a resident of {{address}}, Barangay Sampaloc IV, City of Dasmari&ntilde;as, Cavite.</p>
+
+            <p>As I have personally known the above-named person, they had no means of income or any property that could provide {{purpose}} purposes. In regards to this matter may we request at your good office {{purpose}} assistance on the person named/stated above.</p>
+
+            <p>This certification is given this <span class="bold">{{ordinalIssueDate}}</span> to the above-named person for whatever legal purposes it may serve best.</p>
+        </div>
+
+        <div class="signature-block">
+            <p class="signatory-name">{{captainName}}</p>
+            <p class="signatory-pos">{{captainTitle}}</p>
+        </div>
+    </div>
+</body>
+</html>

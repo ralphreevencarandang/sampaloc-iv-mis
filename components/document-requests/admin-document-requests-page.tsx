@@ -5,27 +5,34 @@ import {
   AlertCircle,
   Archive,
   CheckCircle2,
+  FileDown,
   FileText,
   Loader2,
+  Mail,
   MoreVertical,
   Search,
 } from 'lucide-react'
-import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { fetchAdminDocumentRequests } from '@/lib/document-requests-api'
+import {
+  fetchAdminDocumentRequests,
+  generateDocumentRequestPdf,
+} from '@/lib/document-requests-api'
 import {
   getDocumentDefinition,
   type DocumentTypeId,
 } from '@/lib/document-request-catalog'
 import type { DocumentRequestStatus } from '@/lib/document-request-utils'
-import { updateAdminDocumentRequestStatusAction } from '@/server/actions/document.actions'
+import {
+  sendAdminDocumentRequestEmailAction,
+  updateAdminDocumentRequestStatusAction,
+} from '@/server/actions/document.actions'
 
 type PageProps = {
   documentType: DocumentTypeId
 }
 
-type AdminFilter = 'ALL' | 'PENDING' | 'REVIEW' | 'APPROVED'
+type AdminFilter = 'ALL' | 'PENDING' | 'REVIEW' | 'APPROVED' | 'GENERATED'
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ')
@@ -54,6 +61,10 @@ function getAdminStatusLabel(status: DocumentRequestStatus) {
     return 'Approved'
   }
 
+  if (status === 'GENERATED') {
+    return 'Generated'
+  }
+
   return status
 }
 
@@ -66,6 +77,7 @@ function StatusBadge({ status }: { status: DocumentRequestStatus }) {
     PENDING: 'border-amber-200 bg-amber-50 text-amber-700',
     REVIEW: 'border-sky-200 bg-sky-50 text-sky-700',
     APPROVED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    GENERATED: 'border-primary-200 bg-primary-50 text-primary-700',
   } as const
 
   return (
@@ -127,16 +139,31 @@ function QueryErrorState({
   )
 }
 
+function downloadPdfBlob(blob: Blob, fileName: string) {
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+
+  anchor.href = objectUrl
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(objectUrl)
+}
+
 function RowActionMenu({
   isOpen,
   canApprove,
   canMoveToReview,
   isApproving,
   isReviewing,
+  canSendEmail,
+  isSendingEmail,
   isMutating,
   onToggle,
   onApprove,
   onReview,
+  onSendEmail,
   onArchive,
 }: {
   isOpen: boolean
@@ -144,10 +171,13 @@ function RowActionMenu({
   canMoveToReview: boolean
   isApproving: boolean
   isReviewing: boolean
+  canSendEmail: boolean
+  isSendingEmail: boolean
   isMutating: boolean
   onToggle: () => void
   onApprove: () => void
   onReview: () => void
+  onSendEmail: () => void
   onArchive: () => void
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -208,6 +238,19 @@ function RowActionMenu({
               <FileText className="h-4 w-4 text-sky-600" />
             )}
             Review
+          </button>
+          <button
+            type="button"
+            disabled={!canSendEmail || isMutating}
+            onClick={onSendEmail}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSendingEmail ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="h-4 w-4 text-primary-600" />
+            )}
+            Send to Email
           </button>
           <button
             type="button"
@@ -303,6 +346,74 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
     },
   })
 
+  const generatePdfMutation = useMutation({
+    mutationFn: generateDocumentRequestPdf,
+    onMutate: () => {
+      setActionError(null)
+      setOpenMenuId(null)
+    },
+    onSuccess: async (result) => {
+      downloadPdfBlob(result.blob, result.fileName)
+      toast.success(
+        result.serialNumber
+          ? `PDF generated successfully. Serial: ${result.serialNumber}`
+          : 'PDF generated successfully.'
+      )
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['documents'] }),
+        queryClient.invalidateQueries({ queryKey: ['documents', documentType] }),
+        queryClient.invalidateQueries({ queryKey: ['resident-document-requests'] }),
+      ])
+    },
+    onError: (mutationError) => {
+      const message =
+        mutationError instanceof Error
+          ? mutationError.message
+          : 'Failed to generate the requested PDF document.'
+
+      setActionError(message)
+      toast.error(message)
+    },
+  })
+
+  const sendEmailMutation = useMutation({
+    mutationFn: sendAdminDocumentRequestEmailAction,
+    onMutate: () => {
+      setActionError(null)
+      setOpenMenuId(null)
+    },
+    onSuccess: async (result) => {
+      if (!result.success) {
+        setActionError(result.message)
+        toast.error(result.message)
+
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['documents'] }),
+          queryClient.invalidateQueries({ queryKey: ['documents', documentType] }),
+          queryClient.invalidateQueries({ queryKey: ['resident-document-requests'] }),
+        ])
+        return
+      }
+
+      toast.success(result.message)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['documents'] }),
+        queryClient.invalidateQueries({ queryKey: ['documents', documentType] }),
+        queryClient.invalidateQueries({ queryKey: ['resident-document-requests'] }),
+      ])
+    },
+    onError: (mutationError) => {
+      const message =
+        mutationError instanceof Error
+          ? mutationError.message
+          : 'Failed to send the requested document to email.'
+
+      setActionError(message)
+      toast.error(message)
+    },
+  })
+
   if (!definition) {
     return (
       <QueryErrorState
@@ -319,7 +430,6 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
       item.requesterName,
       item.requesterEmail,
       item.requesterAddress,
-      item.referenceLast4 ?? '',
     ]
       .join(' ')
       .toLowerCase()
@@ -370,7 +480,7 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
           </p>
           <h1 className="mt-2 text-3xl font-bold text-slate-900">{definition.label}</h1>
           <p className="mt-2 text-slate-600">
-            Review resident submissions, inspect payment proof, and update request status.
+            Review resident submissions and update request status.
           </p>
         </div>
         <div className="rounded-[24px] border border-primary-200 bg-primary-50 px-5 py-4 text-sm text-slate-700">
@@ -382,7 +492,7 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
       <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4  lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
-            {(['ALL', 'PENDING', 'REVIEW', 'APPROVED'] as AdminFilter[]).map((filter) => (
+            {(['ALL', 'PENDING', 'REVIEW', 'APPROVED', 'GENERATED'] as AdminFilter[]).map((filter) => (
               <button
                 key={filter}
                 type="button"
@@ -403,7 +513,7 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
             <input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by requester, email, address, or reference digits"
+              placeholder="Search by requester, email, or address"
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition-colors focus:border-primary-500"
             />
           </div>
@@ -430,16 +540,19 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
                       <th className="px-4 py-4 sm:px-5">Requester</th>
                       <th className="px-4 py-4 sm:px-5">Document Type</th>
                       <th className="px-4 py-4 sm:px-5">Details</th>
-                      <th className="px-4 py-4 sm:px-5">Proof of Payment</th>
-                      <th className="px-4 py-4 sm:px-5">Reference</th>
                       <th className="px-4 py-4 sm:px-5">Status</th>
                       <th className="px-4 py-4 text-center sm:px-5">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRequests.map((request) => {
-                      const canApprove = request.status !== 'APPROVED'
-                      const canMoveToReview = request.status !== 'REVIEW'
+                      const canApprove =
+                        request.status === 'PENDING' || request.status === 'REVIEW'
+                      const canMoveToReview =
+                        request.status === 'PENDING' || request.status === 'APPROVED'
+                      const canGeneratePdf =
+                        request.status === 'APPROVED' || request.status === 'GENERATED'
+                      const canSendEmail = canGeneratePdf
                       const isMenuOpen = openMenuId === request.id
                       const isApproving =
                         reviewMutation.isPending &&
@@ -449,6 +562,12 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
                         reviewMutation.isPending &&
                         reviewMutation.variables?.requestId === request.id &&
                         reviewMutation.variables?.status === 'REVIEW'
+                      const isGeneratingPdf =
+                        generatePdfMutation.isPending &&
+                        generatePdfMutation.variables === request.id
+                      const isSendingEmail =
+                        sendEmailMutation.isPending &&
+                        sendEmailMutation.variables?.requestId === request.id
 
                       return (
                         <tr key={request.id} className="border-t border-slate-100 align-top">
@@ -478,71 +597,84 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
                             </div>
                           </td>
                           <td className="px-4 py-4 sm:px-5">
-                            {request.proofOfPaymentUrl ? (
-                              <a
-                                href={request.proofOfPaymentUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="block w-36"
-                              >
-                                <Image
-                                  src={request.proofOfPaymentUrl}
-                                  alt="Payment proof preview"
-                                  width={320}
-                                  height={220}
-                                  unoptimized
-                                  className="h-24 w-full rounded-2xl object-cover"
-                                />
-                                <p className="mt-2 text-xs text-slate-600">View attachment</p>
-                              </a>
-                            ) : (
-                              <p className="text-sm text-slate-500">No attachment</p>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-slate-700 sm:px-5">
-                            {request.referenceLast4 ? `**** ${request.referenceLast4}` : 'Pending'}
-                          </td>
-                          <td className="px-4 py-4 sm:px-5">
-                            <StatusBadge status={request.status} />
+                            <div className="space-y-1">
+                              <StatusBadge status={request.status} />
+                              {request.serialNumber ? (
+                                <p className="text-xs font-medium text-primary-700">
+                                  Serial: {request.serialNumber}
+                                </p>
+                              ) : null}
+                            </div>
                           </td>
                           <td className="px-4 py-4 text-center sm:px-5">
-                            <RowActionMenu
-                              isOpen={isMenuOpen}
-                              canApprove={canApprove}
-                              canMoveToReview={canMoveToReview}
-                              isApproving={isApproving}
-                              isReviewing={isReviewing}
-                              isMutating={reviewMutation.isPending}
-                              onToggle={() => {
-                                setOpenMenuId((current) => (current === request.id ? null : request.id))
-                              }}
-                              onApprove={() => {
-                                if (!confirmStatusChange('APPROVED')) {
-                                  return
-                                }
+                            <div className="flex items-center justify-center gap-2">
+                              {canGeneratePdf ? (
+                                <button
+                                  type="button"
+                                  disabled={isGeneratingPdf}
+                                  onClick={() => {
+                                    generatePdfMutation.mutate(request.id)
+                                  }}
+                                  className="inline-flex items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {isGeneratingPdf ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <FileDown className="h-4 w-4" />
+                                  )}
+                                  {request.status === 'GENERATED' ? 'Download PDF' : 'Generate PDF'}
+                                </button>
+                              ) : null}
 
-                                reviewMutation.mutate({
-                                  requestId: request.id,
-                                  status: 'APPROVED',
-                                })
-                              }}
-                              onReview={() => {
-                                if (!confirmStatusChange('REVIEW')) {
-                                  return
-                                }
+                              <RowActionMenu
+                                isOpen={isMenuOpen}
+                                canApprove={canApprove}
+                                canMoveToReview={canMoveToReview}
+                                isApproving={isApproving}
+                                isReviewing={isReviewing}
+                                canSendEmail={canSendEmail}
+                                isSendingEmail={isSendingEmail}
+                                isMutating={reviewMutation.isPending || isSendingEmail}
+                                onToggle={() => {
+                                  setOpenMenuId((current) => (current === request.id ? null : request.id))
+                                }}
+                                onApprove={() => {
+                                  if (!confirmStatusChange('APPROVED')) {
+                                    return
+                                  }
 
-                                reviewMutation.mutate({
-                                  requestId: request.id,
-                                  status: 'REVIEW',
-                                })
-                              }}
-                              onArchive={() => {
-                                setOpenMenuId(null)
-                                toast('Archive action is not available yet.', {
-                                  icon: '📦',
-                                })
-                              }}
-                            />
+                                  reviewMutation.mutate({
+                                    requestId: request.id,
+                                    status: 'APPROVED',
+                                  })
+                                }}
+                                onReview={() => {
+                                  if (!confirmStatusChange('REVIEW')) {
+                                    return
+                                  }
+
+                                  reviewMutation.mutate({
+                                    requestId: request.id,
+                                    status: 'REVIEW',
+                                  })
+                                }}
+                                onSendEmail={() => {
+                                  if (!window.confirm('Generate the PDF and send it to the resident email?')) {
+                                    return
+                                  }
+
+                                  sendEmailMutation.mutate({
+                                    requestId: request.id,
+                                  })
+                                }}
+                                onArchive={() => {
+                                  setOpenMenuId(null)
+                                  toast('Archive action is not available yet.', {
+                                    icon: '📦',
+                                  })
+                                }}
+                              />
+                            </div>
                           </td>
                         </tr>
                       )

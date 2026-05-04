@@ -35,6 +35,7 @@ enum RequestStatus {
   PENDING
   REVIEW
   APPROVED
+  GENERATED
 }
 
 enum VerificationStatus {
@@ -244,8 +245,11 @@ model DocumentRequest {
   details         Json?
   referenceLast4         String? @map("paymentReferenceDigits")
   proofOfPaymentUrl      String? @map("paymentProofFileName")
+  serialNumber          String? @unique
+  generatedFileUrl      String?
   status RequestStatus @default(PENDING)
   requestedAt DateTime  @default(now())
+  generatedAt DateTime?
   releasedAt  DateTime?
 }
 
@@ -266,6 +270,7 @@ model MedicalRecord {
   checkedBy   Admin  @relation("CheckedByHealthWorker", fields: [checkedById], references: [id])
 
   date DateTime @default(now())
+  isArchive Boolean @default(false)
 }
 
 model VawcRecord {

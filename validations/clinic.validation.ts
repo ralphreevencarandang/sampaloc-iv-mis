@@ -46,7 +46,7 @@ export const medicalRecordSubmissionSchema = z.object({
 export type MedicalRecordSubmissionInput = z.infer<typeof medicalRecordSubmissionSchema>
 
 export function parseMedicalRecordFormData(formData: FormData) {
-  const attachments = formData
+  const uploadedAttachments = formData
     .getAll('attachments')
     .filter((value): value is File => value instanceof File && value.size > 0)
     .map((file) => ({
@@ -55,12 +55,46 @@ export function parseMedicalRecordFormData(formData: FormData) {
       type: file.type,
     }))
 
+  const existingAttachmentsValue = formData.get('existingAttachments')
+  let existingAttachments: Array<{ name: string; size: number; type?: string }> = []
+
+  if (typeof existingAttachmentsValue === 'string' && existingAttachmentsValue.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(existingAttachmentsValue) as unknown
+
+      if (Array.isArray(parsed)) {
+        existingAttachments = parsed.flatMap((item) => {
+          if (
+            typeof item === 'object' &&
+            item !== null &&
+            'name' in item &&
+            typeof item.name === 'string' &&
+            'size' in item &&
+            typeof item.size === 'number'
+          ) {
+            return [
+              {
+                name: item.name,
+                size: item.size,
+                type: 'type' in item && typeof item.type === 'string' ? item.type : undefined,
+              },
+            ]
+          }
+
+          return []
+        })
+      }
+    } catch {
+      existingAttachments = []
+    }
+  }
+
   return medicalRecordSubmissionSchema.safeParse({
     patientId: formData.get('patientId'),
     diagnosis: formData.get('diagnosis'),
     notes: formData.get('notes'),
     date: formData.get('date'),
-    attachments,
+    attachments: [...existingAttachments, ...uploadedAttachments],
   })
 }
 

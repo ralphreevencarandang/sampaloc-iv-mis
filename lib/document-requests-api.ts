@@ -41,3 +41,53 @@ export async function fetchResidentDocumentRequests(): Promise<ResidentDocumentR
     throw error
   }
 }
+
+export type GeneratedDocumentPdfResult = {
+  blob: Blob
+  fileName: string
+  serialNumber: string | null
+}
+
+export async function generateDocumentRequestPdf(
+  requestId: string
+): Promise<GeneratedDocumentPdfResult> {
+  try {
+    const response = await api.post<Blob>(
+      '/document/generate',
+      { requestId },
+      {
+        responseType: 'blob',
+      }
+    )
+
+    const contentDisposition = response.headers['content-disposition']
+    const fileNameMatch = /filename="?([^"]+)"?/i.exec(contentDisposition ?? '')
+    const fileName = fileNameMatch?.[1] ?? 'document-request.pdf'
+
+    return {
+      blob: response.data,
+      fileName,
+      serialNumber: response.headers['x-document-serial'] ?? null,
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data
+
+      if (data instanceof Blob) {
+        const messageText = await data.text()
+
+        try {
+          const parsed = JSON.parse(messageText) as { message?: string }
+          throw new Error(parsed.message ?? 'Failed to generate the requested document PDF.')
+        } catch {
+          throw new Error(messageText || 'Failed to generate the requested document PDF.')
+        }
+      }
+
+      const message = (data as { message?: string } | undefined)?.message
+      throw new Error(message ?? 'Failed to generate the requested document PDF.')
+    }
+
+    throw error
+  }
+}

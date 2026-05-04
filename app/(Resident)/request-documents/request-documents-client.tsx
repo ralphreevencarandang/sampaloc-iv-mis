@@ -1,19 +1,15 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
-  CreditCard,
-  FileImage,
   FileText,
   Loader2,
   Send,
-  Upload,
   User,
 } from "lucide-react";
 import {
@@ -60,8 +56,6 @@ type SubmittedRequest = {
   submittedAt: string;
   amount: string;
   summary: DocumentDetailLine[];
-  referenceLast4: string | null;
-  proofOfPaymentUrl: string | null;
   status: string;
 };
 
@@ -186,8 +180,6 @@ function mapRequestRecord(record: ResidentDocumentRequestRecord): SubmittedReque
     submittedAt: record.submittedAt,
     amount: formatCurrency(record.amount),
     summary: record.detailLines,
-    referenceLast4: record.referenceLast4,
-    proofOfPaymentUrl: record.proofOfPaymentUrl,
     status: record.status,
   };
 }
@@ -274,10 +266,10 @@ function TableShell({
 
 function RequestStatusBadge({ status }: { status: string }) {
   const toneClass =
-    status === "APPROVED"
+    status === "APPROVED" || status === "GENERATED"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : status === "REJECTED"
-        ? "border-rose-200 bg-rose-50 text-rose-700"
+      : status === "REVIEW"
+        ? "border-sky-200 bg-sky-50 text-sky-700"
         : "border-amber-200 bg-amber-50 text-amber-700";
 
   return (
@@ -351,55 +343,6 @@ function TextAreaField({
   );
 }
 
-function GCashQrCard() {
-  return (
-    <div className="flex flex-col items-center rounded-[28px] border border-slate-200 bg-slate-50 p-5">
-      <svg viewBox="0 0 120 120" className="h-48 w-48 rounded-[28px] border border-slate-200 bg-white p-4">
-        <rect width="120" height="120" fill="white" />
-        <g fill="#111827">
-          <rect x="8" y="8" width="28" height="28" rx="2" />
-          <rect x="14" y="14" width="16" height="16" fill="white" />
-          <rect x="84" y="8" width="28" height="28" rx="2" />
-          <rect x="90" y="14" width="16" height="16" fill="white" />
-          <rect x="8" y="84" width="28" height="28" rx="2" />
-          <rect x="14" y="90" width="16" height="16" fill="white" />
-          <rect x="48" y="8" width="8" height="8" />
-          <rect x="60" y="8" width="8" height="8" />
-          <rect x="48" y="20" width="8" height="8" />
-          <rect x="60" y="20" width="8" height="8" />
-          <rect x="44" y="40" width="8" height="8" />
-          <rect x="56" y="40" width="8" height="8" />
-          <rect x="68" y="40" width="8" height="8" />
-          <rect x="80" y="40" width="8" height="8" />
-          <rect x="40" y="52" width="8" height="8" />
-          <rect x="52" y="52" width="8" height="8" />
-          <rect x="76" y="52" width="8" height="8" />
-          <rect x="92" y="52" width="8" height="8" />
-          <rect x="44" y="64" width="8" height="8" />
-          <rect x="68" y="64" width="8" height="8" />
-          <rect x="80" y="64" width="8" height="8" />
-          <rect x="92" y="64" width="8" height="8" />
-          <rect x="44" y="76" width="8" height="8" />
-          <rect x="56" y="76" width="8" height="8" />
-          <rect x="68" y="76" width="8" height="8" />
-          <rect x="80" y="76" width="8" height="8" />
-          <rect x="92" y="76" width="8" height="8" />
-          <rect x="48" y="88" width="8" height="8" />
-          <rect x="60" y="88" width="8" height="8" />
-          <rect x="72" y="88" width="8" height="8" />
-          <rect x="84" y="88" width="8" height="8" />
-          <rect x="96" y="88" width="8" height="8" />
-          <rect x="48" y="100" width="8" height="8" />
-          <rect x="72" y="100" width="8" height="8" />
-          <rect x="96" y="100" width="8" height="8" />
-        </g>
-      </svg>
-      <p className="mt-4 text-sm font-semibold text-slate-900">Sampaloc IV GCash</p>
-      <p className="mt-1 text-center text-xs text-slate-500">Scan this QR code using your GCash app.</p>
-    </div>
-  );
-}
-
 export default function RequestDocumentsClient({
   residentProfile,
   initialError,
@@ -415,24 +358,11 @@ export default function RequestDocumentsClient({
   const [quantity, setQuantity] = useState<number>(1);
   const [submissionMessage, setSubmissionMessage] = useState("");
   const [submissionError, setSubmissionError] = useState("");
-  const [referenceLast4, setReferenceLast4] = useState("");
-  const [paymentReferenceError, setPaymentReferenceError] = useState("");
-  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
-  const [paymentProofError, setPaymentProofError] = useState("");
-  const [paymentPreviewUrl, setPaymentPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIsBootLoading(false), 450);
     return () => window.clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    return () => {
-      if (paymentPreviewUrl) {
-        URL.revokeObjectURL(paymentPreviewUrl);
-      }
-    };
-  }, [paymentPreviewUrl]);
 
   const selectedDocument = useMemo(
     () => documentTypeCatalog.find((item) => item.id === selectedDocumentId) ?? documentTypeCatalog[0],
@@ -501,11 +431,6 @@ export default function RequestDocumentsClient({
       setSubmissionMessage(result.message);
       setFormValues(initialFormValues);
       setQuantity(1);
-      setReferenceLast4("");
-      setPaymentReferenceError("");
-      setPaymentProofError("");
-      setPaymentProofFile(null);
-      setPaymentPreviewUrl(null);
 
       queryClient.setQueryData<ResidentDocumentRequestRecord[]>(
         ["resident-document-requests", residentProfile?.id],
@@ -542,11 +467,6 @@ export default function RequestDocumentsClient({
     setQuantity(1);
     setSubmissionMessage("");
     setSubmissionError("");
-    setReferenceLast4("");
-    setPaymentReferenceError("");
-    setPaymentProofError("");
-    setPaymentProofFile(null);
-    setPaymentPreviewUrl(null);
   };
 
   const handleRequestSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -567,22 +487,9 @@ export default function RequestDocumentsClient({
       nextErrors.purpose = "Purpose is required.";
     }
 
-    let blocked = false;
-
-    if (selectedDocument.fee > 0) {
-      if (!paymentProofFile) {
-        setPaymentProofError("Proof of payment is required.");
-        blocked = true;
-      }
-      if (!/^\d{4}$/.test(referenceLast4)) {
-        setPaymentReferenceError("Enter exactly 4 digits.");
-        blocked = true;
-      }
-    }
-
     setFormErrors(nextErrors);
 
-    if (Object.keys(nextErrors).length > 0 || blocked) {
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -593,13 +500,6 @@ export default function RequestDocumentsClient({
     };
 
     const formData = createDocumentRequestFormData(payload);
-    
-    if (selectedDocument.fee > 0) {
-      if (paymentProofFile) {
-        formData.append("paymentProof", paymentProofFile);
-      }
-      formData.append("referenceLast4", referenceLast4);
-    }
 
     await createRequestMutation.mutateAsync(formData);
   };
@@ -618,7 +518,7 @@ export default function RequestDocumentsClient({
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary-600">Resident Services</p>
           <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">Document Request</h1>
           <p className="text-sm leading-6 text-slate-600 sm:text-base">
-            Complete the form and upload your payment proof to submit your document request.
+            Complete the form to submit your document request.
           </p>
         </div>
 
@@ -799,102 +699,6 @@ export default function RequestDocumentsClient({
                  
                 </div>
 
-                {selectedDocument.fee > 0 ? (
-                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-start gap-3 border-b border-slate-100 pb-5">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-700">
-                        <CreditCard className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-slate-900">GCash Payment</h2>
-                        <p className="text-sm text-slate-600">
-                          Please pay {formatCurrency(selectedDocument.fee * quantity)} via GCash and upload the receipt.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-6 grid gap-6 lg:grid-cols-[240px_1fr]">
-                      <GCashQrCard />
-
-                      <div className="space-y-5">
-                        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                          <p className="text-sm font-semibold text-slate-900">Upload proof of payment</p>
-                          <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-8 text-center transition-colors hover:border-primary-400 hover:bg-primary-50/30">
-                            <Upload className="h-6 w-6 text-primary-700" />
-                            <p className="mt-3 text-sm font-medium text-slate-900">Choose a payment screenshot</p>
-                            <input
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp,image/gif"
-                              className="sr-only"
-                              onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                                const file = event.target.files?.[0] ?? null;
-                                setPaymentProofError("");
-
-                                if (!file) {
-                                  return;
-                                }
-
-                                if (!file.type.startsWith("image/")) {
-                                  setPaymentProofFile(null);
-                                  setPaymentPreviewUrl(null);
-                                  setPaymentProofError("Please upload an image file for proof of payment.");
-                                  return;
-                                }
-
-                                if (paymentPreviewUrl) {
-                                  URL.revokeObjectURL(paymentPreviewUrl);
-                                }
-
-                                setPaymentProofFile(file);
-                                setPaymentPreviewUrl(URL.createObjectURL(file));
-                              }}
-                            />
-                          </label>
-
-                          {paymentProofError ? <p className="mt-3 text-xs text-rose-500">{paymentProofError}</p> : null}
-
-                          {paymentPreviewUrl ? (
-                            <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
-                                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                                  <FileImage className="h-4 w-4 text-primary-700" />
-                                  <span>{paymentProofFile?.name}</span>
-                                </div>
-                                <Image
-                                  src={paymentPreviewUrl}
-                                alt="Proof of payment preview"
-                                width={1200}
-                                height={900}
-                                unoptimized
-                                className="mt-4 max-h-72 w-full rounded-2xl object-cover"
-                              />
-                            </div>
-                          ) : null}
-                        </div>
-
-                        <div>
-                          <label className="text-sm font-medium text-slate-700">
-                            Last 4 Digits of Reference Number <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            inputMode="numeric"
-                            maxLength={4}
-                            value={referenceLast4}
-                            onChange={(event) => {
-                              setReferenceLast4(event.target.value.replace(/\D/g, "").slice(0, 4));
-                              setPaymentReferenceError("");
-                            }}
-                            placeholder="1234"
-                            className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-primary-500"
-                          />
-                          {paymentReferenceError ? (
-                            <p className="mt-2 text-xs text-rose-500">{paymentReferenceError}</p>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row">
                   <button
                     type="submit"
@@ -960,7 +764,7 @@ export default function RequestDocumentsClient({
                     </div>
                   </div>
                 ) : (
-                  <TableShell columns="Document|Created|Amount|Status|Reference|Proof of Payment|Details">
+                  <TableShell columns="Document|Created|Amount|Status|Details">
                     {requestHistory.map((request) => (
                       <tr key={request.id} className="border-b border-slate-100 align-top last:border-b-0">
                         <td className="px-5 py-4">
@@ -978,28 +782,6 @@ export default function RequestDocumentsClient({
                         <td className="px-5 py-4">
                           <div className="min-w-30">
                             <RequestStatusBadge status={request.status} />
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-sm text-slate-700">
-                          <div className="min-w-30 font-medium">
-                            {request.referenceLast4 ? `**** ${request.referenceLast4}` : "Awaiting input"}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="min-w-55">
-                            {request.proofOfPaymentUrl ? (
-                              <div className="space-y-3">
-                                <Image
-                                  src={request.proofOfPaymentUrl}
-                                  alt="Uploaded payment proof"
-                                  width={1200}
-                                  height={900}
-                                  className="h-28 w-full rounded-2xl object-cover"
-                                />
-                              </div>
-                            ) : (
-                              <p className="text-sm text-slate-500">No upload attached</p>
-                            )}
                           </div>
                         </td>
                         <td className="px-5 py-4">
