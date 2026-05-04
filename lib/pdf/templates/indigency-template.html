@@ -3,29 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate of Indigency</title>
+    <title>Certificate of Indigency - {{name}}</title>
     <style>
-        /* Base page styling to simulate A4 paper in a browser */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
         body {
-            background-color: #525659;
+            background-color: #ffffff;
             display: flex;
             justify-content: center;
-            padding: 20px;
+            padding: 0;
             font-family: 'Times New Roman', Times, serif;
             margin: 0;
         }
 
         .page {
             background-color: white;
-            width: 210mm;          /* A4 width */
-            min-height: 297mm;     /* A4 height */
-            padding: 25.4mm;       /* 1 inch margins */
+            width: 210mm;
+            height: 297mm;
+            padding: 25.4mm;
             box-sizing: border-box;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
             position: relative;
         }
 
-        /* Content Styling */
         .header {
             text-align: center;
             margin-bottom: 40pt;
@@ -70,7 +72,7 @@
 
         .content p {
             margin-bottom: 15pt;
-            text-indent: 40pt; /* Paragraph indentation */
+            text-indent: 40pt;
         }
 
         .bold {
@@ -95,20 +97,6 @@
             margin-top: 0;
             padding-right: 15pt;
         }
-
-        /* Print Media Query so it prints properly without background margins */
-        @media print {
-            body {
-                background: none;
-                padding: 0;
-            }
-            .page {
-                box-shadow: none;
-                margin: 0;
-                width: 100%;
-                min-height: auto;
-            }
-        }
     </style>
 </head>
 <body>
@@ -117,7 +105,7 @@
             <p>Republic of the Philippines</p>
             <p>Region IV-A CALABARZON</p>
             <p>Province of Cavite</p>
-            <p>City of Dasmariñas</p>
+            <p>City of Dasmari&ntilde;as</p>
             <p>BARANGAY SAMPALOC IV</p>
             <p>Barangay Hall Annex Zone XI Bautista</p>
             <p class="office">OFFICE OF THE PUNONG BARANGAY</p>
@@ -130,16 +118,16 @@
         <div class="salutation">To Whom It May Concern;</div>
 
         <div class="content">
-            <p>This is to certify that <span class="bold">NENITA V. COLINA</span> a resident of Block 55 Lot 7 Bahay Pangarap, Barangay Sampaloc IV, City of Dasmariñas, Cavite.</p>
-            
-            <p>As I have personally known the above-named person, they had no means of income or any property that could provide medical purposes. In regards to this matter may we request at your good office medical assistance on the person named/stated above.</p>
-            
-            <p>This certification is given this <span class="bold">10th day of April, 2026</span> to the above-named person for whatever legal purposes it may serve best.</p>
+            <p>This is to certify that <span class="bold">{{nameUpper}}</span> a resident of {{address}}, Barangay Sampaloc IV, City of Dasmari&ntilde;as, Cavite.</p>
+
+            <p>As I have personally known the above-named person, they had no means of income or any property that could provide {{purpose}} purposes. In regards to this matter may we request at your good office {{purpose}} assistance on the person named/stated above.</p>
+
+            <p>This certification is given this <span class="bold">{{ordinalIssueDate}}</span> to the above-named person for whatever legal purposes it may serve best.</p>
         </div>
 
         <div class="signature-block">
-            <p class="signatory-name">HON. ARMANDO M. MOVIDO</p>
-            <p class="signatory-pos">Punong Barangay</p>
+            <p class="signatory-name">{{captainName}}</p>
+            <p class="signatory-pos">{{captainTitle}}</p>
         </div>
     </div>
 </body>

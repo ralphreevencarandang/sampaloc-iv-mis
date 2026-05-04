@@ -52,7 +52,6 @@ const AdminSidebar = () => {
     { label: 'Indigency', href: '/admin/documents/indigency' },
     { label: 'Residency', href: '/admin/documents/residency' },
     { label: 'Cedula', href: '/admin/documents/cedula' },
-    { label: 'Barangay ID', href: '/admin/documents/barangay-id' },
     { label: 'First Time Job Seeker', href: '/admin/documents/job-seeker' },
   ];
 

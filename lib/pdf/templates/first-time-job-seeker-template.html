@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barangay Certification and Oath of Undertaking - {{name}}</title>
+    <style>
+        :root {
+            --page-width: 210mm;
+            --page-height: 297mm;
+            --font-main: 'Times New Roman', Times, serif;
+            --font-header: Arial, Helvetica, sans-serif;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+        }
+
+        .page {
+            background-color: white;
+            width: var(--page-width);
+            height: var(--page-height);
+            box-sizing: border-box;
+            padding-left: 25.4mm;
+            padding-right: 25.4mm;
+            padding-top: 12.7mm;
+            padding-bottom: 12.7mm;
+            position: relative;
+            page-break-after: always;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+        }
+
+        .header {
+            text-align: center;
+            font-family: var(--font-header);
+            line-height: 1.3;
+            margin-bottom: 20px;
+        }
+
+        .header .rep {
+            font-size: 11pt;
+        }
+
+        .header .brgy {
+            font-weight: bold;
+            font-size: 14pt;
+            margin-top: 10px;
+        }
+
+        .header .sub-brgy {
+            font-size: 10pt;
+        }
+
+        .header .office {
+            font-weight: bold;
+            font-size: 13pt;
+            margin-top: 10px;
+            color: #000;
+        }
+
+        .doc-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18pt;
+            letter-spacing: 2px;
+            text-decoration: underline;
+            margin: 30px 0;
+        }
+
+        .content {
+            font-size: 12pt;
+            line-height: 1.6;
+            text-align: justify;
+        }
+
+        .salutation {
+            margin-bottom: 20px;
+        }
+
+        .paragraph {
+            text-indent: 0.5in;
+            margin-bottom: 15px;
+        }
+
+        .oath-list {
+            list-style-type: none;
+            padding-left: 0;
+            font-size: 14px;
+        }
+
+        .oath-list li {
+            display: flex;
+        }
+
+        .oath-list .num {
+            min-width: 25px;
+        }
+
+        .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+        }
+
+        .sign-block {
+            display: flex;
+            flex-direction: column;
+            width: 45%;
+        }
+
+        .sign-title {
+            margin-bottom: 30px;
+        }
+
+        .sign-name {
+            font-weight: bold;
+            text-decoration: underline;
+            text-transform: uppercase;
+        }
+
+        .sign-position {
+            font-size: 11pt;
+        }
+
+        .sign-block.right {
+            align-items: flex-end;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <div class="rep">Republic of the Philippines</div>
+            <div class="rep">Region IV-A CALABARZON</div>
+            <div class="rep">Province of Cavite</div>
+            <div class="rep">City of Dasmari&ntilde;as</div>
+            <div class="brgy">BARANGAY SAMPALOC IV</div>
+            <div class="sub-brgy">Barangay Hall Annex Zone XI Bautista</div>
+            <div class="office">OFFICE OF THE PUNONG BARANGAY</div>
+        </div>
+
+        <div class="doc-title">CERTIFICATION</div>
+
+        <div class="content">
+            <div class="salutation">To Whom It May Concern:</div>
+
+            <div class="paragraph">
+                The undersigned hereby certify that {{nameUpper}}, {{age}} years of age, a resident of {{address}}, Barangay Sampaloc IV, City of Dasmari&ntilde;as, Cavite.
+            </div>
+
+            <div class="paragraph">
+                The above-named person is personally known to the undersigned to be a person of Good Moral Character, a Law-Abiding Citizen, and is not connected with any subversive organization, has no pending criminal or civil record in this Barangay.
+            </div>
+
+            <div class="paragraph">
+                This further certifies that the above-named person is a First Time Job Seeker.
+            </div>
+
+            <div class="paragraph">
+                Accorded by RA 11261 through the Oath of the Undertaking he/she has signed and executed in the presence of our Barangay Official.
+            </div>
+
+            <div class="paragraph">
+                Issued upon request of the above-named person this {{ordinalIssueDate}} at Barangay Sampaloc IV Dasmari&ntilde;as City, Cavite for whatever legal purpose it may serve.
+            </div>
+        </div>
+
+        <div class="signature-section" style="margin-top: 80px;">
+            <div class="sign-block">
+                <div class="sign-title">Witness:</div>
+                <div class="sign-name">{{secretaryName}}</div>
+                <div class="sign-position">{{secretaryTitle}}</div>
+            </div>
+
+            <div class="sign-block right" style="justify-content: flex-end;">
+                <div class="sign-name">{{captainName}}</div>
+                <div class="sign-position">{{captainTitle}}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="header">
+            <div class="rep">Republic of the Philippines</div>
+            <div class="rep">Region IV-A CALABARZON</div>
+            <div class="rep">Province of Cavite</div>
+            <div class="rep">City of Dasmari&ntilde;as</div>
+            <div class="brgy">BARANGAY SAMPALOC IV</div>
+            <div class="sub-brgy">Barangay Hall Annex Zone XI Bautista</div>
+            <div class="office">OFFICE OF THE PUNONG BARANGAY</div>
+        </div>
+
+        <div class="doc-title">OATH OF UNDERTAKING</div>
+
+        <div class="content">
+            <div class="paragraph" style="text-indent: 0;">
+                I, <strong>{{nameUpper}}</strong>, {{age}} years of age, a resident of {{address}}, Barangay Sampaloc IV, City of Dasmari&ntilde;as, Cavite, for {{yearsOfResidency}} year(s), availing the benefits of Republic Act 11261, otherwise known as the First Time Jobseekers Act of 2019, do hereby declare, agree and undertake to abide and be bound by the following:
+            </div>
+
+            <ul class="oath-list">
+                <li>
+                    <div class="num">1.</div>
+                    <div>That this is the first time that I will actively look for a job, and therefore requesting that a barangay certification be issued in my favor to avail the benefits of the law;</div>
+                </li>
+                <li>
+                    <div class="num">2.</div>
+                    <div>That I am aware that the benefit and privilege/s under the said law shall be valid only for one (1) year from the date that the Barangay Certification is issued;</div>
+                </li>
+                <li>
+                    <div class="num">3.</div>
+                    <div>That I can avail the benefits of the law only once;</div>
+                </li>
+                <li>
+                    <div class="num">4.</div>
+                    <div>That I understand that my personal information shall be included in the Roster/ List of First Time Jobseekers and will not be used any unlawful purposes;</div>
+                </li>
+                <li>
+                    <div class="num">5.</div>
+                    <div>That I will inform and/or report to the Barangay personally, through text or other means, or through my family/relatives once I get employed; and</div>
+                </li>
+                <li>
+                    <div class="num">6.</div>
+                    <div>That I am not a beneficiary of the Job Start Program under R.A No. 10869 and other laws that give similar exemptions for the documents or transactions exampled under R.A No. 11261</div>
+                </li>
+                <li>
+                    <div class="num">7.</div>
+                    <div>That if issued the requested Certification, I will not use the same in any fraud, neither falsify nor help and/or assist in the fabrication of the said certification,</div>
+                </li>
+                <li>
+                    <div class="num">8.</div>
+                    <div>That this undertaking is made solely for the purposes of obtaining a Barangay Certification consistent with the objective of R.A No. 11261 and not for any other purposes.</div>
+                </li>
+                <li>
+                    <div class="num">9.</div>
+                    <div>That I consent to the use of my personal information pursuant to the Data Privacy Act and other applicable laws, rules, and regulations.</div>
+                </li>
+            </ul>
+
+            <div class="paragraph" style="margin-top: 20px;">
+                Issued upon request of the above-named person this {{ordinalIssueDateNoComma}} at Barangay Sampaloc IV, Dasmari&ntilde;as, Cavite and for whatever legal purpose/s it may serve him/her best.
+            </div>
+        </div>
+
+        <div class="signature-section" style="margin-top: 30px;">
+            <div class="sign-block" style="width: 35%">
+                <div class="sign-title">First Time Jobseeker</div>
+                <div class="sign-name">{{nameUpper}}</div>
+                <div class="sign-position">Name & Signature</div>
+            </div>
+            <div class="sign-block" style="width: 25%;">
+                <div class="sign-title">Witness:</div>
+                <div class="sign-name">{{secretaryName}}</div>
+                <div class="sign-position">{{secretaryTitle}}</div>
+            </div>
+
+            <div style="width: 40%">
+                <div class="sign-name" style="margin-top: 30px;">{{captainName}}</div>
+                <div class="sign-position">{{captainTitle}}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

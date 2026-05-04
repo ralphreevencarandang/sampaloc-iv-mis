@@ -11,8 +11,10 @@ type DocumentRequestPdfResident = {
   firstName: string
   middleName: string | null
   lastName: string
+  birthDate: Date
   houseNumber: string
   street: string
+  contactNumber: string | null
 }
 
 export type GeneratedDocumentRequestPdfRecord = {
@@ -109,8 +111,10 @@ export async function generateStoredDocumentRequestPdf(
             firstName: true,
             middleName: true,
             lastName: true,
+            birthDate: true,
             houseNumber: true,
             street: true,
+            contactNumber: true,
           },
         },
       },
