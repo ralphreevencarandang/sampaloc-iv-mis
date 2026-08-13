@@ -24,7 +24,19 @@ export type RegisterResidentResult = {
 
 type SanitizedResidentRegistration = Omit<
   ResidentRegistrationInput,
-  "password" | "confirmPassword" | "middleName" | "birthDate" | "occupation" | "validIDImageName" | "isVoter" | "precinctNumber"
+  | "password"
+  | "confirmPassword"
+  | "middleName"
+  | "birthDate"
+  | "occupation"
+  | "subdivision"
+  | "phase"
+  | "validIDImageName"
+  | "isVoter"
+  | "precinctNumber"
+  | "is4Ps"
+  | "isPwd"
+  | "pwdCondition"
 > & {
   email: string;
   firstName: string;
@@ -32,6 +44,8 @@ type SanitizedResidentRegistration = Omit<
   middleName: string | null;
   street: string;
   houseNumber: string;
+  subdivision: string | null;
+  phase: string | null;
   contactNumber: string;
   occupation: string | null;
   citizenship: string;
@@ -40,6 +54,9 @@ type SanitizedResidentRegistration = Omit<
   password: string;
   isVoter: boolean;
   precinctNumber: string | null;
+  is4Ps: boolean;
+  isPwd: boolean;
+  pwdCondition: string | null;
 };
 
 function getFormValue(formData: FormData, key: string) {
@@ -61,7 +78,7 @@ function validateResidentRegistration(formData: FormData): {
     };
   }
 
-  const input: ResidentRegistrationInput = {
+  const input = {
     email: getFormValue(formData, "email"),
     password: getFormValue(formData, "password"),
     confirmPassword: getFormValue(formData, "confirmPassword"),
@@ -73,11 +90,16 @@ function validateResidentRegistration(formData: FormData): {
     civilStatus: getFormValue(formData, "civilStatus"),
     street: getFormValue(formData, "street"),
     houseNumber: getFormValue(formData, "houseNumber"),
+    subdivision: getFormValue(formData, "subdivision"),
+    phase: getFormValue(formData, "phase"),
     contactNumber: getFormValue(formData, "contactNumber"),
     occupation: getFormValue(formData, "occupation"),
     citizenship: getFormValue(formData, "citizenship"),
     isVoter: getFormValue(formData, "isVoter"),
     precinctNumber: getFormValue(formData, "precinctNumber"),
+    is4Ps: getFormValue(formData, "is4Ps"),
+    isPwd: getFormValue(formData, "isPwd"),
+    pwdCondition: getFormValue(formData, "pwdCondition"),
     validIDImageName: validIDImageFile.name,
   };
 
@@ -111,11 +133,16 @@ function validateResidentRegistration(formData: FormData): {
       civilStatus: data.civilStatus,
       street: data.street,
       houseNumber: data.houseNumber,
+      subdivision: data.subdivision || null,
+      phase: data.phase || null,
       contactNumber: data.contactNumber,
       occupation: data.occupation || null,
       citizenship: data.citizenship,
       isVoter: data.isVoter === "Yes",
       precinctNumber: data.isVoter === "Yes" ? data.precinctNumber : null,
+      is4Ps: data.is4Ps === "Yes",
+      isPwd: data.isPwd === "Yes",
+      pwdCondition: data.isPwd === "Yes" ? data.pwdCondition : null,
       validIDImageFile,
     },
   };
@@ -176,11 +203,16 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
           civilStatus: data.civilStatus,
           street: data.street,
           houseNumber: data.houseNumber,
+          subdivision: data.subdivision,
+          phase: data.phase,
           contactNumber: data.contactNumber,
           occupation: data.occupation,
           citizenship: data.citizenship,
           isVoter: data.isVoter,
           precinctNumber: data.precinctNumber,
+          is4Ps: data.is4Ps,
+          isPwd: data.isPwd,
+          pwdCondition: data.pwdCondition,
           validIDImage: uploadResult.secure_url,
         },
       });
@@ -228,11 +260,16 @@ export async function updateResidentAction(id: string, formData: FormData): Prom
     civilStatus: getFormValue(formData, "civilStatus"),
     street: getFormValue(formData, "street"),
     houseNumber: getFormValue(formData, "houseNumber"),
+    subdivision: getFormValue(formData, "subdivision"),
+    phase: getFormValue(formData, "phase"),
     contactNumber: getFormValue(formData, "contactNumber"),
     occupation: getFormValue(formData, "occupation"),
     citizenship: getFormValue(formData, "citizenship"),
     isVoter: getFormValue(formData, "isVoter"),
     precinctNumber: getFormValue(formData, "precinctNumber"),
+    is4Ps: getFormValue(formData, "is4Ps"),
+    isPwd: getFormValue(formData, "isPwd"),
+    pwdCondition: getFormValue(formData, "pwdCondition"),
   };
 
   const parsed = adminResidentUpdateSchema.safeParse(input);
@@ -264,11 +301,16 @@ export async function updateResidentAction(id: string, formData: FormData): Prom
         civilStatus: data.civilStatus,
         street: data.street,
         houseNumber: data.houseNumber,
+        subdivision: data.subdivision || null,
+        phase: data.phase || null,
         contactNumber: data.contactNumber,
         occupation: data.occupation || null,
         citizenship: data.citizenship,
         isVoter: data.isVoter === "Yes",
         precinctNumber: data.isVoter === "Yes" ? data.precinctNumber || null : null,
+        is4Ps: data.is4Ps === "Yes",
+        isPwd: data.isPwd === "Yes",
+        pwdCondition: data.isPwd === "Yes" ? data.pwdCondition || null : null,
         status: data.status,
       },
     });

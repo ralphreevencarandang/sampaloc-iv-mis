@@ -106,6 +106,8 @@ model Resident {
 
   street      String
   houseNumber String
+  subdivision String?
+  phase       String?
 
   contactNumber String?
   occupation    String?
@@ -113,6 +115,9 @@ model Resident {
 
   isVoter        Boolean @default(false)
   precinctNumber String? @map("precinctNumber")
+  is4Ps          Boolean @default(false)
+  isPwd          Boolean @default(false)
+  pwdCondition   String?
   isArchived     Boolean @default(false)
 
   validIDImage String?

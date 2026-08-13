@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { calculateAge } from "@/lib/resident-demographics";
 
 export async function GET() {
   try {
@@ -26,10 +27,8 @@ export async function GET() {
     let maleCount = 0;
     let femaleCount = 0;
     let minorCount = 0;
-    let teenCount = 0;
     let adultCount = 0;
-
-    const today = new Date();
+    let seniorCount = 0;
 
     for (const r of residents) {
       if (r.isVoter) votersCount++;
@@ -41,17 +40,12 @@ export async function GET() {
         femaleCount++;
       }
 
-      // Calculate age
-      let age = today.getFullYear() - r.birthDate.getFullYear();
-      const m = today.getMonth() - r.birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < r.birthDate.getDate())) {
-        age--;
-      }
+      const age = calculateAge(r.birthDate);
 
-      if (age <= 12) {
+      if (age <= 17) {
         minorCount++;
-      } else if (age >= 13 && age <= 17) {
-        teenCount++;
+      } else if (age >= 60) {
+        seniorCount++;
       } else {
         adultCount++;
       }
@@ -66,9 +60,11 @@ export async function GET() {
       },
       ageGroups: {
         minor: minorCount,
-        teen: teenCount,
         adult: adultCount,
+        senior: seniorCount,
       },
+      totalMinors: minorCount,
+      totalSeniors: seniorCount,
       totalVawc: vawcCount,
       totalBlotters: blotterCount,
       totalDocumentRequests: docRequestCount,

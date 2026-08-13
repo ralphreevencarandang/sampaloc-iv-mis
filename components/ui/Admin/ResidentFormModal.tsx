@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { updateResidentAction } from '@/server/actions/resident.actions'
 import { adminResidentUpdateSchema, type AdminResidentUpdateInput } from '@/validations/auth.validation'
+import { calculateAge, PWD_CONDITIONS } from '@/lib/resident-demographics'
 
 export interface ResidentRecord {
   id: string
@@ -19,11 +20,16 @@ export interface ResidentRecord {
   civilStatus: string
   street: string
   houseNumber: string
+  subdivision: string | null
+  phase: string | null
   contactNumber: string | null
   occupation: string | null
   citizenship: string
   isVoter: boolean
   precinctNumber: string | null
+  is4Ps: boolean
+  isPwd: boolean
+  pwdCondition: string | null
   status: 'PENDING' | 'APPROVED' | 'DECLINED'
 }
 
@@ -62,14 +68,22 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
       civilStatus: '',
       street: '',
       houseNumber: '',
+      subdivision: '',
+      phase: '',
       contactNumber: '',
       occupation: '',
       citizenship: '',
       isVoter: 'No',
       precinctNumber: '',
+      is4Ps: 'No',
+      isPwd: 'No',
+      pwdCondition: '',
     },
   })
   const selectedIsVoter = useWatch({ control, name: 'isVoter' })
+  const selectedIsPwd = useWatch({ control, name: 'isPwd' })
+  const selectedBirthDate = useWatch({ control, name: 'birthDate' })
+  const computedAge = selectedBirthDate ? calculateAge(selectedBirthDate) : null
 
   useEffect(() => {
     if (isOpen) {
@@ -86,11 +100,16 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
           civilStatus: initialData.civilStatus,
           street: initialData.street,
           houseNumber: initialData.houseNumber,
+          subdivision: initialData.subdivision || '',
+          phase: initialData.phase || '',
           contactNumber: initialData.contactNumber || '',
           occupation: initialData.occupation || '',
           citizenship: initialData.citizenship,
           isVoter: initialData.isVoter ? 'Yes' : 'No',
           precinctNumber: initialData.precinctNumber || '',
+          is4Ps: initialData.is4Ps ? 'Yes' : 'No',
+          isPwd: initialData.isPwd ? 'Yes' : 'No',
+          pwdCondition: initialData.isPwd ? initialData.pwdCondition || '' : '',
         })
       } else {
         reset()
@@ -108,6 +127,16 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
       }
     }
   }, [getValues, selectedIsVoter, setValue])
+
+  useEffect(() => {
+    if (selectedIsPwd === 'No') {
+      const currentPwdCondition = getValues('pwdCondition')
+
+      if (currentPwdCondition) {
+        setValue('pwdCondition', '', { shouldDirty: true, shouldValidate: true })
+      }
+    }
+  }, [getValues, selectedIsPwd, setValue])
 
   const mutation = useMutation({
     mutationFn: async (data: AdminResidentUpdateInput) => {
@@ -238,6 +267,11 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
               </label>
               <input {...register('birthDate')} id="birthDate" type="date" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
               {errors.birthDate && <span className="text-xs text-red-500">{errors.birthDate.message}</span>}
+              {computedAge !== null && !Number.isNaN(computedAge) && (
+                <span className={`text-xs ${computedAge > 0 ? 'text-slate-500' : 'text-red-500'}`}>
+                  Age: {computedAge}
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col gap-1">
@@ -263,6 +297,7 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
                 <option value="Widowed">Widowed</option>
                 <option value="Divorced">Divorced</option>
                 <option value="Separated">Separated</option>
+                <option value="Solo Parent">Solo Parent</option>
               </select>
               {errors.civilStatus && <span className="text-xs text-red-500">{errors.civilStatus.message}</span>}
             </div>
@@ -297,6 +332,16 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             </div>
 
             <div className="flex flex-col gap-1">
+              <label htmlFor="subdivision" className="text-sm font-medium text-slate-700">Subdivision</label>
+              <input {...register('subdivision')} id="subdivision" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="phase" className="text-sm font-medium text-slate-700">Phase</label>
+              <input {...register('phase')} id="phase" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
+            </div>
+
+            <div className="flex flex-col gap-1">
               <label htmlFor="isVoter" className="text-sm font-medium text-slate-700">
                 Eligible to Vote<RequiredMark />
               </label>
@@ -323,6 +368,48 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
                 {errors.precinctNumber && <span className="text-xs text-red-500">{errors.precinctNumber.message}</span>}
               </div>
             )}
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="is4Ps" className="text-sm font-medium text-slate-700">
+                4Ps Beneficiary<RequiredMark />
+              </label>
+              <select {...register('is4Ps')} id="is4Ps" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+              {errors.is4Ps && <span className="text-xs text-red-500">{errors.is4Ps.message}</span>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="isPwd" className="text-sm font-medium text-slate-700">
+                PWD<RequiredMark />
+              </label>
+              <select {...register('isPwd')} id="isPwd" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+              {errors.isPwd && <span className="text-xs text-red-500">{errors.isPwd.message}</span>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="pwdCondition" className="text-sm font-medium text-slate-700">
+                PWD Condition{selectedIsPwd === 'Yes' && <RequiredMark />}
+              </label>
+              <select
+                {...register('pwdCondition')}
+                id="pwdCondition"
+                disabled={selectedIsPwd !== 'Yes'}
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 text-slate-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+              >
+                <option value="">Select Condition</option>
+                {PWD_CONDITIONS.map((condition) => (
+                  <option key={condition} value={condition}>
+                    {condition}
+                  </option>
+                ))}
+              </select>
+              {errors.pwdCondition && <span className="text-xs text-red-500">{errors.pwdCondition.message}</span>}
+            </div>
           </div>
 
           <div className="sticky bottom-0 bg-white py-4 border-t border-gray-100 mt-6 flex gap-3">

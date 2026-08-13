@@ -14,6 +14,7 @@ import {
   residentRegistrationSchema,
   type ResidentRegistrationInput,
 } from "@/validations/resident.validation";
+import { PWD_CONDITIONS } from "@/lib/resident-demographics";
 import logo from '@/public/images/sampaloc-logo.png'
 
 
@@ -35,17 +36,22 @@ const initialFormState: RegisterFormState = {
   civilStatus: "",
   street: "",
   houseNumber: "",
+  subdivision: "",
+  phase: "",
   contactNumber: "",
   occupation: "",
   citizenship: "",
   isVoter: "",
   precinctNumber: "",
+  is4Ps: "No",
+  isPwd: "No",
+  pwdCondition: "",
   validIDImageName: "",
   validIDImage: null,
   validIDImagePreview: "",
 };
 
-const civilStatuses = ["Single", "Married", "Widowed", "Divorced", "Separated"];
+const civilStatuses = ["Single", "Married", "Widowed", "Divorced", "Separated", "Solo Parent"];
 const genders = ["Male", "Female"];
 
 function RequiredMark() {
@@ -126,6 +132,14 @@ export default function RegisterPage() {
         };
       }
 
+      if (name === "isPwd" && value === "No") {
+        return {
+          ...current,
+          isPwd: value,
+          pwdCondition: "",
+        };
+      }
+
       return {
         ...current,
         [name]: value,
@@ -137,6 +151,7 @@ export default function RegisterPage() {
       [name]: "",
       submit: "",
       ...(name === "isVoter" && value === "No" ? { precinctNumber: "" } : {}),
+      ...(name === "isPwd" && value === "No" ? { pwdCondition: "" } : {}),
     }));
   };
 
@@ -191,11 +206,16 @@ export default function RegisterPage() {
       civilStatus: formData.civilStatus,
       street: formData.street,
       houseNumber: formData.houseNumber,
+      subdivision: formData.subdivision,
+      phase: formData.phase,
       contactNumber: formData.contactNumber,
       occupation: formData.occupation,
       citizenship: formData.citizenship,
       isVoter: formData.isVoter,
       precinctNumber: formData.precinctNumber,
+      is4Ps: formData.is4Ps,
+      isPwd: formData.isPwd,
+      pwdCondition: formData.pwdCondition,
       validIDImageName: formData.validIDImageName,
     });
 
@@ -237,11 +257,16 @@ export default function RegisterPage() {
     submission.set("civilStatus", formData.civilStatus);
     submission.set("street", formData.street);
     submission.set("houseNumber", formData.houseNumber);
+    submission.set("subdivision", formData.subdivision);
+    submission.set("phase", formData.phase);
     submission.set("contactNumber", formData.contactNumber);
     submission.set("occupation", formData.occupation);
     submission.set("citizenship", formData.citizenship);
     submission.set("isVoter", formData.isVoter);
     submission.set("precinctNumber", formData.precinctNumber);
+    submission.set("is4Ps", formData.is4Ps);
+    submission.set("isPwd", formData.isPwd);
+    submission.set("pwdCondition", formData.pwdCondition);
     submission.set("validIDImage", formData.validIDImage);
 
     await registerMutation.mutateAsync(submission);
@@ -283,7 +308,7 @@ export default function RegisterPage() {
             <h2 className="mb-4 border-b-2 border-primary-600 pb-2 text-lg font-semibold text-gray-900">
               Account Details
             </h2>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 ">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Email Address<RequiredMark />
@@ -323,7 +348,7 @@ export default function RegisterPage() {
                 {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
               </div>
 
-              <div className="md:col-span-2">
+              <div className="">
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Confirm Password<RequiredMark />
                 </label>
@@ -406,6 +431,11 @@ export default function RegisterPage() {
                   }`}
                 />
                 {errors.birthDate && <p className="mt-1 text-sm text-red-500">{errors.birthDate}</p>}
+                {/* {computedAge !== null && !Number.isNaN(computedAge) && (
+                  <p className={`mt-1 text-xs ${computedAge > 0 ? "text-gray-500" : "text-red-500"}`}>
+                    Age: {computedAge}
+                  </p>
+                )} */}
               </div>
 
               <div>
@@ -493,6 +523,30 @@ export default function RegisterPage() {
                 {errors.houseNumber && (
                   <p className="mt-1 text-sm text-red-500">{errors.houseNumber}</p>
                 )}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Subdivision</label>
+                <input
+                  type="text"
+                  name="subdivision"
+                  value={formData.subdivision}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="e.g., Sampaloc Village"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">Phase</label>
+                <input
+                  type="text"
+                  name="phase"
+                  value={formData.phase}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="e.g., Phase 2"
+                />
               </div>
 
               <div>
@@ -587,6 +641,71 @@ export default function RegisterPage() {
                   )}
                 </div>
               )}
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  4Ps Beneficiary<RequiredMark />
+                </label>
+                <select
+                  name="is4Ps"
+                  value={formData.is4Ps}
+                  onChange={handleInputChange}
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                    errors.is4Ps ? "border-red-500" : "border-gray-300"
+                  }`}
+                >
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+                {errors.is4Ps && (
+                  <p className="mt-1 text-sm text-red-500">{errors.is4Ps}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  PWD<RequiredMark />
+                </label>
+                <select
+                  name="isPwd"
+                  value={formData.isPwd}
+                  onChange={handleInputChange}
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                    errors.isPwd ? "border-red-500" : "border-gray-300"
+                  }`}
+                >
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+                {errors.isPwd && (
+                  <p className="mt-1 text-sm text-red-500">{errors.isPwd}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  PWD Condition{formData.isPwd === "Yes" && <RequiredMark />}
+                </label>
+                <select
+                  name="pwdCondition"
+                  value={formData.pwdCondition}
+                  onChange={handleInputChange}
+                  disabled={formData.isPwd !== "Yes"}
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 ${
+                    errors.pwdCondition ? "border-red-500" : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Select Condition</option>
+                  {PWD_CONDITIONS.map((condition) => (
+                    <option key={condition} value={condition}>
+                      {condition}
+                    </option>
+                  ))}
+                </select>
+                {errors.pwdCondition && (
+                  <p className="mt-1 text-sm text-red-500">{errors.pwdCondition}</p>
+                )}
+              </div>
             </div>
           </section>
 

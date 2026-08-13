@@ -33,11 +33,16 @@ type ResidentDetail = {
   civilStatus: string
   street: string
   houseNumber: string
+  subdivision: string | null
+  phase: string | null
   contactNumber: string | null
   occupation: string | null
   citizenship: string
   isVoter: boolean
   precinctNumber: string | null
+  is4Ps: boolean
+  isPwd: boolean
+  pwdCondition: string | null
   validIDImage: string | null
   status: ResidentStatus
   createdAt: string
@@ -86,6 +91,10 @@ function statusIcon(status: ResidentStatus) {
     default:
       return <Calendar className="h-4 w-4" />
   }
+}
+
+function formatResidentAddress(resident: Pick<ResidentDetail, 'houseNumber' | 'street' | 'subdivision' | 'phase'>) {
+  return [resident.houseNumber, resident.street, resident.subdivision, resident.phase].filter(Boolean).join(', ')
 }
 
 function InfoTile({
@@ -321,12 +330,18 @@ export default function ResidentViewPage() {
               />
               <InfoTile label="Gender" value={resident.gender} />
               <InfoTile label="Civil Status" value={resident.civilStatus} />
-              <InfoTile label="Citizenship" value={resident.citizenship} />
-              <InfoTile
-                label="Occupation"
-                value={resident.occupation || 'Not provided'}
-              />
-            </div>
+                <InfoTile label="Citizenship" value={resident.citizenship} />
+                <InfoTile
+                  label="Occupation"
+                  value={resident.occupation || 'Not provided'}
+                />
+                <InfoTile label="4Ps Beneficiary" value={resident.is4Ps ? 'Yes' : 'No'} />
+                <InfoTile label="PWD" value={resident.isPwd ? 'Yes' : 'No'} />
+                <InfoTile
+                  label="PWD Condition"
+                  value={resident.isPwd ? resident.pwdCondition || 'Not provided' : 'Not applicable'}
+                />
+              </div>
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -337,13 +352,15 @@ export default function ResidentViewPage() {
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <InfoTile label="House Number / Unit" value={resident.houseNumber} />
               <InfoTile label="Street" value={resident.street} />
+              <InfoTile label="Subdivision" value={resident.subdivision || 'Not provided'} />
+              <InfoTile label="Phase" value={resident.phase || 'Not provided'} />
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 md:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Complete Address
                 </p>
                 <div className="mt-2 flex items-start gap-3 text-sm font-medium text-slate-900">
                   <House className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
-                  <span>{`${resident.houseNumber}, ${resident.street}`}</span>
+                  <span>{formatResidentAddress(resident)}</span>
                 </div>
               </div>
             </div>

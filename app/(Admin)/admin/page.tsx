@@ -38,9 +38,11 @@ type DashboardStats = {
   };
   ageGroups: {
     minor: number;
-    teen: number;
     adult: number;
+    senior: number;
   };
+  totalMinors: number;
+  totalSeniors: number;
   totalVawc: number;
   totalBlotters: number;
   totalDocumentRequests: number;
@@ -49,7 +51,7 @@ type DashboardStats = {
 };
 
 const COLORS = ['#3b82f6', '#ec4899']; // Blue, Pink for gender
-const BAR_COLORS = ['#fbbf24', '#f97316', '#8b5cf6']; // Minor, Teen, Adult colors
+const BAR_COLORS = ['#fbbf24', '#8b5cf6', '#14b8a6']; // Minor, Adult, Senior colors
 
 function SkeletonLoader() {
   return (
@@ -65,7 +67,7 @@ function SkeletonLoader() {
       
       {/* Stats Grid Skeleton */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
-        {Array.from({ length: 7 }).map((_, i) => (
+        {Array.from({ length: 9 }).map((_, i) => (
           <div key={i} className="h-[96px] rounded-[24px] bg-slate-200" />
         ))}
       </div>
@@ -119,6 +121,8 @@ export default function AdminDashboard() {
   const kpis = [
     { label: 'Total Residents', value: data?.totalResidents || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Registered Voters', value: data?.totalVoters || 0, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Senior Citizens', value: data?.totalSeniors || 0, icon: UserCheck, color: 'text-teal-600', bg: 'bg-teal-50' },
+    { label: 'Minors', value: data?.totalMinors || 0, icon: Users, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'VAWC Cases', value: data?.totalVawc || 0, icon: ShieldAlert, color: 'text-rose-600', bg: 'bg-rose-50' },
     { label: 'Blotter Records', value: data?.totalBlotters || 0, icon: Scale, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'Doc Requests', value: data?.totalDocumentRequests || 0, icon: FileText, color: 'text-purple-600', bg: 'bg-purple-50' },
@@ -132,9 +136,9 @@ export default function AdminDashboard() {
   ];
 
   const ageData = [
-    { name: 'Minor (0-12)', count: data?.ageGroups.minor || 0 },
-    { name: 'Teen (13-17)', count: data?.ageGroups.teen || 0 },
-    { name: 'Adult (18+)', count: data?.ageGroups.adult || 0 },
+    { name: 'Minor (0-17)', count: data?.ageGroups.minor || 0 },
+    { name: 'Adult (18-59)', count: data?.ageGroups.adult || 0 },
+    { name: 'Senior (60+)', count: data?.ageGroups.senior || 0 },
   ];
 
   return (
@@ -183,7 +187,7 @@ export default function AdminDashboard() {
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 >
                    {genderData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -191,7 +195,7 @@ export default function AdminDashboard() {
                 </Pie>
                 <Tooltip 
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: any) => [value, 'Residents']}
+                  formatter={(value: number | string) => [value, 'Residents']}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
               </PieChart>
@@ -221,7 +225,7 @@ export default function AdminDashboard() {
                 <Tooltip
                   cursor={{ fill: '#f1f5f9' }}
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: any) => [value, 'Residents']}
+                  formatter={(value: number | string) => [value, 'Residents']}
                 />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
                   {ageData.map((entry, index) => (

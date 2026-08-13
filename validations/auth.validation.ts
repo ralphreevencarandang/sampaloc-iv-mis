@@ -1,7 +1,12 @@
 import { z } from "zod";
+import { calculateAge, PWD_CONDITIONS } from "@/lib/resident-demographics";
 
 const requiredString = (label: string) =>
   z.string().trim().min(1, `${label} is required.`);
+
+const yesNoSchema = z.enum(["Yes", "No"], {
+  message: "Please select Yes or No.",
+}).or(z.literal("").refine(() => false, { message: "Please select Yes or No." }));
 
 const baseResidentFields = {
   firstName: requiredString("First name"),
@@ -12,23 +17,35 @@ const baseResidentFields = {
     .min(1, "Birth date is required.")
     .refine((value) => !Number.isNaN(new Date(value).getTime()), {
       message: "Birth date is invalid.",
+    })
+    .refine((value) => calculateAge(value) > 0, {
+      message: "Age must be greater than 0.",
     }),
   gender: requiredString("Gender"),
   civilStatus: requiredString("Civil status"),
   street: requiredString("Street"),
   houseNumber: requiredString("House number"),
+  subdivision: z.string().trim().optional().default(""),
+  phase: z.string().trim().optional().default(""),
   contactNumber: requiredString("Contact number"),
   occupation: z.string().trim().optional().default(""),
   citizenship: requiredString("Citizenship"),
-  isVoter: requiredString("Eligible to Vote"),
+  isVoter: yesNoSchema,
   precinctNumber: z.string().trim().optional().default(""),
+  is4Ps: yesNoSchema,
+  isPwd: yesNoSchema,
+  pwdCondition: z.string().trim().optional().default(""),
 };
 
-export const adminResidentUpdateSchema = z.object({
-  email: z.email("Enter a valid email address.").trim().toLowerCase(),
-  status: z.enum(["PENDING", "APPROVED", "DECLINED"]),
-  ...baseResidentFields,
-}).superRefine((value, ctx) => {
+function validateResidentDependencies(
+  value: {
+    isVoter: string;
+    precinctNumber: string;
+    isPwd: string;
+    pwdCondition: string;
+  },
+  ctx: z.RefinementCtx
+) {
   if (value.isVoter === "Yes" && !value.precinctNumber.trim()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -36,6 +53,41 @@ export const adminResidentUpdateSchema = z.object({
       message: "Precinct number is required when eligible to vote.",
     });
   }
+
+  if (value.isPwd === "Yes") {
+    if (!value.pwdCondition.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["pwdCondition"],
+        message: "PWD condition is required when PWD is Yes.",
+      });
+      return;
+    }
+
+    if (!PWD_CONDITIONS.includes(value.pwdCondition as (typeof PWD_CONDITIONS)[number])) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["pwdCondition"],
+        message: "Select a valid PWD condition.",
+      });
+    }
+  }
+
+  if (value.isPwd === "No" && value.pwdCondition.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["pwdCondition"],
+      message: "PWD condition must be empty when PWD is No.",
+    });
+  }
+}
+
+export const adminResidentUpdateSchema = z.object({
+  email: z.email("Enter a valid email address.").trim().toLowerCase(),
+  status: z.enum(["PENDING", "APPROVED", "DECLINED"]),
+  ...baseResidentFields,
+}).superRefine((value, ctx) => {
+  validateResidentDependencies(value, ctx);
 });
 
 export type AdminResidentUpdateInput = z.input<typeof adminResidentUpdateSchema>;
@@ -58,13 +110,7 @@ export const residentRegistrationSchema = z
     path: ["confirmPassword"],
   })
   .superRefine((value, ctx) => {
-    if (value.isVoter === "Yes" && !value.precinctNumber.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["precinctNumber"],
-        message: "Precinct number is required when eligible to vote.",
-      });
-    }
+    validateResidentDependencies(value, ctx);
   });
 
 export type ResidentRegistrationInput = z.infer<

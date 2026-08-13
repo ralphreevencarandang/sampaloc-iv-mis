@@ -10,6 +10,7 @@ import {
   archiveResidentAction,
   unarchiveResidentAction,
 } from '@/server/actions/resident.actions'
+import { calculateAge, getDemographicGroup } from '@/lib/resident-demographics'
 
 export interface ResidentRecord {
   id: string
@@ -22,11 +23,16 @@ export interface ResidentRecord {
   civilStatus: string
   street: string
   houseNumber: string
+  subdivision: string | null
+  phase: string | null
   contactNumber: string | null
   occupation: string | null
   citizenship: string
   isVoter: boolean
   precinctNumber: string | null
+  is4Ps: boolean
+  isPwd: boolean
+  pwdCondition: string | null
   isArchived: boolean
   status: 'PENDING' | 'APPROVED' | 'DECLINED'
   createdAt?: string
@@ -49,6 +55,11 @@ async function fetchResidents(): Promise<ResidentRecord[]> {
 }
 
 const ITEMS_PER_PAGE = 10
+const civilStatusOptions = ['Single', 'Married', 'Widowed', 'Divorced', 'Separated', 'Solo Parent']
+
+function formatResidentAddress(resident: Pick<ResidentRecord, 'houseNumber' | 'street' | 'subdivision' | 'phase'>) {
+  return [resident.houseNumber, resident.street, resident.subdivision, resident.phase].filter(Boolean).join(', ')
+}
 
 export default function ResidentPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -56,6 +67,12 @@ export default function ResidentPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedResident, setSelectedResident] = useState<ResidentRecord | null>(null)
   const [actionError, setActionError] = useState('')
+  const [demographicFilter, setDemographicFilter] = useState('All')
+  const [voterFilter, setVoterFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState('All')
+  const [fourPsFilter, setFourPsFilter] = useState('All')
+  const [pwdFilter, setPwdFilter] = useState('All')
+  const [civilStatusFilter, setCivilStatusFilter] = useState('All')
   const queryClient = useQueryClient()
 
   const {
@@ -71,8 +88,16 @@ export default function ResidentPage() {
   const filteredResidents = useMemo(() => {
     return residents.filter((resident) => {
       const fullName = `${resident.firstName} ${resident.lastName}`.toLowerCase()
-      const address = `${resident.houseNumber} ${resident.street}`.toLowerCase()
+      const address = formatResidentAddress(resident).toLowerCase()
       const search = searchTerm.toLowerCase()
+      const demographic = getDemographicGroup(resident.birthDate)
+
+      if (demographicFilter !== 'All' && demographic !== demographicFilter) return false
+      if (voterFilter !== 'All' && (resident.isVoter ? 'Yes' : 'No') !== voterFilter) return false
+      if (statusFilter !== 'All' && resident.status !== statusFilter) return false
+      if (fourPsFilter !== 'All' && (resident.is4Ps ? 'Yes' : 'No') !== fourPsFilter) return false
+      if (pwdFilter !== 'All' && (resident.isPwd ? 'Yes' : 'No') !== pwdFilter) return false
+      if (civilStatusFilter !== 'All' && resident.civilStatus !== civilStatusFilter) return false
 
       return (
         fullName.includes(search) ||
@@ -80,7 +105,16 @@ export default function ResidentPage() {
         address.includes(search)
       )
     })
-  }, [searchTerm, residents])
+  }, [
+    civilStatusFilter,
+    demographicFilter,
+    fourPsFilter,
+    pwdFilter,
+    residents,
+    searchTerm,
+    statusFilter,
+    voterFilter,
+  ])
 
   const totalPages = Math.ceil(filteredResidents.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -114,17 +148,22 @@ export default function ResidentPage() {
     }
   }
 
-  const computeAge = (birthDate: string) => {
-    const today = new Date()
-    const birth = new Date(birthDate)
-    let age = today.getFullYear() - birth.getFullYear()
-    const m = today.getMonth() - birth.getMonth()
-
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-      age--
+  const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>) => {
+    return (event: React.ChangeEvent<HTMLSelectElement>) => {
+      setter(event.target.value)
+      setCurrentPage(1)
     }
+  }
 
-    return age
+  const resetFilters = () => {
+    setSearchTerm('')
+    setDemographicFilter('All')
+    setVoterFilter('All')
+    setStatusFilter('All')
+    setFourPsFilter('All')
+    setPwdFilter('All')
+    setCivilStatusFilter('All')
+    setCurrentPage(1)
   }
 
   const archiveMutation = useMutation({
@@ -186,6 +225,58 @@ export default function ResidentPage() {
             className="flex-1 bg-transparent text-slate-700 outline-none placeholder-slate-500"
           />
         </div>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+          
+          <div>
+            
+            <select value={demographicFilter} onChange={handleFilterChange(setDemographicFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+              <option value="All">All Demographics</option>
+              <option value="Minor">Minor</option>
+              <option value="Adult">Adult</option>
+              <option value="Senior">Senior</option>
+            
+            </select>
+
+          </div>
+          
+
+          <select value={voterFilter} onChange={handleFilterChange(setVoterFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="All">All Voters</option>
+            <option value="Yes">Voter: Yes</option>
+            <option value="No">Voter: No</option>
+          </select>
+
+          <select value={statusFilter} onChange={handleFilterChange(setStatusFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="All">All Statuses</option>
+            <option value="APPROVED">Approved</option>
+            <option value="PENDING">Pending</option>
+            <option value="DECLINED">Declined</option>
+          </select>
+          <select value={fourPsFilter} onChange={handleFilterChange(setFourPsFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="All">All 4Ps</option>
+            <option value="Yes">4Ps: Yes</option>
+            <option value="No">4Ps: No</option>
+          </select>
+          <select value={pwdFilter} onChange={handleFilterChange(setPwdFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="All">All PWD</option>
+            <option value="Yes">PWD: Yes</option>
+            <option value="No">PWD: No</option>
+          </select>
+          <select value={civilStatusFilter} onChange={handleFilterChange(setCivilStatusFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="All">All Civil Statuses</option>
+            {civilStatusOptions.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset Filters
+          </button>
+        </div>
       </div>
 
       {actionError && (
@@ -213,6 +304,8 @@ export default function ResidentPage() {
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Gender</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Civil Status</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Voters</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">4Ps</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">PWD</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Address</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Status</th>
                     <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
@@ -222,8 +315,8 @@ export default function ResidentPage() {
                   {paginatedResidents.length > 0 ? (
                     paginatedResidents.map((resident) => {
                       const fullName = `${resident.firstName} ${resident.middleName ? `${resident.middleName} ` : ''}${resident.lastName}`
-                      const address = `${resident.houseNumber} ${resident.street}`
-                      const age = computeAge(resident.birthDate)
+                      const address = formatResidentAddress(resident)
+                      const age = calculateAge(resident.birthDate)
 
                       return (
                         <tr key={resident.id} className="border-b border-gray-100 transition-colors hover:bg-slate-50">
@@ -234,14 +327,14 @@ export default function ResidentPage() {
                           <td className="px-6 py-4 text-sm text-slate-600">{resident.civilStatus}</td>
                           <td className="px-6 py-4 text-sm">
                             <span
-                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                                resident.isVoter
-                                  ? 'border-primary-200 bg-primary-50 text-primary-700'
-                                  : 'border-slate-200 bg-slate-50 text-slate-700'
-                              }`}
+                              className={`inline-flex items-center rounded-full  px-2.5 py-1 text-xs  `}
                             >
                               {resident.isVoter ? 'Yes' : 'No'}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{resident.is4Ps ? 'Yes' : 'No'}</td>
+                          <td className="px-6 py-4 text-sm text-slate-600">
+                            {resident.isPwd ? resident.pwdCondition || 'Yes' : 'No'}
                           </td>
                           <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600">{address}</td>
                           <td className="px-6 py-4 text-sm">
@@ -289,7 +382,7 @@ export default function ResidentPage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={9} className="px-6 py-12 text-center">
+                      <td colSpan={11} className="px-6 py-12 text-center">
                         <p className="font-medium text-slate-600">
                           No active residents found matching your criteria
                         </p>

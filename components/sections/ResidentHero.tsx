@@ -41,7 +41,7 @@ const ResidentHero = () => {
             </div>
 
             {/* Quick stats / trust indicators */}
-            <div className="flex items-center gap-6 mt-8 pt-8 border-t border-gray-100 w-full max-w-md">
+            {/* <div className="flex items-center gap-6 mt-8 pt-8 border-t border-gray-100 w-full max-w-md">
               <div className="flex flex-col">
                 <span className="text-2xl font-bold text-slate-900">10k+</span>
                 <span className="text-sm text-slate-500 font-medium">Resident</span>
@@ -56,7 +56,7 @@ const ResidentHero = () => {
                 <span className="text-2xl font-bold text-slate-900">100%</span>
                 <span className="text-sm text-slate-500 font-medium">Tapat</span>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Right Side: Image/Illustration */}
