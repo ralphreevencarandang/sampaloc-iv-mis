@@ -23,6 +23,7 @@ import { fetchResidentDocumentRequests } from "@/lib/document-requests-api";
 import {
   createResidentDocumentRequestAction,
 } from "@/server/actions/document.actions";
+import type { DocumentSettingRecord } from "@/server/actions/document-settings.actions";
 
 export type RequestResidentProfile = {
   id: string;
@@ -98,7 +99,6 @@ const profileFieldMap: Record<
     { key: "citizenship", label: "Citizenship", getValue: (profile) => profile.citizenship },
     { key: "birthdate", label: "Birthdate", getValue: (profile) => formatDate(profile.birthDate) },
     { key: "address", label: "Address", getValue: getFullAddress },
-    { key: "civilStatus", label: "Civil Status", getValue: (profile) => profile.civilStatus },
   ],
   "barangay-id": [
     { key: "name", label: "Name", getValue: getFullName },
@@ -346,9 +346,11 @@ function TextAreaField({
 export default function RequestDocumentsClient({
   residentProfile,
   initialError,
+  initialDocuments = [],
 }: {
   residentProfile: RequestResidentProfile | null;
   initialError?: string;
+  initialDocuments?: DocumentSettingRecord[];
 }) {
   const queryClient = useQueryClient();
   const [isBootLoading, setIsBootLoading] = useState(true);
@@ -359,14 +361,47 @@ export default function RequestDocumentsClient({
   const [submissionMessage, setSubmissionMessage] = useState("");
   const [submissionError, setSubmissionError] = useState("");
 
+  const documentsQuery = useQuery({
+    queryKey: ["document-types-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/documents/types");
+      if (!res.ok) throw new Error("Failed to fetch document details");
+      return (await res.json()) as DocumentSettingRecord[];
+    },
+    initialData: initialDocuments,
+    staleTime: 10 * 1000,
+  });
+
+  const dbDocs = documentsQuery.data ?? initialDocuments;
+
+  const dbDocMap = useMemo(() => {
+    const map = new Map<string, DocumentSettingRecord>();
+    for (const d of dbDocs) {
+      map.set(d.documentTypeId, d);
+    }
+    return map;
+  }, [dbDocs]);
+
+  const dynamicDocumentCatalog = useMemo(() => {
+    return documentTypeCatalog.map((doc) => {
+      const dbDoc = dbDocMap.get(doc.id);
+      return {
+        ...doc,
+        label: dbDoc?.name || doc.label,
+        description: dbDoc?.description !== undefined && dbDoc.description !== null ? dbDoc.description : doc.description,
+        fee: dbDoc?.price !== undefined ? dbDoc.price : doc.fee,
+      };
+    });
+  }, [dbDocMap]);
+
   useEffect(() => {
     const timer = window.setTimeout(() => setIsBootLoading(false), 450);
     return () => window.clearTimeout(timer);
   }, []);
 
   const selectedDocument = useMemo(
-    () => documentTypeCatalog.find((item) => item.id === selectedDocumentId) ?? documentTypeCatalog[0],
-    [selectedDocumentId]
+    () => dynamicDocumentCatalog.find((item) => item.id === selectedDocumentId) ?? dynamicDocumentCatalog[0],
+    [dynamicDocumentCatalog, selectedDocumentId]
   );
 
   const profileFields = useMemo(() => {
@@ -547,7 +582,7 @@ export default function RequestDocumentsClient({
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {documentTypeCatalog.map((document) => {
+                {dynamicDocumentCatalog.map((document) => {
                   const isSelected = document.id === selectedDocumentId;
 
                   return (

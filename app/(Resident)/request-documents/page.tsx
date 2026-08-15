@@ -1,5 +1,9 @@
 import prisma from "@/lib/prisma";
 import { requireResidentSession } from "@/lib/resident-session";
+import {
+  getAllDocumentsWithPricingAction,
+  type DocumentSettingRecord,
+} from "@/server/actions/document-settings.actions";
 import RequestDocumentsClient, {
   type RequestResidentProfile,
 } from "./request-documents-client";
@@ -37,9 +41,15 @@ export default async function RequestDocumentsPage() {
   const residentSession = await requireResidentSession();
   let residentProfile: RequestResidentProfile | null = null;
   let initialError: string | undefined;
+  let initialDocuments: DocumentSettingRecord[] = [];
 
   try {
-    residentProfile = await getResidentProfile(residentSession.id);
+    const [profile, docs] = await Promise.all([
+      getResidentProfile(residentSession.id),
+      getAllDocumentsWithPricingAction(),
+    ]);
+    residentProfile = profile;
+    initialDocuments = docs;
   } catch (error) {
     initialError =
       error instanceof Error
@@ -47,5 +57,13 @@ export default async function RequestDocumentsPage() {
         : "Failed to load resident details for document requests.";
   }
 
-  return <RequestDocumentsClient residentProfile={residentProfile} initialError={initialError} />;
+  return (
+    <RequestDocumentsClient
+      residentProfile={residentProfile}
+      initialError={initialError}
+      initialDocuments={initialDocuments}
+    />
+  );
 }
+
+

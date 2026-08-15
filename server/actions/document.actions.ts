@@ -87,7 +87,14 @@ export async function createResidentDocumentRequestAction(
   try {
     const relevantDetails = pickRelevantDocumentRequestData(parsed.data)
     const requestedCopies = Number(parsed.data.requestedCopies)
-    const totalAmount = definition.fee * requestedCopies
+    
+    // Fetch dynamic price from database with fallback to catalog fee
+    const documentSetting = await prisma.document.findUnique({
+      where: { documentTypeId: definition.id },
+      select: { price: true },
+    })
+    const unitPrice = documentSetting?.price !== undefined ? documentSetting.price : definition.fee
+    const totalAmount = Math.round(unitPrice * requestedCopies)
 
     const createdRequest = await prisma.documentRequest.create({
       data: {

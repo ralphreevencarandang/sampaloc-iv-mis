@@ -253,6 +253,55 @@ async function main() {
     }
     console.log(`Seeded ${officialsData.length} officials successfully.`);
 
+    console.log("Seeding Default Documents...");
+    const documentsData = [
+        {
+            documentTypeId: "clearance",
+            name: "Barangay Clearance",
+            description: "For employment, business permits, travel, or similar official transactions.",
+            price: 75,
+            isActive: true,
+        },
+        {
+            documentTypeId: "indigency",
+            name: "Certificate of Indigency",
+            description: "For medical, educational, burial, or social assistance applications.",
+            price: 50,
+            isActive: true,
+        },
+        {
+            documentTypeId: "residency",
+            name: "Certificate of Residency",
+            description: "Proof of current address and duration of stay in Sampaloc IV.",
+            price: 50,
+            isActive: true,
+        },
+        {
+            documentTypeId: "cedula",
+            name: "Cedula Request",
+            description: "Personal community tax certificate request details.",
+            price: 90,
+            isActive: true,
+        },
+        {
+            documentTypeId: "first-time-job-seeker",
+            name: "First Time Job Seeker Certificate",
+            description: "For first-time applicants requesting employment-related barangay certification.",
+            price: 0,
+            isActive: true,
+        },
+    ];
+
+    for (const doc of documentsData) {
+        await prisma.document.upsert({
+            where: { documentTypeId: doc.documentTypeId },
+            update: {},
+            create: doc,
+        });
+    }
+    console.log(`Seeded ${documentsData.length} default documents successfully.`);
+
+
 }
 main()
     .catch((e) => {

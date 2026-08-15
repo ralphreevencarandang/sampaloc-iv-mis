@@ -48,6 +48,7 @@ const AdminSidebar = () => {
   });
 
   const documentTypes = [
+    { label: 'Manage Documents', href: '/admin/documents/manage' },
     { label: 'Clearance', href: '/admin/documents/clearance' },
     { label: 'Indigency', href: '/admin/documents/indigency' },
     { label: 'Residency', href: '/admin/documents/residency' },
