@@ -6,9 +6,12 @@ import Link from 'next/link'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import ResidentFormModal from '@/components/ui/Admin/ResidentFormModal'
+import BulkActionBar from '@/components/ui/Admin/BulkActionBar'
+import BulkConfirmModal from '@/components/ui/Admin/BulkConfirmModal'
 import {
   archiveResidentAction,
   unarchiveResidentAction,
+  bulkArchiveResidentsAction,
 } from '@/server/actions/resident.actions'
 import { calculateAge, getDemographicGroup } from '@/lib/resident-demographics'
 
@@ -67,6 +70,9 @@ export default function ResidentPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedResident, setSelectedResident] = useState<ResidentRecord | null>(null)
   const [actionError, setActionError] = useState('')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
+
   const [demographicFilter, setDemographicFilter] = useState('All')
   const [voterFilter, setVoterFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -133,8 +139,6 @@ export default function ResidentPage() {
     }
   }, [currentPage, totalPages])
 
-
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED':
@@ -191,6 +195,31 @@ export default function ResidentPage() {
     },
   })
 
+  const bulkArchiveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      return bulkArchiveResidentsAction(ids)
+    },
+    onSuccess: (result) => {
+      if (!result.success) {
+        setActionError(result.message)
+        toast.error(result.message)
+        return
+      }
+
+      setActionError('')
+      toast.success(result.message)
+      setSelectedIds([])
+      setIsBulkModalOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['residents'] })
+      void queryClient.invalidateQueries({ queryKey: ['archivedData', 'residents'] })
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to bulk archive residents.'
+      setActionError(message)
+      toast.error(message)
+    },
+  })
+
   const handleArchiveToggle = (resident: ResidentRecord) => {
     setActionError('')
     archiveMutation.mutate({
@@ -198,6 +227,32 @@ export default function ResidentPage() {
       archived: !resident.isArchived,
     })
   }
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
+  }
+
+  const handleSelectAllCurrentPage = () => {
+    const pageIds = paginatedResidents.map((r) => r.id)
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id))
+
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)))
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])))
+    }
+  }
+
+  const handleSelectAllFiltered = () => {
+    const allIds = filteredResidents.map((r) => r.id)
+    setSelectedIds(allIds)
+  }
+
+  const isCurrentPageAllSelected =
+    paginatedResidents.length > 0 &&
+    paginatedResidents.every((r) => selectedIds.includes(r.id))
 
   return (
     <div className="space-y-6">
@@ -210,6 +265,19 @@ export default function ResidentPage() {
         <div className="flex flex-wrap gap-3">
         </div>
       </div>
+
+      {/* Floating Bulk Action Bar */}
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={filteredResidents.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={handleSelectAllFiltered}
+        isAllSelected={selectedIds.length === filteredResidents.length}
+        onBulkAction={() => setIsBulkModalOpen(true)}
+        actionType="archive"
+        actionLabel="Bulk Archive"
+        isLoading={bulkArchiveMutation.isPending}
+      />
 
       <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-slate-50 px-4 py-2.5">
@@ -226,43 +294,62 @@ export default function ResidentPage() {
           />
         </div>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
-          
           <div>
-            
-            <select value={demographicFilter} onChange={handleFilterChange(setDemographicFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select
+              value={demographicFilter}
+              onChange={handleFilterChange(setDemographicFilter)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
               <option value="All">All Demographics</option>
               <option value="Minor">Minor</option>
               <option value="Adult">Adult</option>
               <option value="Senior">Senior</option>
-            
             </select>
-
           </div>
-          
 
-          <select value={voterFilter} onChange={handleFilterChange(setVoterFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <select
+            value={voterFilter}
+            onChange={handleFilterChange(setVoterFilter)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
             <option value="All">All Voters</option>
             <option value="Yes">Voter: Yes</option>
             <option value="No">Voter: No</option>
           </select>
 
-          <select value={statusFilter} onChange={handleFilterChange(setStatusFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <select
+            value={statusFilter}
+            onChange={handleFilterChange(setStatusFilter)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
             <option value="All">All Statuses</option>
             <option value="APPROVED">Approved</option>
             <option value="PENDING">Pending</option>
             <option value="DECLINED">Declined</option>
           </select>
-          <select value={fourPsFilter} onChange={handleFilterChange(setFourPsFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <select
+            value={fourPsFilter}
+            onChange={handleFilterChange(setFourPsFilter)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
             <option value="All">All 4Ps</option>
             <option value="Yes">4Ps: Yes</option>
             <option value="No">4Ps: No</option>
           </select>
-          <select value={pwdFilter} onChange={handleFilterChange(setPwdFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <select
+            value={pwdFilter}
+            onChange={handleFilterChange(setPwdFilter)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
             <option value="All">All PWD</option>
             <option value="Yes">PWD: Yes</option>
             <option value="No">PWD: No</option>
           </select>
-          <select value={civilStatusFilter} onChange={handleFilterChange(setCivilStatusFilter)} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <select
+            value={civilStatusFilter}
+            onChange={handleFilterChange(setCivilStatusFilter)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
             <option value="All">All Civil Statuses</option>
             {civilStatusOptions.map((status) => (
               <option key={status} value={status}>{status}</option>
@@ -298,6 +385,15 @@ export default function ResidentPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-slate-50">
+                    <th className="w-12 px-4 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isCurrentPageAllSelected}
+                        onChange={handleSelectAllCurrentPage}
+                        aria-label="Select all residents on this page"
+                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                    </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Name</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Email</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Age</th>
@@ -317,9 +413,24 @@ export default function ResidentPage() {
                       const fullName = `${resident.firstName} ${resident.middleName ? `${resident.middleName} ` : ''}${resident.lastName}`
                       const address = formatResidentAddress(resident)
                       const age = calculateAge(resident.birthDate)
+                      const isSelected = selectedIds.includes(resident.id)
 
                       return (
-                        <tr key={resident.id} className="border-b border-gray-100 transition-colors hover:bg-slate-50">
+                        <tr
+                          key={resident.id}
+                          className={`border-b border-gray-100 transition-colors ${
+                            isSelected ? 'bg-primary-50/60' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <td className="w-12 px-4 py-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleSelectRow(resident.id)}
+                              aria-label={`Select ${fullName}`}
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            />
+                          </td>
                           <td className="px-6 py-4 text-sm font-medium text-slate-900">{fullName}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{resident.email}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{age}</td>
@@ -327,7 +438,7 @@ export default function ResidentPage() {
                           <td className="px-6 py-4 text-sm text-slate-600">{resident.civilStatus}</td>
                           <td className="px-6 py-4 text-sm">
                             <span
-                              className={`inline-flex items-center rounded-full  px-2.5 py-1 text-xs  `}
+                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs`}
                             >
                               {resident.isVoter ? 'Yes' : 'No'}
                             </span>
@@ -382,7 +493,7 @@ export default function ResidentPage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={11} className="px-6 py-12 text-center">
+                      <td colSpan={12} className="px-6 py-12 text-center">
                         <p className="font-medium text-slate-600">
                           No active residents found matching your criteria
                         </p>
@@ -444,6 +555,20 @@ export default function ResidentPage() {
           setSelectedResident(null)
         }}
         initialData={selectedResident}
+      />
+
+      {/* Confirmation Modal */}
+      <BulkConfirmModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onConfirm={() => bulkArchiveMutation.mutate(selectedIds)}
+        title="Archive Selected Residents"
+        message={`Are you sure you want to archive ${selectedIds.length} selected resident${
+          selectedIds.length !== 1 ? 's' : ''
+        }? They will be moved to the archive section.`}
+        confirmText="Archive Selected"
+        variant="warning"
+        isPending={bulkArchiveMutation.isPending}
       />
     </div>
   )

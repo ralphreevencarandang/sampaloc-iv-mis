@@ -42,6 +42,7 @@ async function setOfficialArchiveStatusAction(
         id: true,
         firstName: true,
         lastName: true,
+        middleName: true,
         email: true,
         officialProfile: true,
         isActive: true,
@@ -111,6 +112,10 @@ async function setBlotterArchiveStatusAction(
       },
     })
 
+    const complainantDisplayName = blotter.complainant
+      ? [blotter.complainant.firstName, blotter.complainant.lastName].filter(Boolean).join(" ")
+      : blotter.complainantName
+
     return {
       success: true,
       message: isArchive
@@ -118,7 +123,7 @@ async function setBlotterArchiveStatusAction(
         : "Blotter record restored successfully.",
       blotter: {
         id: blotter.id,
-        complainant: [blotter.complainant.firstName, blotter.complainant.lastName].filter(Boolean).join(" "),
+        complainant: complainantDisplayName,
         respondentName: blotter.respondentName,
         incident: blotter.incident,
         location: blotter.location,
@@ -284,6 +289,202 @@ async function setPetArchiveStatusAction(
       message: isArchive
         ? "An unexpected error occurred while archiving the pet."
         : "An unexpected error occurred while restoring the pet.",
+    };
+  }
+}
+
+export type BulkArchiveResult = {
+  success: boolean;
+  message: string;
+  count?: number;
+};
+
+export async function bulkArchiveOfficialsAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkOfficialArchiveStatusAction(ids, true);
+}
+
+export async function bulkUnarchiveOfficialsAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkOfficialArchiveStatusAction(ids, false);
+}
+
+async function setBulkOfficialArchiveStatusAction(
+  ids: string[],
+  isArchive: boolean
+): Promise<BulkArchiveResult> {
+  try {
+    if (!ids || ids.length === 0) {
+      return { success: false, message: "No officials selected." };
+    }
+    const result = await prisma.official.updateMany({
+      where: { id: { in: ids } },
+      data: { isArchive },
+    });
+    return {
+      success: true,
+      message: isArchive
+        ? `Successfully archived ${result.count} official${result.count !== 1 ? 's' : ''}.`
+        : `Successfully restored ${result.count} official${result.count !== 1 ? 's' : ''}.`,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("bulk official archive failed", error);
+    return {
+      success: false,
+      message: isArchive
+        ? "An unexpected error occurred while archiving officials."
+        : "An unexpected error occurred while restoring officials.",
+    };
+  }
+}
+
+export async function bulkArchiveBlottersAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkBlotterArchiveStatusAction(ids, true);
+}
+
+export async function bulkUnarchiveBlottersAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkBlotterArchiveStatusAction(ids, false);
+}
+
+async function setBulkBlotterArchiveStatusAction(
+  ids: string[],
+  isArchive: boolean
+): Promise<BulkArchiveResult> {
+  try {
+    if (!ids || ids.length === 0) {
+      return { success: false, message: "No blotters selected." };
+    }
+    const result = await prisma.blotter.updateMany({
+      where: { id: { in: ids } },
+      data: { isArchive },
+    });
+    return {
+      success: true,
+      message: isArchive
+        ? `Successfully archived ${result.count} blotter record${result.count !== 1 ? 's' : ''}.`
+        : `Successfully restored ${result.count} blotter record${result.count !== 1 ? 's' : ''}.`,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("bulk blotter archive failed", error);
+    return {
+      success: false,
+      message: isArchive
+        ? "An unexpected error occurred while archiving blotters."
+        : "An unexpected error occurred while restoring blotters.",
+    };
+  }
+}
+
+export async function bulkArchiveVawcAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkVawcArchiveStatusAction(ids, true);
+}
+
+export async function bulkUnarchiveVawcAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkVawcArchiveStatusAction(ids, false);
+}
+
+async function setBulkVawcArchiveStatusAction(
+  ids: string[],
+  isArchive: boolean
+): Promise<BulkArchiveResult> {
+  try {
+    if (!ids || ids.length === 0) {
+      return { success: false, message: "No VAWC cases selected." };
+    }
+    const result = await prisma.vawcRecord.updateMany({
+      where: { id: { in: ids } },
+      data: { isArchive },
+    });
+    return {
+      success: true,
+      message: isArchive
+        ? `Successfully archived ${result.count} VAWC case${result.count !== 1 ? 's' : ''}.`
+        : `Successfully restored ${result.count} VAWC case${result.count !== 1 ? 's' : ''}.`,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("bulk VAWC archive failed", error);
+    return {
+      success: false,
+      message: isArchive
+        ? "An unexpected error occurred while archiving VAWC cases."
+        : "An unexpected error occurred while restoring VAWC cases.",
+    };
+  }
+}
+
+export async function bulkArchivePetsAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkPetArchiveStatusAction(ids, true);
+}
+
+export async function bulkUnarchivePetsAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkPetArchiveStatusAction(ids, false);
+}
+
+async function setBulkPetArchiveStatusAction(
+  ids: string[],
+  isArchive: boolean
+): Promise<BulkArchiveResult> {
+  try {
+    if (!ids || ids.length === 0) {
+      return { success: false, message: "No pets selected." };
+    }
+    const result = await prisma.pet.updateMany({
+      where: { id: { in: ids } },
+      data: { isArchive },
+    });
+    return {
+      success: true,
+      message: isArchive
+        ? `Successfully archived ${result.count} pet${result.count !== 1 ? 's' : ''}.`
+        : `Successfully restored ${result.count} pet${result.count !== 1 ? 's' : ''}.`,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("bulk pet archive failed", error);
+    return {
+      success: false,
+      message: isArchive
+        ? "An unexpected error occurred while archiving pets."
+        : "An unexpected error occurred while restoring pets.",
+    };
+  }
+}
+
+export async function bulkArchiveMedicalRecordsAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkMedicalRecordArchiveStatusAction(ids, true);
+}
+
+export async function bulkUnarchiveMedicalRecordsAction(ids: string[]): Promise<BulkArchiveResult> {
+  return setBulkMedicalRecordArchiveStatusAction(ids, false);
+}
+
+async function setBulkMedicalRecordArchiveStatusAction(
+  ids: string[],
+  isArchive: boolean
+): Promise<BulkArchiveResult> {
+  try {
+    if (!ids || ids.length === 0) {
+      return { success: false, message: "No medical records selected." };
+    }
+    const result = await prisma.medicalRecord.updateMany({
+      where: { id: { in: ids } },
+      data: { isArchive },
+    });
+    return {
+      success: true,
+      message: isArchive
+        ? `Successfully archived ${result.count} medical record${result.count !== 1 ? 's' : ''}.`
+        : `Successfully restored ${result.count} medical record${result.count !== 1 ? 's' : ''}.`,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("bulk medical record archive failed", error);
+    return {
+      success: false,
+      message: isArchive
+        ? "An unexpected error occurred while archiving medical records."
+        : "An unexpected error occurred while restoring medical records.",
     };
   }
 }

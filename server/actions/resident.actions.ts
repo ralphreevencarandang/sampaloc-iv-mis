@@ -405,6 +405,62 @@ export async function unarchiveResidentAction(id: string): Promise<ResidentArchi
   return setResidentArchiveStatusAction(id, false);
 }
 
+export type BulkResidentArchiveResult = {
+  success: boolean;
+  message: string;
+  count?: number;
+};
+
+export async function bulkArchiveResidentsAction(ids: string[]): Promise<BulkResidentArchiveResult> {
+  return setBulkResidentArchiveStatusAction(ids, true);
+}
+
+export async function bulkUnarchiveResidentsAction(ids: string[]): Promise<BulkResidentArchiveResult> {
+  return setBulkResidentArchiveStatusAction(ids, false);
+}
+
+async function setBulkResidentArchiveStatusAction(
+  ids: string[],
+  isArchived: boolean
+): Promise<BulkResidentArchiveResult> {
+  try {
+    if (!ids || ids.length === 0) {
+      return {
+        success: false,
+        message: "No residents selected.",
+      };
+    }
+
+    const result = await prisma.resident.updateMany({
+      where: {
+        id: { in: ids },
+      },
+      data: {
+        isArchived,
+      },
+    });
+
+    revalidatePath("/admin/resident");
+    revalidatePath("/admin/archived");
+
+    return {
+      success: true,
+      message: isArchived
+        ? `Successfully archived ${result.count} resident${result.count !== 1 ? 's' : ''}.`
+        : `Successfully restored ${result.count} resident${result.count !== 1 ? 's' : ''}.`,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("bulk resident archive status update failed", error);
+    return {
+      success: false,
+      message: isArchived
+        ? "An unexpected error occurred while archiving the selected residents."
+        : "An unexpected error occurred while restoring the selected residents.",
+    };
+  }
+}
+
 export async function deleteResidentAction(id: string): Promise<DeleteResidentResult> {
   try {
     await prisma.$transaction([

@@ -14,10 +14,14 @@ import {
   RotateCcw,
   Search,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import AnnouncementModalForm from '@/components/ui/Admin/AnnouncementModalForm'
+import BulkActionBar from '@/components/ui/Admin/BulkActionBar'
+import BulkConfirmModal from '@/components/ui/Admin/BulkConfirmModal'
 import {
   archiveAnnouncementAction,
   unarchiveAnnouncementAction,
+  bulkArchiveAnnouncementsAction,
 } from '@/server/actions/announcement.actions'
 import type { AnnouncementRecord } from '@/server/announcements/announcements'
 
@@ -54,6 +58,8 @@ export default function AnnouncementPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementRecord | null>(null)
   const [actionError, setActionError] = useState('')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
   const queryClient = useQueryClient()
 
   const {
@@ -99,15 +105,44 @@ export default function AnnouncementPage() {
     onSuccess: (result) => {
       if (!result.success) {
         setActionError(result.message)
+        toast.error(result.message)
         return
       }
 
       setActionError('')
+      toast.success(result.message)
       void queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_QUERY_KEY })
       void queryClient.invalidateQueries({ queryKey: ['archivedData', 'announcements'] })
     },
     onError: (error) => {
-      setActionError(error instanceof Error ? error.message : 'Failed to update archive state.')
+      const msg = error instanceof Error ? error.message : 'Failed to update archive state.'
+      setActionError(msg)
+      toast.error(msg)
+    },
+  })
+
+  const bulkArchiveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      return bulkArchiveAnnouncementsAction(ids)
+    },
+    onSuccess: (result) => {
+      if (!result.success) {
+        setActionError(result.message)
+        toast.error(result.message)
+        return
+      }
+
+      setActionError('')
+      toast.success(result.message)
+      setSelectedIds([])
+      setIsBulkModalOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_QUERY_KEY })
+      void queryClient.invalidateQueries({ queryKey: ['archivedData', 'announcements'] })
+    },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : 'Failed to bulk archive announcements.'
+      setActionError(msg)
+      toast.error(msg)
     },
   })
 
@@ -118,6 +153,32 @@ export default function AnnouncementPage() {
       archived: !announcement.isArchive,
     })
   }
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
+  }
+
+  const handleSelectAllCurrentPage = () => {
+    const pageIds = paginatedAnnouncements.map((a) => a.id)
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id))
+
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)))
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])))
+    }
+  }
+
+  const handleSelectAllFiltered = () => {
+    const allIds = filteredAnnouncements.map((a) => a.id)
+    setSelectedIds(allIds)
+  }
+
+  const isCurrentPageAllSelected =
+    paginatedAnnouncements.length > 0 &&
+    paginatedAnnouncements.every((a) => selectedIds.includes(a.id))
 
   return (
     <div className="space-y-6">
@@ -139,6 +200,19 @@ export default function AnnouncementPage() {
           </button>
         </div>
       </div>
+
+      {/* Floating Bulk Action Bar */}
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={filteredAnnouncements.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={handleSelectAllFiltered}
+        isAllSelected={selectedIds.length === filteredAnnouncements.length}
+        onBulkAction={() => setIsBulkModalOpen(true)}
+        actionType="archive"
+        actionLabel="Bulk Archive"
+        isLoading={bulkArchiveMutation.isPending}
+      />
 
       <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-slate-50 px-4 py-2.5">
@@ -167,6 +241,15 @@ export default function AnnouncementPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-slate-50">
+                <th className="w-12 px-4 py-4 text-center">
+                  <input
+                    type="checkbox"
+                    checked={isCurrentPageAllSelected}
+                    onChange={handleSelectAllCurrentPage}
+                    aria-label="Select all announcements on this page"
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Image</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Title</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Content</th>
@@ -179,80 +262,97 @@ export default function AnnouncementPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <p className="font-medium text-slate-600">Loading announcements...</p>
                   </td>
                 </tr>
               ) : isError ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <p className="text-sm font-medium text-red-600">
                       {error instanceof Error ? error.message : 'Failed to load announcements.'}
                     </p>
                   </td>
                 </tr>
               ) : paginatedAnnouncements.length > 0 ? (
-                paginatedAnnouncements.map((announcement) => (
-                  <tr key={announcement.id} className="border-b border-gray-100 transition-colors hover:bg-slate-50">
-                    <td className="px-6 py-4">
-                      {announcement.image ? (
-                        <Image
-                          src={announcement.image}
-                          alt={announcement.title}
-                          width={56}
-                          height={56}
-                          className="h-14 w-14 rounded-lg object-cover"
+                paginatedAnnouncements.map((announcement) => {
+                  const isSelected = selectedIds.includes(announcement.id)
+                  return (
+                    <tr
+                      key={announcement.id}
+                      className={`border-b border-gray-100 transition-colors ${
+                        isSelected ? 'bg-primary-50/60' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <td className="w-12 px-4 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectRow(announcement.id)}
+                          aria-label={`Select ${announcement.title}`}
+                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         />
-                      ) : (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                          <Megaphone className="h-5 w-5" />
+                      </td>
+                      <td className="px-6 py-4">
+                        {announcement.image ? (
+                          <Image
+                            src={announcement.image}
+                            alt={announcement.title}
+                            width={56}
+                            height={56}
+                            className="h-14 w-14 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                            <Megaphone className="h-5 w-5" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-900">{announcement.title}</td>
+                      <td className="max-w-sm px-6 py-4 text-sm text-slate-600" title={announcement.content}>
+                        <p className="line-clamp-2">{announcement.content}</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{getOfficialName(announcement)}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{announcement.createdBy.position}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-slate-400" />
+                          {new Date(announcement.createdAt).toLocaleDateString()}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900">{announcement.title}</td>
-                    <td className="max-w-sm px-6 py-4 text-sm text-slate-600" title={announcement.content}>
-                      <p className="line-clamp-2">{announcement.content}</p>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{getOfficialName(announcement)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{announcement.createdBy.position}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-slate-400" />
-                        {new Date(announcement.createdAt).toLocaleDateString()}
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedAnnouncement(announcement)
-                            setIsModalOpen(true)
-                          }}
-                          className="rounded-lg p-1.5 text-amber-600 transition-colors hover:bg-amber-50"
-                          title="Edit"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleArchiveToggle(announcement)}
-                          disabled={archiveMutation.isPending}
-                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                          title={announcement.isArchive ? 'Unarchive' : 'Archive'}
-                        >
-                          {announcement.isArchive ? (
-                            <RotateCcw className="h-4 w-4" />
-                          ) : (
-                            <Archive className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedAnnouncement(announcement)
+                              setIsModalOpen(true)
+                            }}
+                            className="rounded-lg p-1.5 text-amber-600 transition-colors hover:bg-amber-50"
+                            title="Edit"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleArchiveToggle(announcement)}
+                            disabled={archiveMutation.isPending}
+                            className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            title={announcement.isArchive ? 'Unarchive' : 'Archive'}
+                          >
+                            {announcement.isArchive ? (
+                              <RotateCcw className="h-4 w-4" />
+                            ) : (
+                              <Archive className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <p className="font-medium text-slate-600">
                       No active announcements found
                     </p>
@@ -315,6 +415,20 @@ export default function AnnouncementPage() {
         mode={selectedAnnouncement ? 'edit' : 'create'}
         initialData={selectedAnnouncement}
         onSaved={handleAnnouncementSaved}
+      />
+
+      {/* Confirmation Modal */}
+      <BulkConfirmModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onConfirm={() => bulkArchiveMutation.mutate(selectedIds)}
+        title="Archive Selected Announcements"
+        message={`Are you sure you want to archive ${selectedIds.length} selected announcement${
+          selectedIds.length !== 1 ? 's' : ''
+        }? They will be moved to the archive section.`}
+        confirmText="Archive Selected"
+        variant="warning"
+        isPending={bulkArchiveMutation.isPending}
       />
     </div>
   )

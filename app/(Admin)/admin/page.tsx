@@ -195,7 +195,7 @@ export default function AdminDashboard() {
                 </Pie>
                 <Tooltip 
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number | string) => [value, 'Residents']}
+                  formatter={(value) => [String(value ?? 0), 'Residents']}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
               </PieChart>
@@ -225,7 +225,7 @@ export default function AdminDashboard() {
                 <Tooltip
                   cursor={{ fill: '#f1f5f9' }}
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number | string) => [value, 'Residents']}
+                  formatter={(value) => [String(value ?? 0), 'Residents']}
                 />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
                   {ageData.map((entry, index) => (

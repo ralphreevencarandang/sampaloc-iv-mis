@@ -1,15 +1,16 @@
 "use client"
 
 import React, { useState, useMemo } from 'react'
-import { Search, Plus, Edit2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, ShieldAlert } from 'lucide-react'
+import { Search, Plus, Edit2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, ShieldAlert, Archive } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import VawcModalForm from '@/components/ui/Admin/VawcModalForm'
+import BulkActionBar from '@/components/ui/Admin/BulkActionBar'
+import BulkConfirmModal from '@/components/ui/Admin/BulkConfirmModal'
 import axios from '@/lib/axios'
 import type { VawcRecordType } from '@/server/actions/vawc.actions'
-import { archiveVawcAction } from '@/server/actions/archive.actions'
+import { archiveVawcAction, bulkArchiveVawcAction } from '@/server/actions/archive.actions'
 import Link from 'next/link'
-import { Archive } from 'lucide-react'
-import toast from 'react-hot-toast'
 
 const ITEMS_PER_PAGE = 10
 
@@ -18,6 +19,8 @@ export default function VawcPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedVawc, setSelectedVawc] = useState<VawcRecordType | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
 
   const queryClient = useQueryClient();
 
@@ -38,11 +41,33 @@ export default function VawcPage() {
     onSuccess: (data) => {
       toast.success(data.message);
       queryClient.invalidateQueries({ queryKey: ["vawcs"] });
+      queryClient.invalidateQueries({ queryKey: ["archivedData", "vawc"] });
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Failed to archive VAWC record.");
     }
   });
+
+  const bulkArchiveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      return bulkArchiveVawcAction(ids)
+    },
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.message)
+        return
+      }
+
+      toast.success(result.message)
+      setSelectedIds([])
+      setIsBulkModalOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['vawcs'] })
+      void queryClient.invalidateQueries({ queryKey: ['archivedData', 'vawc'] })
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to bulk archive VAWC cases.')
+    },
+  })
 
   const filteredVawcs = useMemo(() => {
     return vawcs.filter(vawc =>
@@ -81,6 +106,32 @@ export default function VawcPage() {
     }
   }
 
+  const handleSelectRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
+  }
+
+  const handleSelectAllCurrentPage = () => {
+    const pageIds = paginatedVawcs.map((v) => v.id)
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id))
+
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)))
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])))
+    }
+  }
+
+  const handleSelectAllFiltered = () => {
+    const allIds = filteredVawcs.map((v) => v.id)
+    setSelectedIds(allIds)
+  }
+
+  const isCurrentPageAllSelected =
+    paginatedVawcs.length > 0 &&
+    paginatedVawcs.every((v) => selectedIds.includes(v.id))
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -103,6 +154,19 @@ export default function VawcPage() {
         </button>
       </div>
 
+      {/* Floating Bulk Action Bar */}
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={filteredVawcs.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={handleSelectAllFiltered}
+        isAllSelected={selectedIds.length === filteredVawcs.length}
+        onBulkAction={() => setIsBulkModalOpen(true)}
+        actionType="archive"
+        actionLabel="Bulk Archive"
+        isLoading={bulkArchiveMutation.isPending}
+      />
+
       <div className="bg-white rounded-lg border border-gray-100 p-4 shadow-sm">
         <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-lg border border-gray-200">
           <Search className="w-5 h-5 text-slate-400" />
@@ -124,6 +188,15 @@ export default function VawcPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 border-b border-gray-100">
+                <th className="w-12 px-4 py-4 text-center">
+                  <input
+                    type="checkbox"
+                    checked={isCurrentPageAllSelected}
+                    onChange={handleSelectAllCurrentPage}
+                    aria-label="Select all VAWC cases on this page"
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Case / Date</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Complainant</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Respondent</th>
@@ -135,7 +208,7 @@ export default function VawcPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                        <Loader2 className="w-8 h-8 animate-spin text-red-600" />
                        <p className="text-slate-600 font-medium">Loading VAWC Cases...</p>
@@ -144,7 +217,7 @@ export default function VawcPage() {
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                        <AlertCircle className="w-8 h-8 text-red-500" />
                        <p className="text-slate-600 font-medium">Error loading cases. Please try again.</p>
@@ -152,59 +225,76 @@ export default function VawcPage() {
                   </td>
                 </tr>
               ) : paginatedVawcs.length > 0 ? (
-                paginatedVawcs.map((vawc) => (
-                  <tr key={vawc.id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-slate-900">{vawc.caseNumber}</p>
-                        <p className="text-xs text-slate-500">{new Date(vawc.incidentDate).toLocaleDateString()}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                        <p className="text-sm font-medium text-slate-900">{vawc.victimName}</p>
-                        {vawc.isMinor && <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] rounded font-bold tracking-wide">MINOR</span>}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{vawc.respondentName}</td>
-                    <td className="px-6 py-4 text-sm">
-                       <span className={`inline-flex px-2.5 py-1 rounded-md text-xs font-bold ${getAbuseTypeBadge(vawc.abuseType)}`}>
-                         {vawc.abuseType}
-                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(vawc.status)}`}>
-                        {vawc.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Link 
-                          href={`/admin/vawc/${vawc.id}`}
-                          className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors" title="View Case">
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                        <button 
-                          onClick={() => {
-                            setSelectedVawc(vawc)
-                            setIsModalOpen(true)
-                          }}
-                          className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit Case">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => {
-                             if(confirm('Are you sure you want to archive this VAWC case?')) {
-                               archiveMutation.mutate(vawc.id);
-                             }
-                          }}
-                          disabled={archiveMutation.isPending}
-                          className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors disabled:opacity-50" title="Archive Case">
-                          <Archive className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                paginatedVawcs.map((vawc) => {
+                  const isSelected = selectedIds.includes(vawc.id)
+                  return (
+                    <tr
+                      key={vawc.id}
+                      className={`border-b border-gray-100 transition-colors ${
+                        isSelected ? 'bg-primary-50/60' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <td className="w-12 px-4 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectRow(vawc.id)}
+                          aria-label={`Select case ${vawc.caseNumber}`}
+                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                          <p className="text-sm font-semibold text-slate-900">{vawc.caseNumber}</p>
+                          <p className="text-xs text-slate-500">{new Date(vawc.incidentDate).toLocaleDateString()}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                          <p className="text-sm font-medium text-slate-900">{vawc.victimName}</p>
+                          {vawc.isMinor && <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 text-[10px] rounded font-bold tracking-wide">MINOR</span>}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{vawc.respondentName}</td>
+                      <td className="px-6 py-4 text-sm">
+                         <span className={`inline-flex px-2.5 py-1 rounded-md text-xs font-bold ${getAbuseTypeBadge(vawc.abuseType)}`}>
+                           {vawc.abuseType}
+                         </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(vawc.status)}`}>
+                          {vawc.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Link 
+                            href={`/admin/vawc/${vawc.id}`}
+                            className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors" title="View Case">
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                          <button 
+                            onClick={() => {
+                              setSelectedVawc(vawc)
+                              setIsModalOpen(true)
+                            }}
+                            className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="Edit Case">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => {
+                               if(confirm('Are you sure you want to archive this VAWC case?')) {
+                                 archiveMutation.mutate(vawc.id);
+                               }
+                            }}
+                            disabled={archiveMutation.isPending}
+                            className="p-1.5 hover:bg-red-50 text-red-600 rounded-lg transition-colors disabled:opacity-50" title="Archive Case">
+                            <Archive className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={7} className="px-6 py-12 text-center">
                     <p className="text-slate-600 font-medium">No VAWC cases found.</p>
                   </td>
                 </tr>
@@ -262,6 +352,20 @@ export default function VawcPage() {
           setSelectedVawc(null)
         }} 
         initialData={selectedVawc} 
+      />
+
+      {/* Confirmation Modal */}
+      <BulkConfirmModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onConfirm={() => bulkArchiveMutation.mutate(selectedIds)}
+        title="Archive Selected VAWC Cases"
+        message={`Are you sure you want to archive ${selectedIds.length} selected VAWC case${
+          selectedIds.length !== 1 ? 's' : ''
+        }? They will be moved to the archive section.`}
+        confirmText="Archive Selected"
+        variant="danger"
+        isPending={bulkArchiveMutation.isPending}
       />
     </div>
   )

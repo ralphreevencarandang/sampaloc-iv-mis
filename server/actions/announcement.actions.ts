@@ -247,6 +247,59 @@ export async function unarchiveAnnouncementAction(id: string): Promise<Announcem
   return setAnnouncementArchiveStatusAction(id, false)
 }
 
+export type BulkAnnouncementArchiveResult = {
+  success: boolean;
+  message: string;
+  count?: number;
+};
+
+export async function bulkArchiveAnnouncementsAction(ids: string[]): Promise<BulkAnnouncementArchiveResult> {
+  return setBulkAnnouncementArchiveStatusAction(ids, true);
+}
+
+export async function bulkUnarchiveAnnouncementsAction(ids: string[]): Promise<BulkAnnouncementArchiveResult> {
+  return setBulkAnnouncementArchiveStatusAction(ids, false);
+}
+
+async function setBulkAnnouncementArchiveStatusAction(
+  ids: string[],
+  isArchive: boolean
+): Promise<BulkAnnouncementArchiveResult> {
+  try {
+    if (!ids || ids.length === 0) {
+      return {
+        success: false,
+        message: "No announcements selected.",
+      };
+    }
+
+    const result = await prisma.announcement.updateMany({
+      where: {
+        id: { in: ids },
+      },
+      data: {
+        isArchive,
+      },
+    });
+
+    return {
+      success: true,
+      message: isArchive
+        ? `Successfully archived ${result.count} announcement${result.count !== 1 ? 's' : ''}.`
+        : `Successfully restored ${result.count} announcement${result.count !== 1 ? 's' : ''}.`,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("bulk announcement archive status update failed", error);
+    return {
+      success: false,
+      message: isArchive
+        ? "An unexpected error occurred while archiving the selected announcements."
+        : "An unexpected error occurred while restoring the selected announcements.",
+    };
+  }
+}
+
 async function setAnnouncementArchiveStatusAction(
   id: string,
   isArchive: boolean

@@ -134,7 +134,7 @@ export async function submitMedicalRecordAction(
 ): Promise<SubmitMedicalRecordResult> {
   const validation = await getValidatedMedicalRecordSubmission(formData)
 
-  if ('result' in validation) {
+  if ('result' in validation && validation.result) {
     return validation.result
   }
 
@@ -188,7 +188,7 @@ export async function updateMedicalRecordAction(
 ): Promise<SubmitMedicalRecordResult> {
   const validation = await getValidatedMedicalRecordSubmission(formData)
 
-  if ('result' in validation) {
+  if ('result' in validation && validation.result) {
     return validation.result
   }
 
