@@ -226,7 +226,7 @@ function RowActionMenu({
             )}
             Approve
           </button>
-          <button
+          {/* <button
             type="button"
             disabled={!canMoveToReview || isMutating}
             onClick={onReview}
@@ -238,7 +238,7 @@ function RowActionMenu({
               <FileText className="h-4 w-4 text-sky-600" />
             )}
             Review
-          </button>
+          </button> */}
           <button
             type="button"
             disabled={!canSendEmail || isMutating}
@@ -492,7 +492,7 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
       <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4  lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
-            {(['ALL', 'PENDING', 'REVIEW', 'APPROVED', 'GENERATED'] as AdminFilter[]).map((filter) => (
+            {(['ALL', 'PENDING',  'APPROVED', 'GENERATED'] as AdminFilter[]).map((filter) => (
               <button
                 key={filter}
                 type="button"

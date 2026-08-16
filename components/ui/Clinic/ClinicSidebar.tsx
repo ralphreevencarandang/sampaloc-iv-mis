@@ -17,7 +17,7 @@ import type { AuthenticatedHealthWorker } from '@/lib/health-worker-session'
 import { logoutHealthWorkerAction } from '@/server/actions/auth.actions'
 
 type ClinicSidebarProps = {
-  healthWorker: AuthenticatedHealthWorker
+  healthWorker?: AuthenticatedHealthWorker | null
 }
 
 const navItems = [
@@ -90,8 +90,8 @@ export default function ClinicSidebar({ healthWorker }: ClinicSidebarProps) {
               </div>
               {isOpen && (
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">{healthWorker.name}</p>
-                  <p className="truncate text-xs text-slate-400">{healthWorker.email}</p>
+                  <p className="truncate text-sm font-semibold text-white">{healthWorker?.name ?? 'Health Worker'}</p>
+                  <p className="truncate text-xs text-slate-400">{healthWorker?.email ?? ''}</p>
                 </div>
               )}
             </div>

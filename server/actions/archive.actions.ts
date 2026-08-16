@@ -5,6 +5,7 @@ import { mapOfficialRecord } from "@/server/officials/officials"
 import { type CreateOfficialResult } from "@/server/actions/official.actions"
 import { type BlotterRecord } from "@/server/actions/blotter.actions"
 import { type PetRecord } from "@/server/actions/pet.action"
+import { hasAdminPermission } from "@/lib/admin-authorization"
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -20,6 +21,10 @@ async function setOfficialArchiveStatusAction(
   id: string,
   isArchive: boolean
 ): Promise<CreateOfficialResult> {
+  if (!(await hasAdminPermission("officials", "write"))) {
+    return { success: false, message: "You do not have permission to archive officials." }
+  }
+
   try {
     const existingOfficial = await prisma.official.findUnique({
       where: { id },
@@ -90,6 +95,10 @@ async function setBlotterArchiveStatusAction(
   id: string,
   isArchive: boolean
 ): Promise<BlotterArchiveResult> {
+  if (!(await hasAdminPermission("blotter", "write"))) {
+    return { success: false, message: "You do not have permission to archive blotter records." }
+  }
+
   try {
     const existingBlotter = await prisma.blotter.findUnique({
       where: { id },
@@ -173,6 +182,10 @@ async function setVawcArchiveStatusAction(
   id: string,
   isArchive: boolean
 ): Promise<VawcArchiveResult> {
+  if (!(await hasAdminPermission("vawc", "write"))) {
+    return { success: false, message: "You do not have permission to archive VAWC records." };
+  }
+
   try {
     const existingVawc = await prisma.vawcRecord.findUnique({
       where: { id },
@@ -234,6 +247,10 @@ async function setPetArchiveStatusAction(
   id: string,
   isArchive: boolean
 ): Promise<PetArchiveResult> {
+  if (!(await hasAdminPermission("pets", "write"))) {
+    return { success: false, message: "You do not have permission to archive pets." };
+  }
+
   try {
     const existingPet = await prisma.pet.findUnique({
       where: { id },
@@ -311,6 +328,10 @@ async function setBulkOfficialArchiveStatusAction(
   ids: string[],
   isArchive: boolean
 ): Promise<BulkArchiveResult> {
+  if (!(await hasAdminPermission("officials", "write"))) {
+    return { success: false, message: "You do not have permission to archive officials." };
+  }
+
   try {
     if (!ids || ids.length === 0) {
       return { success: false, message: "No officials selected." };
@@ -349,6 +370,10 @@ async function setBulkBlotterArchiveStatusAction(
   ids: string[],
   isArchive: boolean
 ): Promise<BulkArchiveResult> {
+  if (!(await hasAdminPermission("blotter", "write"))) {
+    return { success: false, message: "You do not have permission to archive blotter records." };
+  }
+
   try {
     if (!ids || ids.length === 0) {
       return { success: false, message: "No blotters selected." };
@@ -387,6 +412,10 @@ async function setBulkVawcArchiveStatusAction(
   ids: string[],
   isArchive: boolean
 ): Promise<BulkArchiveResult> {
+  if (!(await hasAdminPermission("vawc", "write"))) {
+    return { success: false, message: "You do not have permission to archive VAWC records." };
+  }
+
   try {
     if (!ids || ids.length === 0) {
       return { success: false, message: "No VAWC cases selected." };
@@ -425,6 +454,10 @@ async function setBulkPetArchiveStatusAction(
   ids: string[],
   isArchive: boolean
 ): Promise<BulkArchiveResult> {
+  if (!(await hasAdminPermission("pets", "write"))) {
+    return { success: false, message: "You do not have permission to archive pets." };
+  }
+
   try {
     if (!ids || ids.length === 0) {
       return { success: false, message: "No pets selected." };
@@ -463,6 +496,10 @@ async function setBulkMedicalRecordArchiveStatusAction(
   ids: string[],
   isArchive: boolean
 ): Promise<BulkArchiveResult> {
+  if (!(await hasAdminPermission("health", "write"))) {
+    return { success: false, message: "You do not have permission to archive medical records." };
+  }
+
   try {
     if (!ids || ids.length === 0) {
       return { success: false, message: "No medical records selected." };

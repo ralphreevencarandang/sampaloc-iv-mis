@@ -2,6 +2,7 @@ import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 import bcrypt from "bcryptjs";
+
 if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required for seeding.");
 }
@@ -10,6 +11,7 @@ const adapter = new PrismaPg(process.env.DATABASE_URL);
 const prisma = new PrismaClient({
     adapter,
 });
+
 async function main() {
     console.log("Seeding Sample Residents...");
     // Requirement: password is "password" (hash it before saving using bcrypt)
@@ -29,6 +31,7 @@ async function main() {
             occupation: "Engineer",
             citizenship: "Filipino",
             isVoter: true,
+            isPwd: false,
             precinctNumber: "1234A",
             status: "APPROVED" as const,
         },
@@ -46,6 +49,7 @@ async function main() {
             occupation: "Teacher",
             citizenship: "Filipino",
             isVoter: true,
+            isPwd: false,
             precinctNumber: "1234B",
             status: "APPROVED" as const,
         },
@@ -63,6 +67,7 @@ async function main() {
             occupation: "Student",
             citizenship: "Filipino",
             isVoter: false,
+            isPwd: false,
             status: "PENDING" as const,
         },
         {
@@ -79,6 +84,7 @@ async function main() {
             occupation: "Doctor",
             citizenship: "Filipino",
             isVoter: true,
+            isPwd: false,
             precinctNumber: "5678C",
             status: "APPROVED" as const,
         },
@@ -96,6 +102,7 @@ async function main() {
             occupation: "Business Owner",
             citizenship: "Filipino",
             isVoter: true,
+            isPwd: false,
             precinctNumber: "9101D",
             status: "APPROVED" as const,
         },
@@ -113,15 +120,51 @@ async function main() {
             occupation: "Security Guard",
             citizenship: "Filipino",
             isVoter: true,
+            isPwd: false,
             precinctNumber: "1121E",
             status: "PENDING" as const,
+        },
+        {
+            email: "ralphreevencarandang@gmail.com",
+            firstName: "Ralph Reeven",
+            lastName: "Carandang",
+            middleName: null,
+            birthDate: new Date("2002-11-20"),
+            gender: "Male",
+            civilStatus: "Single",
+            street: "Sampaloc IV",
+            houseNumber: "N/A",
+            contactNumber: "09000000000",
+            occupation: "Resident",
+            citizenship: "Filipino",
+            isVoter: false,
+            isPwd: false,
+            status: "APPROVED" as const,
         }
     ];
+
     for (const resident of residentsData) {
         // Idempotent implementation using upsert
         await prisma.resident.upsert({
             where: { email: resident.email },
-            update: {},
+            update: {
+                firstName: resident.firstName,
+                lastName: resident.lastName,
+                middleName: resident.middleName,
+                birthDate: resident.birthDate,
+                gender: resident.gender,
+                civilStatus: resident.civilStatus,
+                street: resident.street,
+                houseNumber: resident.houseNumber,
+                contactNumber: resident.contactNumber,
+                occupation: resident.occupation,
+                citizenship: resident.citizenship,
+                isVoter: resident.isVoter,
+                isPwd: resident.isPwd,
+                precinctNumber: "precinctNumber" in resident ? resident.precinctNumber : null,
+                status: resident.status,
+                password: hashedPassword,
+            },
             create: {
                 ...resident,
                 password: hashedPassword,
@@ -130,24 +173,69 @@ async function main() {
     }
     console.log(`Seeded ${residentsData.length} residents successfully.`);
 
-    console.log("Seeding Admin User...");
+    console.log("Seeding Barangay User Accounts...");
     const adminPassword = await bcrypt.hash("adminPassword", 10);
-    await prisma.admin.upsert({
-        where: { email: "admin@sampalociv.com" },
-        update: {},
-        create: {
+    const defaultUserPassword = await bcrypt.hash("password", 10);
+    const adminUsers = [
+        {
             name: "System Admin",
             email: "admin@sampalociv.com",
             password: adminPassword,
-            role: "ADMIN",
+            role: "ADMIN" as const,
         },
-    });
-    console.log("Seeded admin user successfully.");
+        {
+            name: "Belen Movido",
+            email: "belen.movido@sampaloc4.gov.ph",
+            password: defaultUserPassword,
+            role: "ADMIN" as const,
+        },
+        {
+            name: "Jedrick Narvaez",
+            email: "jedrick.narvaez@sampaloc4.gov.ph",
+            password: defaultUserPassword,
+            role: "SK" as const,
+        },
+        {
+            name: "Peace Order",
+            email: "peace.order@sampaloc4.gov.ph",
+            password: defaultUserPassword,
+            role: "PEACE_AND_ORDER" as const,
+        },
+        {
+            name: "Armando Movido",
+            email: "armando.movido@sampaloc4.gov.ph",
+            password: defaultUserPassword,
+            role: "PUNONG_BARANGAY" as const,
+        },
+        {
+            name: "Clerk Barangay",
+            email: "cleark.barangay@sampaloc4.gov.ph",
+            password: defaultUserPassword,
+            role: "CLERK" as const,
+        },
+    ];
+
+    for (const adminUser of adminUsers) {
+        await prisma.admin.upsert({
+            where: { email: adminUser.email },
+            update: {
+                name: adminUser.name,
+                role: adminUser.role,
+                password: adminUser.password,
+            },
+            create: adminUser,
+        });
+    }
+    console.log(`Seeded ${adminUsers.length} barangay user accounts successfully.`);
 
     console.log("Seeding Health Worker User...");
     await prisma.admin.upsert({
         where: { email: "healthworker@sampalociv.com" },
-        update: {},
+        update: {
+            name: "Health Worker",
+            role: "HEALTH_WORKER",
+            password: adminPassword,
+        },
         create: {
             name: "Health Worker",
             email: "healthworker@sampalociv.com",
@@ -241,7 +329,14 @@ async function main() {
     for (const official of officialsData) {
         await prisma.official.upsert({
             where: { email: official.email },
-            update: {},
+            update: {
+                firstName: official.firstName,
+                middleName: official.middleName,
+                lastName: official.lastName,
+                position: official.position,
+                isActive: true,
+                isArchive: false,
+            },
             create: {
                 ...official,
                 isActive: true,
@@ -295,14 +390,18 @@ async function main() {
     for (const doc of documentsData) {
         await prisma.document.upsert({
             where: { documentTypeId: doc.documentTypeId },
-            update: {},
+            update: {
+                name: doc.name,
+                description: doc.description,
+                price: doc.price,
+                isActive: doc.isActive,
+            },
             create: doc,
         });
     }
     console.log(`Seeded ${documentsData.length} default documents successfully.`);
-
-
 }
+
 main()
     .catch((e) => {
         console.error("Error generating seed data:", e);

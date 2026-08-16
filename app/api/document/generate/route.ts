@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getCurrentAdminFromSession } from '@/lib/admin-session'
+import { forbiddenUnlessAdminCan } from '@/lib/api-authorization'
 import {
   DocumentRequestPdfGenerationError,
   generateStoredDocumentRequestPdf,
@@ -9,11 +9,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
-  const currentAdmin = await getCurrentAdminFromSession()
-
-  if (!currentAdmin) {
-    return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 })
-  }
+  const forbidden = await forbiddenUnlessAdminCan('documents', 'write')
+  if (forbidden) return forbidden
 
   let requestId = ''
 

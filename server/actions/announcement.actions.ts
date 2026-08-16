@@ -12,6 +12,7 @@ import {
   getAnnouncementFieldErrors,
   type AnnouncementFormInput,
 } from "@/validations/announcement.validation";
+import { hasAdminPermission } from "@/lib/admin-authorization";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -71,6 +72,10 @@ function validateAnnouncementForm(formData: FormData): {
 export async function createAnnouncementAction(
   formData: FormData
 ): Promise<AnnouncementMutationResult> {
+  if (!(await hasAdminPermission("announcements", "write"))) {
+    return { success: false, message: "You do not have permission to create announcements." };
+  }
+
   const { data, fieldErrors } = validateAnnouncementForm(formData);
 
   if (!data) {
@@ -148,6 +153,10 @@ export async function updateAnnouncementAction(
   id: string,
   formData: FormData
 ): Promise<AnnouncementMutationResult> {
+  if (!(await hasAdminPermission("announcements", "write"))) {
+    return { success: false, message: "You do not have permission to update announcements." };
+  }
+
   const { data, fieldErrors } = validateAnnouncementForm(formData);
 
   if (!data) {
@@ -265,6 +274,10 @@ async function setBulkAnnouncementArchiveStatusAction(
   ids: string[],
   isArchive: boolean
 ): Promise<BulkAnnouncementArchiveResult> {
+  if (!(await hasAdminPermission("announcements", "write"))) {
+    return { success: false, message: "You do not have permission to archive announcements." };
+  }
+
   try {
     if (!ids || ids.length === 0) {
       return {
@@ -304,6 +317,10 @@ async function setAnnouncementArchiveStatusAction(
   id: string,
   isArchive: boolean
 ): Promise<AnnouncementMutationResult> {
+  if (!(await hasAdminPermission("announcements", "write"))) {
+    return { success: false, message: "You do not have permission to archive announcements." };
+  }
+
   try {
     const existingAnnouncement = await prisma.announcement.findUnique({
       where: { id },

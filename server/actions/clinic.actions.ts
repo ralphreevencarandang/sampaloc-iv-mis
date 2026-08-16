@@ -1,10 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { AdminRole } from '@/app/generated/prisma/enums'
 import { getCurrentAdminFromSession } from '@/lib/admin-session'
 import { getCurrentHealthWorkerFromSession } from '@/lib/health-worker-session'
 import prismaModule from '@/lib/prisma'
 import { serializeClinicMedicalRecord, type ClinicMedicalRecordListItem } from '@/lib/clinic-utils'
+import { canAccessResource } from '@/lib/rbac'
 import {
   getZodFieldErrors,
   parseMedicalRecordFormData,
@@ -55,6 +57,19 @@ async function getValidatedMedicalRecordSubmission(formData: FormData) {
         message: 'Your session has expired. Please sign in again.',
         fieldErrors: {
           submit: 'Your session has expired. Please sign in again.',
+        },
+      },
+    }
+  }
+
+  if (actor.role !== AdminRole.HEALTH_WORKER && !canAccessResource(actor.role, 'health', 'write')) {
+    return {
+      actor: null,
+      result: {
+        success: false,
+        message: 'You do not have permission to update medical records.',
+        fieldErrors: {
+          submit: 'You do not have permission to update medical records.',
         },
       },
     }
@@ -266,6 +281,13 @@ async function setMedicalRecordArchiveStatusAction(
     return {
       success: false,
       message: 'Your session has expired. Please sign in again.',
+    }
+  }
+
+  if (actor.role !== AdminRole.HEALTH_WORKER && !canAccessResource(actor.role, 'health', 'write')) {
+    return {
+      success: false,
+      message: 'You do not have permission to archive medical records.',
     }
   }
 

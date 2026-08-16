@@ -3,6 +3,7 @@ import { getCurrentAdminFromSession } from '@/lib/admin-session'
 import { getCurrentHealthWorkerFromSession } from '@/lib/health-worker-session'
 import prismaModule from '@/lib/prisma'
 import { serializeClinicMedicalRecord } from '@/lib/clinic-utils'
+import { canAccessResource } from '@/lib/rbac'
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule
 
@@ -15,6 +16,13 @@ export async function GET(request: Request) {
 
     if (!currentHealthWorker && !currentAdmin) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 })
+    }
+
+    if (!currentHealthWorker && currentAdmin && !canAccessResource(currentAdmin.role, 'health')) {
+      return NextResponse.json(
+        { message: 'You do not have permission to access medical records.' },
+        { status: 403 }
+      )
     }
 
     const { searchParams } = new URL(request.url)

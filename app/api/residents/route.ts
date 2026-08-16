@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { forbiddenUnlessAdminCan } from "@/lib/api-authorization";
 
 export async function GET(request: Request) {
+  const forbidden = await forbiddenUnlessAdminCan("residents");
+  if (forbidden) return forbidden;
+
   try {
     const { searchParams } = new URL(request.url);
     const archived = searchParams.get("archived") === "true";

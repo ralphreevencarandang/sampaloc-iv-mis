@@ -6,8 +6,12 @@ import { getVawcFromDb } from "@/server/actions/vawc.actions";
 import { getPetsFromDb } from "@/server/actions/pet.action";
 import { prisma } from "@/lib/prisma";
 import { serializeClinicMedicalRecord } from "@/lib/clinic-utils";
+import { forbiddenUnlessAdminCan } from "@/lib/api-authorization";
 
 export async function GET(request: Request) {
+  const forbidden = await forbiddenUnlessAdminCan("archives");
+  if (forbidden) return forbidden;
+
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");

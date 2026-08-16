@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculateAge } from "@/lib/resident-demographics";
+import { forbiddenUnlessAdminCan } from "@/lib/api-authorization";
 
 export async function GET() {
+  const forbidden = await forbiddenUnlessAdminCan("dashboard");
+  if (forbidden) return forbidden;
+
   try {
     const [
       residents,

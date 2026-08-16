@@ -4,6 +4,7 @@ import { VawcStatus, AbuseType, RelationshipType } from "@/app/generated/prisma/
 import { vawcSchema, type VawcFormInput, getVawcFieldErrors } from "@/validations/vawc.validation";
 import prismaModule from "@/lib/prisma";
 import { CloudinaryUploadError, uploadImageToCloudinary } from "@/lib/cloudinary";
+import { hasAdminPermission } from "@/lib/admin-authorization";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -142,6 +143,10 @@ export async function getVawcById(id: string): Promise<VawcRecordType | null> {
 }
 
 export async function createVawc(formData: FormData): Promise<CreateVawcResult> {
+  if (!(await hasAdminPermission("vawc", "write"))) {
+    return { success: false, message: "You do not have permission to create VAWC records." };
+  }
+
   const fileValue = formData.get("vawcImage");
   const vawcImageFile = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
   const isMinor = getFormBoolean(formData, "isMinor");
@@ -250,6 +255,10 @@ export async function createVawc(formData: FormData): Promise<CreateVawcResult> 
 }
 
 export async function updateVawc(id: string, formData: FormData): Promise<CreateVawcResult> {
+  if (!(await hasAdminPermission("vawc", "write"))) {
+    return { success: false, message: "You do not have permission to update VAWC records." };
+  }
+
   const fileValue = formData.get("vawcImage");
   const vawcImageFile = fileValue instanceof File && fileValue.size > 0 ? fileValue : null;
   const isMinor = getFormBoolean(formData, "isMinor");

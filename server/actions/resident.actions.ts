@@ -13,6 +13,7 @@ import {
 import { revalidatePath } from "next/cache";
 
 import { sendResidentApprovalEmail } from "@/lib/nodemailer";
+import { hasAdminPermission } from "@/lib/admin-authorization";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -249,6 +250,10 @@ export type UpdateResidentResult = {
 };
 
 export async function updateResidentAction(id: string, formData: FormData): Promise<UpdateResidentResult> {
+  if (!(await hasAdminPermission("residents", "write"))) {
+    return { success: false, message: "You do not have permission to update residents." };
+  }
+
   const input = {
     email: getFormValue(formData, "email"),
     status: getFormValue(formData, "status"),
@@ -355,6 +360,10 @@ async function setResidentArchiveStatusAction(
   id: string,
   isArchived: boolean
 ): Promise<ResidentArchiveResult> {
+  if (!(await hasAdminPermission("residents", "write"))) {
+    return { success: false, message: "You do not have permission to archive residents." };
+  }
+
   try {
     const existingResident = await prisma.resident.findUnique({
       where: { id },
@@ -423,6 +432,10 @@ async function setBulkResidentArchiveStatusAction(
   ids: string[],
   isArchived: boolean
 ): Promise<BulkResidentArchiveResult> {
+  if (!(await hasAdminPermission("residents", "write"))) {
+    return { success: false, message: "You do not have permission to archive residents." };
+  }
+
   try {
     if (!ids || ids.length === 0) {
       return {
@@ -462,6 +475,10 @@ async function setBulkResidentArchiveStatusAction(
 }
 
 export async function deleteResidentAction(id: string): Promise<DeleteResidentResult> {
+  if (!(await hasAdminPermission("residents", "write"))) {
+    return { success: false, message: "You do not have permission to delete residents." };
+  }
+
   try {
     await prisma.$transaction([
       prisma.pet.deleteMany({ where: { ownerId: id } }),

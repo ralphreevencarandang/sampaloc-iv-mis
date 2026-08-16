@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { forbiddenUnlessAdminCan } from "@/lib/api-authorization";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 export async function GET(_: Request, { params }: RouteContext) {
+  const forbidden = await forbiddenUnlessAdminCan("residents");
+  if (forbidden) return forbidden;
+
   try {
     const { id } = await params;
 

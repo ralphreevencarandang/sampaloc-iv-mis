@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import prismaModule from "@/lib/prisma";
+import { forbiddenUnlessAdminCan } from "@/lib/api-authorization";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
 export async function GET() {
+  const forbidden = await forbiddenUnlessAdminCan("voters");
+  if (forbidden) return forbidden;
+
   try {
     const voters = await prisma.resident.findMany({
       where: {

@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import prismaModule from '@/lib/prisma'
-import { getCurrentAdminFromSession } from '@/lib/admin-session'
 import { documentTypeCatalog } from '@/lib/document-request-catalog'
+import { hasAdminPermission } from '@/lib/admin-authorization'
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule
 
@@ -146,12 +146,10 @@ export async function updateDocumentPriceAction(input: {
   price: number
   description?: string
 }): Promise<UpdateDocumentPriceResult> {
-  const currentAdmin = await getCurrentAdminFromSession()
-
-  if (!currentAdmin) {
+  if (!(await hasAdminPermission('documents', 'write'))) {
     return {
       success: false,
-      message: 'Your admin session has expired. Please sign in again.',
+      message: 'You do not have permission to update document settings.',
     }
   }
 

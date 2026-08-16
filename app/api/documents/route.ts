@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import prismaModule from '@/lib/prisma'
-import { getCurrentAdminFromSession } from '@/lib/admin-session'
+import { hasAdminPermission } from '@/lib/admin-authorization'
 import { isDocumentTypeId } from '@/lib/document-request-catalog'
 import {
   serializeAdminDocumentRequest,
@@ -19,9 +19,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Invalid document type filter.' }, { status: 400 })
     }
 
-    const currentAdmin = await getCurrentAdminFromSession()
-
-    if (currentAdmin) {
+    if (await hasAdminPermission('documents')) {
       const documentRequests = await prisma.documentRequest.findMany({
         where: requestedType ? { documentTypeId: requestedType } : undefined,
         select: {

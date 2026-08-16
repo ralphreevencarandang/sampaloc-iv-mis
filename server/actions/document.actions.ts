@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import type { Prisma } from '@/app/generated/prisma/client'
-import { getCurrentAdminFromSession } from '@/lib/admin-session'
+import { hasAdminPermission } from '@/lib/admin-authorization'
 import { sendDocumentRequestPdfEmail } from '@/lib/nodemailer'
 import prismaModule from '@/lib/prisma'
 import { getDocumentDefinition } from '@/lib/document-request-catalog'
@@ -161,12 +161,10 @@ export async function updateAdminDocumentRequestStatusAction(input: {
   requestId: string
   status: AdminDocumentRequestStatus
 }): Promise<UpdateAdminDocumentRequestStatusResult> {
-  const currentAdmin = await getCurrentAdminFromSession()
-
-  if (!currentAdmin) {
+  if (!(await hasAdminPermission('documents', 'write'))) {
     return {
       success: false,
-      message: 'Your admin session has expired. Please sign in again.',
+      message: 'You do not have permission to update document requests.',
     }
   }
 
@@ -279,12 +277,10 @@ export async function updateAdminDocumentRequestStatusAction(input: {
 export async function sendAdminDocumentRequestEmailAction(input: {
   requestId: string
 }): Promise<SendAdminDocumentRequestEmailResult> {
-  const currentAdmin = await getCurrentAdminFromSession()
-
-  if (!currentAdmin) {
+  if (!(await hasAdminPermission('documents', 'write'))) {
     return {
       success: false,
-      message: 'Your admin session has expired. Please sign in again.',
+      message: 'You do not have permission to generate document requests.',
     }
   }
 

@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getVawcById } from "@/server/actions/vawc.actions";
+import { forbiddenUnlessAdminCan } from "@/lib/api-authorization";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
+  const forbidden = await forbiddenUnlessAdminCan("vawc");
+  if (forbidden) return forbidden;
+
   try {
     const resolvedParams = await Promise.resolve(params);
     const record = await getVawcById(resolvedParams.id);

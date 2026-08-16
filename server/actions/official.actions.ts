@@ -12,6 +12,7 @@ import {
   officialSchema,
   type OfficialFormInput,
 } from "@/validations/official.validation";
+import { hasAdminPermission } from "@/lib/admin-authorization";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -75,6 +76,10 @@ function validateOfficialForm(formData: FormData): {
 }
 
 export async function createOfficial(formData: FormData): Promise<CreateOfficialResult> {
+  if (!(await hasAdminPermission("officials", "write"))) {
+    return { success: false, message: "You do not have permission to create officials." };
+  }
+
   const { data, fieldErrors } = validateOfficialForm(formData);
 
   if (!data) {
@@ -170,6 +175,10 @@ export async function createOfficial(formData: FormData): Promise<CreateOfficial
 }
 
 export async function updateOfficial(id: string, formData: FormData): Promise<CreateOfficialResult> {
+  if (!(await hasAdminPermission("officials", "write"))) {
+    return { success: false, message: "You do not have permission to update officials." };
+  }
+
   const { data, fieldErrors } = validateOfficialForm(formData);
 
   if (!data) {
@@ -278,4 +287,3 @@ export async function updateOfficial(id: string, formData: FormData): Promise<Cr
     };
   }
 }
-

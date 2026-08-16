@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { loginAdminAction } from '@/server/actions/auth.actions'
 import { adminLoginSchema, getZodFieldErrors } from '@/validations/auth.validation'
+import { getDefaultAdminRoute } from '@/lib/rbac'
 import logo from '@/public/images/sampaloc-logo.png'
 import Image from 'next/image'
 
@@ -27,7 +28,8 @@ export function AdminLoginForm() {
       }
 
       setError('')
-      router.replace('/admin')
+      const targetRoute = result.admin?.role ? getDefaultAdminRoute(result.admin.role) : '/admin'
+      router.replace(targetRoute)
       router.refresh()
     },
     onError: () => {

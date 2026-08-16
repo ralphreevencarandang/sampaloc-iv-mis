@@ -8,6 +8,7 @@ import {
   type PetFormInput,
 } from "@/validations/pet.validation";
 import { getCurrentResidentFromSession } from "@/lib/resident-session";
+import { hasAdminPermission } from "@/lib/admin-authorization";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -160,6 +161,10 @@ export async function getPetsFromDb(options: {
 }
 
 export async function createPet(formData: FormData): Promise<PetMutationResult> {
+  if (!(await hasAdminPermission("pets", "write"))) {
+    return { success: false, message: "You do not have permission to create pet records." };
+  }
+
   const { data, fieldErrors } = parsePetForm(formData);
 
   if (!data) {
@@ -218,6 +223,10 @@ export async function createPet(formData: FormData): Promise<PetMutationResult> 
 }
 
 export async function updatePet(id: string, formData: FormData): Promise<PetMutationResult> {
+  if (!(await hasAdminPermission("pets", "write"))) {
+    return { success: false, message: "You do not have permission to update pet records." };
+  }
+
   const { data, fieldErrors } = parsePetForm(formData);
 
   if (!data) {

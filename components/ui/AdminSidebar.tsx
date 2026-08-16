@@ -25,13 +25,16 @@ import {
 import { logoutAdminAction } from '@/server/actions/auth.actions';
 import Image from 'next/image';
 import logo from '@/public/images/sampaloc-logo.png'
+import type { AdminRole } from '@/app/generated/prisma/enums';
+import { canAccessResource, type AdminResource } from '@/lib/rbac';
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
+  resource: AdminResource;
 }
 
-const AdminSidebar = () => {
+const AdminSidebar = ({ role }: { role?: AdminRole | null }) => {
   const [isOpen, setIsOpen] = useState(true);
   const pathname = usePathname();
   const [expandedMenu, setExpandedMenu] = useState<string | null>(() =>
@@ -56,20 +59,22 @@ const AdminSidebar = () => {
     { label: 'First Time Job Seeker', href: '/admin/documents/job-seeker' },
   ];
 
-  const navItems: NavItem[] = [
-    { label: 'Dashboard', href: '/admin', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: 'Announcement', href: '/admin/announcements', icon: <Megaphone className="w-5 h-5" /> },
-    { label: 'Barangay Officials', href: '/admin/officials', icon: <Users className="w-5 h-5" /> },
-    { label: 'Resident', href: '/admin/resident', icon: <Home className="w-5 h-5" /> },
-    { label: 'Voters', href: '/admin/voters', icon: <Vote className="w-5 h-5" /> },
-    { label: 'Documents', href: '/admin/documents', icon: <FileText className="w-5 h-5" /> },
-    { label: 'Blotter', href: '/admin/blotter', icon: <BookOpen className="w-5 h-5" /> },
-    { label: 'Health', href: '/admin/health', icon: <HeartPulse className="w-5 h-5" /> },
-    { label: 'VAWC', href: '/admin/vawc', icon: <Venus className="w-5 h-5" /> },
-    { label: 'Pet Registration', href: '/admin/pets', icon: <PawPrint className="w-5 h-5" /> },
-    { label: 'Crisis Inventory', href: '/admin/inventory', icon: <AlertTriangle className="w-5 h-5" /> },
-    { label: 'Archived', href: '/admin/archived', icon: <Archive className="w-5 h-5" /> },
-  ];
+  const navItems = [
+    { label: 'Dashboard', href: '/admin', icon: <LayoutDashboard className="w-5 h-5" />, resource: 'dashboard' },
+    { label: 'Announcement', href: '/admin/announcements', icon: <Megaphone className="w-5 h-5" />, resource: 'announcements' },
+    { label: 'Barangay Officials', href: '/admin/officials', icon: <Users className="w-5 h-5" />, resource: 'officials' },
+    { label: 'Resident', href: '/admin/resident', icon: <Home className="w-5 h-5" />, resource: 'residents' },
+    { label: 'Voters', href: '/admin/voters', icon: <Vote className="w-5 h-5" />, resource: 'voters' },
+    { label: 'Documents', href: '/admin/documents', icon: <FileText className="w-5 h-5" />, resource: 'documents' },
+    { label: 'Blotter', href: '/admin/blotter', icon: <BookOpen className="w-5 h-5" />, resource: 'blotter' },
+    { label: 'Health', href: '/admin/health', icon: <HeartPulse className="w-5 h-5" />, resource: 'health' },
+    { label: 'VAWC', href: '/admin/vawc', icon: <Venus className="w-5 h-5" />, resource: 'vawc' },
+    { label: 'Pet Registration', href: '/admin/pets', icon: <PawPrint className="w-5 h-5" />, resource: 'pets' },
+    { label: 'Crisis Inventory', href: '/admin/inventory', icon: <AlertTriangle className="w-5 h-5" />, resource: 'inventory' },
+    { label: 'Archived', href: '/admin/archived', icon: <Archive className="w-5 h-5" />, resource: 'archives' },
+  ] satisfies NavItem[];
+
+  const visibleNavItems = role ? navItems.filter((item) => canAccessResource(role, item.resource)) : [];
 
   const isActive = (href: string) => {
     if (href === '/admin') {
@@ -113,7 +118,7 @@ const AdminSidebar = () => {
 
         {/* Navigation Items */}
         <nav className="flex-1 px-4 py-6 overflow-y-auto space-y-2">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <div key={item.label}>
               {item.label === 'Documents' ? (
                 <>

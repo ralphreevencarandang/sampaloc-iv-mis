@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getPetsFromDb } from "@/server/actions/pet.action";
+import { forbiddenUnlessAdminCan } from "@/lib/api-authorization";
 
 export async function GET(request: Request) {
+  const forbidden = await forbiddenUnlessAdminCan("pets");
+  if (forbidden) return forbidden;
+
   try {
     const { searchParams } = new URL(request.url);
     const archived = searchParams.get("archived") === "true";

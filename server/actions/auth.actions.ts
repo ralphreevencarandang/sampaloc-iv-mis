@@ -15,6 +15,7 @@ import {
   getCurrentAdminFromSession,
 } from "@/lib/admin-session";
 import type { AuthenticatedAdmin } from "@/lib/admin-auth";
+import { isBarangayAdminRole } from "@/lib/rbac";
 import {
   clearHealthWorkerSession,
   createHealthWorkerSession,
@@ -190,14 +191,14 @@ export async function loginAdminAction(
       };
     }
 
-    if (admin.role !== AdminRole.ADMIN) {
+    if (!isBarangayAdminRole(admin.role)) {
       return {
         success: false,
         message: "Access denied. Insufficient permissions.",
       };
     }
 
-    await createAdminSession(admin.id);
+    await createAdminSession(admin.id, admin.role);
 
     return {
       success: true,

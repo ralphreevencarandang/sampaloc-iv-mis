@@ -8,6 +8,7 @@ import {
   getBlotterFieldErrors,
   residentBlotterSchema,
 } from "@/validations/blotter.validation";
+import { hasAdminPermission } from "@/lib/admin-authorization";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -36,6 +37,10 @@ async function uploadBlotterImageIfPresent(blotterImageFile: File | null) {
 }
 
 export async function createBlotter(formData: FormData): Promise<CreateBlotterResult> {
+  if (!(await hasAdminPermission("blotter", "write"))) {
+    return { success: false, message: "You do not have permission to create blotter records." };
+  }
+
   const blotterImageFile = getUploadedBlotterImage(formData);
   const handledById = formData.get("handledById") as string;
 
@@ -271,6 +276,10 @@ export async function getBlottersFromDb(options: { archived?: boolean } = {}): P
 }
 
 export async function updateBlotter(id: string, formData: FormData): Promise<CreateBlotterResult> {
+  if (!(await hasAdminPermission("blotter", "write"))) {
+    return { success: false, message: "You do not have permission to update blotter records." };
+  }
+
   const blotterImageFile = getUploadedBlotterImage(formData);
 
   const handledById = formData.get("handledById") as string;

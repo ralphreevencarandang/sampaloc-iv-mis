@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getVawcFromDb } from "@/server/actions/vawc.actions";
+import { forbiddenUnlessAdminCan } from "@/lib/api-authorization";
 
 export async function GET() {
+  const forbidden = await forbiddenUnlessAdminCan("vawc");
+  if (forbidden) return forbidden;
+
   try {
     const records = await getVawcFromDb();
     return NextResponse.json(records);
