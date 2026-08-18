@@ -70,7 +70,7 @@ const AdminSidebar = ({ role }: { role?: AdminRole | null }) => {
     { label: 'Health', href: '/admin/health', icon: <HeartPulse className="w-5 h-5" />, resource: 'health' },
     { label: 'VAWC', href: '/admin/vawc', icon: <Venus className="w-5 h-5" />, resource: 'vawc' },
     { label: 'Pet Registration', href: '/admin/pets', icon: <PawPrint className="w-5 h-5" />, resource: 'pets' },
-    { label: 'Crisis Inventory', href: '/admin/inventory', icon: <AlertTriangle className="w-5 h-5" />, resource: 'inventory' },
+    { label: 'Inventory', href: '/admin/inventory', icon: <AlertTriangle className="w-5 h-5" />, resource: 'inventory' },
     { label: 'Archived', href: '/admin/archived', icon: <Archive className="w-5 h-5" />, resource: 'archives' },
   ] satisfies NavItem[];
 

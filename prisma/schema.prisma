@@ -210,11 +210,14 @@ model Blotter {
 }
 
 model InventoryItem {
-  id       String @id @default(cuid())
-  name     String
-  category String
-  quantity Int    @default(0)
-  unit     String
+  id              String  @id @default(cuid())
+  name            String
+  category        String
+  quantity        Int     @default(0)
+  unit            String
+  storageLocation String
+  description     String? @db.Text
+  isArchived      Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
