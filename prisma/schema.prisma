@@ -282,10 +282,12 @@ model MedicalRecord {
   patientId String
   patient   Resident @relation("Patient", fields: [patientId], references: [id], onDelete: Cascade)
 
-  symptoms     String  @db.Text
-  diagnosis    String  @db.Text
-  treatment    String  @db.Text
-  prescription String? @db.Text
+  symptoms       String   @db.Text
+  diagnosis      String   @db.Text
+  treatment      String   @db.Text
+  prescription   String?  @db.Text
+  assignedNurse  String?
+  medicinesGiven String[] @default([])
 
   checkedById String
   checkedBy   Admin  @relation("CheckedByHealthWorker", fields: [checkedById], references: [id])

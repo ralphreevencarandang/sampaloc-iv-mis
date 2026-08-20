@@ -8,7 +8,9 @@ import {
   Edit2,
   Eye,
   Loader2,
+  Pill,
   Search,
+  UserCheck,
 } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -40,6 +42,8 @@ function MedicalRecordsSkeleton() {
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Patient Name</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Diagnosis</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Notes</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Assigned Nurse</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Medicines Given</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
             <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Actions</th>
@@ -48,11 +52,13 @@ function MedicalRecordsSkeleton() {
         <tbody>
           {Array.from({ length: 5 }, (_, index) => (
             <tr key={index} className="border-b border-gray-100">
-              <td className="px-6 py-4"><div className="h-4 w-40 animate-pulse rounded bg-slate-200" /></td>
-              <td className="px-6 py-4"><div className="h-4 w-32 animate-pulse rounded bg-slate-200" /></td>
-              <td className="px-6 py-4"><div className="h-4 w-full max-w-md animate-pulse rounded bg-slate-200" /></td>
-              <td className="px-6 py-4"><div className="h-4 w-24 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-36 animate-pulse rounded bg-slate-200" /></td>
               <td className="px-6 py-4"><div className="h-4 w-28 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-36 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-24 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-32 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-20 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-24 animate-pulse rounded bg-slate-200" /></td>
               <td className="px-6 py-4"><div className="ml-auto h-8 w-24 animate-pulse rounded bg-slate-200" /></td>
             </tr>
           ))}
@@ -106,7 +112,9 @@ export default function AdminHealthRecordsPage({
         record.patientName.toLowerCase().includes(search) ||
         record.diagnosis.toLowerCase().includes(search) ||
         record.notes.toLowerCase().includes(search) ||
-        record.createdByName.toLowerCase().includes(search)
+        record.createdByName.toLowerCase().includes(search) ||
+        (record.assignedNurse && record.assignedNurse.toLowerCase().includes(search)) ||
+        (record.medicinesGiven && record.medicinesGiven.some((m) => m.toLowerCase().includes(search)))
       )
     })
   }, [medicalRecordsQuery.data, searchTerm])
@@ -138,12 +146,12 @@ export default function AdminHealthRecordsPage({
           </div>
         </div>
 
-        <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-slate-50 px-4 py-2.5">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-slate-50 px-4 py-2.5">
             <Search className="h-5 w-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by patient, diagnosis, notes, or health worker..."
+              placeholder="Search by patient, diagnosis, notes, assigned nurse, or medicines..."
               value={searchTerm}
               onChange={(event) => {
                 setSearchTerm(event.target.value)
@@ -154,7 +162,7 @@ export default function AdminHealthRecordsPage({
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           {medicalRecordsQuery.isLoading ? (
             <MedicalRecordsSkeleton />
           ) : medicalRecordsQuery.isError ? (
@@ -180,35 +188,64 @@ export default function AdminHealthRecordsPage({
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100 bg-slate-50">
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Patient Name</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Diagnosis</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Notes</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Patient Name</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Diagnosis</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Notes</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Assigned Nurse</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Medicines Given</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
                       <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-100">
                     {paginatedRecords.map((record) => (
-                      <tr key={record.id} className="border-b border-gray-100 transition-colors hover:bg-slate-50">
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{record.patientName}</td>
+                      <tr key={record.id} className="transition-colors hover:bg-slate-50">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900 whitespace-nowrap">{record.patientName}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">{record.diagnosis}</td>
-                        <td className="max-w-md px-6 py-4 text-sm text-slate-600">
+                        <td className="max-w-xs px-6 py-4 text-sm text-slate-600">
                           <p className="line-clamp-2">{record.notes}</p>
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
+                        <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">
+                          {record.assignedNurse ? (
+                            <div className="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                              <UserCheck className="h-4 w-4 text-teal-600 shrink-0" />
+                              <span>{record.assignedNurse}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 max-w-xs">
+                          {record.medicinesGiven && record.medicinesGiven.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {record.medicinesGiven.map((med, idx) => (
+                                <span
+                                  key={`${med}-${idx}`}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800"
+                                >
+                                  <Pill className="h-3 w-3 text-teal-600 shrink-0" />
+                                  <span>{med}</span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
                           {new Date(record.date).toLocaleDateString('en-PH')}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{record.createdByName}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{record.createdByName}</td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               type="button"
                               onClick={() => setViewRecordId(record.id)}
-                              className="rounded-lg p-1.5 text-primary-600 transition-colors hover:bg-primary-50"
+                              className="rounded-lg p-1.5 text-teal-600 transition-colors hover:bg-teal-50"
                               title="View"
                             >
                               <Eye className="h-4 w-4" />
@@ -263,7 +300,7 @@ export default function AdminHealthRecordsPage({
                         onClick={() => setCurrentPage(page)}
                         className={`h-10 w-10 rounded-lg font-medium transition-colors ${
                           currentPage === page
-                            ? 'bg-primary-600 text-white'
+                            ? 'bg-teal-600 text-white'
                             : 'border border-gray-200 text-slate-600 hover:bg-slate-100'
                         }`}
                       >

@@ -5,14 +5,18 @@ import React, { useMemo, useState } from 'react'
 import Image from 'next/image'
 import {
   Archive,
+  Boxes,
   HeartPulse,
   Megaphone,
+  Package,
   PawPrint,
+  Pill,
   Scale,
   Search,
   Shield,
   ShieldAlert,
   Users,
+  UserCheck,
   RotateCcw,
   Loader2,
   ChevronLeft,
@@ -50,6 +54,12 @@ import {
   bulkUnarchiveAnnouncementsAction,
 } from '@/server/actions/announcement.actions'
 import { unarchiveMedicalRecordAction } from '@/server/actions/clinic.actions'
+import {
+  unarchiveInventoryItem,
+  bulkUnarchiveInventoryItemsAction,
+  type InventoryRecord,
+  type InventoryStatus,
+} from '@/server/actions/inventory.actions'
 
 const ITEMS_PER_PAGE = 10
 
@@ -144,7 +154,28 @@ async function fetchArchivedMedicalRecords(): Promise<ClinicMedicalRecordListIte
   }
 }
 
-type TabId = 'Residents' | 'Officials' | 'Announcements' | 'Blotters' | 'Pets' | 'VAWC' | 'Medical Records'
+async function fetchArchivedInventory(): Promise<InventoryRecord[]> {
+  try {
+    const response = await api.get<InventoryRecord[]>('/archives?type=inventory')
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = (error.response?.data as { message?: string } | undefined)?.message
+      throw new Error(message ?? 'Failed to fetch archived inventory items.')
+    }
+    throw error
+  }
+}
+
+type TabId =
+  | 'Residents'
+  | 'Officials'
+  | 'Announcements'
+  | 'Blotters'
+  | 'Medical Records'
+  | 'Pets'
+  | 'VAWC'
+  | 'Inventory'
 
 type TabDefinition = {
   id: TabId
@@ -157,92 +188,113 @@ function getStatusBadgeClass(status: string) {
     case 'APPROVED':
     case 'RESOLVED':
     case 'ACTIVE':
+    case 'IN STOCK':
       return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-    case 'DECLINED':
     case 'OPEN':
-      return 'bg-red-50 text-red-700 border-red-200'
     case 'PENDING':
-    case 'REPORTED':
+    case 'LOW STOCK':
       return 'bg-amber-50 text-amber-700 border-amber-200'
-    case 'SUMMONED':
-      return 'bg-blue-50 text-blue-700 border-blue-200'
-    default:
+    case 'INACTIVE':
+    case 'OUT OF STOCK':
       return 'bg-slate-50 text-slate-700 border-slate-200'
+    default:
+      return 'bg-blue-50 text-blue-700 border-blue-200'
+  }
+}
+
+function getInventoryStatusBadgeClass(status: InventoryStatus) {
+  switch (status) {
+    case 'In Stock':
+      return 'border-green-200 bg-green-50 text-[#025c2a]'
+    case 'Low Stock':
+      return 'border-amber-200 bg-amber-50 text-[#0f172b]'
+    case 'Out of Stock':
+      return 'border-red-200 bg-red-50 text-[#0f172b]'
   }
 }
 
 export default function ArchivedPage() {
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<TabId>('Residents')
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+
+  // Multi-select state
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
-  const queryClient = useQueryClient()
 
-  const handleTabChange = (tab: TabId) => {
-    setActiveTab(tab)
-    setSelectedIds([])
-    setSearchTerm('')
-    setCurrentPage(1)
+  const handleUnarchiveError = (msg?: string) => {
+    toast.error(msg || 'Failed to restore record.')
   }
 
-  const handleUnarchiveSuccess = (tabKey: string, activeQueryKey: string | string[], message: string) => {
-    toast.success(message)
-    void queryClient.invalidateQueries({ queryKey: ['archivedData', tabKey] })
-    if (typeof activeQueryKey === 'string') {
-      void queryClient.invalidateQueries({ queryKey: [activeQueryKey] })
-    } else {
-      void queryClient.invalidateQueries({ queryKey: activeQueryKey })
-    }
-  }
-
-  const handleUnarchiveError = (message: string) => {
-    toast.error(message)
-  }
-
-  // Single item mutations
+  // Single Item Unarchive Mutations
   const unarchiveResident = useMutation({
     mutationFn: unarchiveResidentAction,
-    onSuccess: (res) =>
-      res.success
-        ? handleUnarchiveSuccess('residents', 'residents', res.message)
-        : handleUnarchiveError(res.message),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(res.message)
+        void queryClient.invalidateQueries({ queryKey: ['archivedData', 'residents'] })
+        void queryClient.invalidateQueries({ queryKey: ['residents'] })
+        return
+      }
+      handleUnarchiveError(res.message)
+    },
     onError: () => handleUnarchiveError('Failed to unarchive resident'),
   })
 
   const unarchiveOfficial = useMutation({
     mutationFn: unarchiveOfficialAction,
-    onSuccess: (res) =>
-      res.success
-        ? handleUnarchiveSuccess('officials', 'officials', res.message)
-        : handleUnarchiveError(res.message),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(res.message)
+        void queryClient.invalidateQueries({ queryKey: ['archivedData', 'officials'] })
+        void queryClient.invalidateQueries({ queryKey: ['officials'] })
+        return
+      }
+      handleUnarchiveError(res.message)
+    },
     onError: () => handleUnarchiveError('Failed to unarchive official'),
   })
 
   const unarchiveAnnouncement = useMutation({
     mutationFn: unarchiveAnnouncementAction,
-    onSuccess: (res) =>
-      res.success
-        ? handleUnarchiveSuccess('announcements', 'announcements', res.message)
-        : handleUnarchiveError(res.message),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(res.message)
+        void queryClient.invalidateQueries({ queryKey: ['archivedData', 'announcements'] })
+        void queryClient.invalidateQueries({ queryKey: ['announcements'] })
+        return
+      }
+      handleUnarchiveError(res.message)
+    },
     onError: () => handleUnarchiveError('Failed to unarchive announcement'),
   })
 
   const unarchiveBlotter = useMutation({
     mutationFn: unarchiveBlotterAction,
-    onSuccess: (res) =>
-      res.success
-        ? handleUnarchiveSuccess('blotters', 'blotters', res.message)
-        : handleUnarchiveError(res.message),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(res.message)
+        void queryClient.invalidateQueries({ queryKey: ['archivedData', 'blotters'] })
+        void queryClient.invalidateQueries({ queryKey: ['blotters'] })
+        return
+      }
+      handleUnarchiveError(res.message)
+    },
     onError: () => handleUnarchiveError('Failed to unarchive blotter'),
   })
 
   const unarchiveVawc = useMutation({
     mutationFn: unarchiveVawcAction,
-    onSuccess: (res) =>
-      res.success
-        ? handleUnarchiveSuccess('vawc', 'vawcs', res.message)
-        : handleUnarchiveError(res.message),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(res.message)
+        void queryClient.invalidateQueries({ queryKey: ['archivedData', 'vawc'] })
+        void queryClient.invalidateQueries({ queryKey: ['vawcs'] })
+        return
+      }
+      handleUnarchiveError(res.message)
+    },
     onError: () => handleUnarchiveError('Failed to unarchive VAWC record'),
   })
 
@@ -276,6 +328,21 @@ export default function ArchivedPage() {
     onError: () => handleUnarchiveError('Failed to unarchive medical record'),
   })
 
+  const unarchiveInventory = useMutation({
+    mutationFn: unarchiveInventoryItem,
+    onSuccess: async (res) => {
+      if (!res.success) {
+        handleUnarchiveError(res.message)
+        return
+      }
+
+      toast.success(res.message)
+      await queryClient.invalidateQueries({ queryKey: ['archivedData', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['inventory'] })
+    },
+    onError: () => handleUnarchiveError('Failed to unarchive inventory item'),
+  })
+
   // Bulk unarchive mutation
   const bulkUnarchiveMutation = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -294,6 +361,8 @@ export default function ArchivedPage() {
           return bulkUnarchivePetsAction(ids)
         case 'Medical Records':
           return bulkUnarchiveMedicalRecordsAction(ids)
+        case 'Inventory':
+          return bulkUnarchiveInventoryItemsAction(ids)
       }
     },
     onSuccess: (res) => {
@@ -313,6 +382,7 @@ export default function ArchivedPage() {
         VAWC: { archiveKey: 'vawc', activeKey: 'vawcs' },
         Pets: { archiveKey: 'pets', activeKey: ['pets'] },
         'Medical Records': { archiveKey: 'medical-records', activeKey: 'medical-records' },
+        Inventory: { archiveKey: 'inventory', activeKey: 'inventory' },
       }
 
       const keys = tabKeyMap[activeTab]
@@ -371,6 +441,12 @@ export default function ArchivedPage() {
     enabled: activeTab === 'Medical Records',
   })
 
+  const { data: archivedInventory = [], isLoading: isInventoryLoading } = useQuery({
+    queryKey: ['archivedData', 'inventory'],
+    queryFn: fetchArchivedInventory,
+    enabled: activeTab === 'Inventory',
+  })
+
   const tabs: TabDefinition[] = [
     { id: 'Residents', label: 'Residents', icon: Users },
     { id: 'Officials', label: 'Officials', icon: Shield },
@@ -379,6 +455,7 @@ export default function ArchivedPage() {
     { id: 'Medical Records', label: 'Medical Records', icon: HeartPulse },
     { id: 'Pets', label: 'Pets', icon: PawPrint },
     { id: 'VAWC', label: 'VAWC', icon: ShieldAlert },
+    { id: 'Inventory', label: 'Inventory Items', icon: Boxes },
   ]
 
   // Filter items by search
@@ -427,9 +504,16 @@ export default function ArchivedPage() {
   const filteredMedicalRecords = useMemo(() => {
     const q = searchTerm.toLowerCase()
     return archivedMedicalRecords.filter((m) =>
-      `${m.patientName} ${m.diagnosis} ${m.notes} ${m.createdByName}`.toLowerCase().includes(q)
+      `${m.patientName} ${m.diagnosis} ${m.notes} ${m.createdByName} ${m.assignedNurse ?? ''} ${(m.medicinesGiven || []).join(' ')}`.toLowerCase().includes(q)
     )
   }, [archivedMedicalRecords, searchTerm])
+
+  const filteredInventory = useMemo(() => {
+    const q = searchTerm.toLowerCase()
+    return archivedInventory.filter((i) =>
+      `${i.name} ${i.category} ${i.storageLocation} ${i.description ?? ''}`.toLowerCase().includes(q)
+    )
+  }, [archivedInventory, searchTerm])
 
   const getCurrentItems = () => {
     switch (activeTab) {
@@ -447,6 +531,8 @@ export default function ArchivedPage() {
         return filteredPets
       case 'Medical Records':
         return filteredMedicalRecords
+      case 'Inventory':
+        return filteredInventory
     }
   }
 
@@ -455,27 +541,37 @@ export default function ArchivedPage() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const paginatedItems = currentItems.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
+  // Selection handlers
   const handleSelectRow = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     )
   }
 
-  const visiblePageIds = paginatedItems.map((item) => item.id)
+  const handleSelectAllFiltered = () => {
+    const ids = currentItems.map((item) => item.id)
+    setSelectedIds(ids)
+  }
+
   const isAllPageSelected =
-    visiblePageIds.length > 0 && visiblePageIds.every((id) => selectedIds.includes(id))
+    paginatedItems.length > 0 &&
+    paginatedItems.every((item) => selectedIds.includes(item.id))
 
   const handleToggleSelectAllPage = () => {
     if (isAllPageSelected) {
-      setSelectedIds((prev) => prev.filter((id) => !visiblePageIds.includes(id)))
+      const pageIds = paginatedItems.map((item) => item.id)
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)))
     } else {
-      setSelectedIds((prev) => Array.from(new Set([...prev, ...visiblePageIds])))
+      const pageIds = paginatedItems.map((item) => item.id)
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])))
     }
   }
 
-  const handleSelectAllFiltered = () => {
-    const allIds = currentItems.map((item) => item.id)
-    setSelectedIds(allIds)
+  const handleTabChange = (tabId: TabId) => {
+    setActiveTab(tabId)
+    setSearchTerm('')
+    setCurrentPage(1)
+    setSelectedIds([])
   }
 
   const renderSectionTable = () => {
@@ -497,18 +593,16 @@ export default function ArchivedPage() {
                       className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Email</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Resident</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Contact</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Address</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Registered Date</th>
                   <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
                 </tr>
               </thead>
               <tbody>
                 {(paginatedItems as ResidentRecord[]).map((item) => {
                   const isSelected = selectedIds.includes(item.id)
-                  const address = [item.houseNumber, item.street, item.subdivision, item.phase].filter(Boolean).join(', ')
                   return (
                     <tr
                       key={item.id}
@@ -525,16 +619,24 @@ export default function ArchivedPage() {
                           className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.firstName} {item.lastName}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.email}</td>
-                      <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600">{address || '-'}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50 text-primary-700 font-semibold text-sm">
+                            {item.firstName.charAt(0)}
+                            {item.lastName.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">{item.firstName} {item.lastName}</p>
+                            <p className="text-xs text-slate-500">{item.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{item.contactNumber || 'N/A'}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{item.houseNumber} {item.street}</td>
                       <td className="px-6 py-4 text-sm">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusBadgeClass(item.status)}`}>
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(item.status)}`}>
                           {item.status}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button
@@ -571,12 +673,10 @@ export default function ArchivedPage() {
                       className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Profile</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Email</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Official</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Position</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Term Start</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Term End</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Email</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Term</th>
                   <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
                 </tr>
               </thead>
@@ -600,25 +700,27 @@ export default function ArchivedPage() {
                         />
                       </td>
                       <td className="px-6 py-4">
-                        {item.officialProfile ? (
-                          <Image
-                            src={item.officialProfile}
-                            alt={item.name}
-                            width={44}
-                            height={44}
-                            className="h-11 w-11 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-500">
-                            {item.name.charAt(0)}
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-10 w-10 overflow-hidden rounded-full border border-gray-200">
+                            {item.officialProfile ? (
+                              <Image src={item.officialProfile} alt={item.name} fill className="object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-primary-50 text-primary-700 font-bold text-sm">
+                                {item.name.charAt(0)}
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                            <p className="text-xs text-slate-500">{item.position}</p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.name}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.email}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{item.position}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{new Date(item.termStart).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.termEnd ? new Date(item.termEnd).toLocaleDateString() : '-'}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{item.email}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        {item.termStart && item.termEnd ? `${new Date(item.termStart).getFullYear()} - ${new Date(item.termEnd).getFullYear()}` : 'N/A'}
+                      </td>
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => unarchiveOfficial.mutate(item.id)}
@@ -654,18 +756,15 @@ export default function ArchivedPage() {
                       className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Image</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Title</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Content</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Announcement</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Created Date</th>
                   <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
                 </tr>
               </thead>
               <tbody>
                 {(paginatedItems as AnnouncementRecord[]).map((item) => {
                   const isSelected = selectedIds.includes(item.id)
-                  const creator = item.createdBy ? `${item.createdBy.firstName} ${item.createdBy.lastName}` : 'Barangay Admin'
                   return (
                     <tr
                       key={item.id}
@@ -683,28 +782,15 @@ export default function ArchivedPage() {
                         />
                       </td>
                       <td className="px-6 py-4">
-                        {item.image ? (
-                          <Image
-                            src={item.image}
-                            alt={item.title}
-                            width={52}
-                            height={52}
-                            className="h-13 w-13 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-13 w-13 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                            <Megaphone className="h-5 w-5" />
-                          </div>
-                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                          <p className="line-clamp-1 text-xs text-slate-500">{item.content}</p>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.title}</td>
-                      <td className="max-w-sm px-6 py-4 text-sm text-slate-600" title={item.content}>
-                        <p className="line-clamp-2">{item.content}</p>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{creator}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">
-                        {new Date(item.createdAt).toLocaleDateString()}
+                        {item.createdBy ? `${item.createdBy.firstName} ${item.createdBy.lastName}` : 'System'}
                       </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{new Date(item.createdAt).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => unarchiveAnnouncement.mutate(item.id)}
@@ -740,11 +826,10 @@ export default function ArchivedPage() {
                       className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                     />
                   </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Incident Details</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Complainant</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Respondent</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Incident</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Location</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Status</th>
                   <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
                 </tr>
@@ -764,17 +849,19 @@ export default function ArchivedPage() {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleSelectRow(item.id)}
-                          aria-label={`Select blotter for ${item.complainant}`}
+                          aria-label={`Select incident ${item.incident}`}
                           className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.complainant}</td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-semibold text-slate-900">{item.incident}</p>
+                        <p className="text-xs text-slate-500">{new Date(item.date).toLocaleDateString()}</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{item.complainant}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{item.respondentName}</td>
-                      <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600" title={item.incident}>{item.incident}</td>
-                      <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600">{item.location}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{new Date(item.date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{item.location}</td>
                       <td className="px-6 py-4 text-sm">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusBadgeClass(item.status)}`}>
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(item.status)}`}>
                           {item.status}
                         </span>
                       </td>
@@ -783,7 +870,7 @@ export default function ArchivedPage() {
                           onClick={() => unarchiveBlotter.mutate(item.id)}
                           disabled={unarchiveBlotter.isPending && unarchiveBlotter.variables === item.id}
                           className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
-                          title="Restore blotter record"
+                          title="Restore blotter"
                         >
                           <RotateCcw className="h-4 w-4 text-primary-600" />
                         </button>
@@ -813,12 +900,11 @@ export default function ArchivedPage() {
                       className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Case Number</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Case No.</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Victim</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Respondent</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Abuse Type</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Incident Date</th>
                   <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
                 </tr>
               </thead>
@@ -842,17 +928,14 @@ export default function ArchivedPage() {
                         />
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-slate-900">{item.caseNumber}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.victimName}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{item.victimName}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{item.respondentName}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-700">{item.abuseType}</td>
                       <td className="px-6 py-4 text-sm">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusBadgeClass(item.status)}`}>
-                          {item.status}
+                        <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 border border-red-200">
+                          {item.abuseType}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {new Date(item.incidentDate).toLocaleDateString()}
-                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{new Date(item.incidentDate).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => unarchiveVawc.mutate(item.id)}
@@ -972,7 +1055,9 @@ export default function ArchivedPage() {
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Patient</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Diagnosis</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Notes / Treatment</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Checked By</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Assigned Nurse</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Medicines Given</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
                   <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
                 </tr>
@@ -996,17 +1081,129 @@ export default function ArchivedPage() {
                           className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-900">{item.patientName}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-slate-900 whitespace-nowrap">{item.patientName}</td>
                       <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600">{item.diagnosis}</td>
                       <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600">{item.notes}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{item.createdByName}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{new Date(item.date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">
+                        {item.assignedNurse ? (
+                          <div className="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                            <UserCheck className="h-3.5 w-3.5 text-primary-600 shrink-0" />
+                            <span>{item.assignedNurse}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 max-w-xs">
+                        {item.medicinesGiven && item.medicinesGiven.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {item.medicinesGiven.map((med, idx) => (
+                              <span
+                                key={`${med}-${idx}`}
+                                className="inline-flex items-center gap-1 rounded-md border border-primary-200 bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-800"
+                              >
+                                <Pill className="h-3 w-3 text-primary-600 shrink-0" />
+                                <span>{med}</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{item.createdByName}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{new Date(item.date).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => unarchiveMedicalRecord.mutate(item.id)}
                           disabled={unarchiveMedicalRecord.isPending && unarchiveMedicalRecord.variables === item.id}
                           className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
                           title="Restore medical record"
+                        >
+                          <RotateCcw className="h-4 w-4 text-primary-600" />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
+
+      case 'Inventory':
+        if (isInventoryLoading) return <LoadingPlaceholder text="Loading archived inventory items..." />
+        if (filteredInventory.length === 0) return <EmptyPlaceholder text="No archived inventory items found" />
+        return (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-gray-100 bg-slate-50">
+                  <th className="w-12 px-4 py-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllPageSelected}
+                      onChange={handleToggleSelectAllPage}
+                      aria-label="Select all inventory items on this page"
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    />
+                  </th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Product Name</th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Category</th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Quantity & Unit</th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Storage Location</th>
+                  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Status</th>
+                  <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Options</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(paginatedItems as InventoryRecord[]).map((item) => {
+                  const isSelected = selectedIds.includes(item.id)
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`border-b border-gray-100 transition-colors ${
+                        isSelected ? 'bg-primary-50/60' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <td className="w-12 px-4 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectRow(item.id)}
+                          aria-label={`Select ${item.name}`}
+                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50 text-primary-700">
+                            <Package className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                            <p className="text-xs text-slate-500">ID: {item.id}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{item.category}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                        {item.quantity.toLocaleString()} {item.unit}
+                      </td>
+                      <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600" title={item.storageLocation}>
+                        {item.storageLocation}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getInventoryStatusBadgeClass(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => unarchiveInventory.mutate(item.id)}
+                          disabled={unarchiveInventory.isPending && unarchiveInventory.variables === item.id}
+                          className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
+                          title="Restore inventory item"
                         >
                           <RotateCcw className="h-4 w-4 text-primary-600" />
                         </button>

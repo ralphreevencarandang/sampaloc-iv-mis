@@ -6,6 +6,10 @@ import { type CreateOfficialResult } from "@/server/actions/official.actions"
 import { type BlotterRecord } from "@/server/actions/blotter.actions"
 import { type PetRecord } from "@/server/actions/pet.action"
 import { hasAdminPermission } from "@/lib/admin-authorization"
+import { getCurrentHealthWorkerFromSession } from "@/lib/health-worker-session"
+import { getCurrentAdminFromSession } from "@/lib/admin-session"
+import { canAccessResource } from "@/lib/rbac"
+import { AdminRole } from "@/app/generated/prisma/enums"
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -496,7 +500,15 @@ async function setBulkMedicalRecordArchiveStatusAction(
   ids: string[],
   isArchive: boolean
 ): Promise<BulkArchiveResult> {
-  if (!(await hasAdminPermission("health", "write"))) {
+  const [healthWorker, admin] = await Promise.all([
+    getCurrentHealthWorkerFromSession(),
+    getCurrentAdminFromSession(),
+  ]);
+
+  const hasHealthWorkerAccess = Boolean(healthWorker);
+  const hasAdminAccess = admin && (admin.role === AdminRole.HEALTH_WORKER || canAccessResource(admin.role, "health", "write"));
+
+  if (!hasHealthWorkerAccess && !hasAdminAccess) {
     return { success: false, message: "You do not have permission to archive medical records." };
   }
 

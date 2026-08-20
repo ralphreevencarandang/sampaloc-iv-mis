@@ -4,6 +4,7 @@ import { fetchOfficialsFromDb } from "@/server/officials/officials";
 import { getBlottersFromDb } from "@/server/actions/blotter.actions";
 import { getVawcFromDb } from "@/server/actions/vawc.actions";
 import { getPetsFromDb } from "@/server/actions/pet.action";
+import { getInventoryFromDb } from "@/server/actions/inventory.actions";
 import { prisma } from "@/lib/prisma";
 import { serializeClinicMedicalRecord } from "@/lib/clinic-utils";
 import { forbiddenUnlessAdminCan } from "@/lib/api-authorization";
@@ -76,6 +77,11 @@ export async function GET(request: Request) {
       return NextResponse.json(pets);
     }
 
+    if (type === "inventory") {
+      const inventoryItems = await getInventoryFromDb({ archived: true });
+      return NextResponse.json(inventoryItems);
+    }
+
     if (type === "medical-records") {
       const medicalRecords = await prisma.medicalRecord.findMany({
         where: {
@@ -88,6 +94,8 @@ export async function GET(request: Request) {
           diagnosis: true,
           treatment: true,
           prescription: true,
+          assignedNurse: true,
+          medicinesGiven: true,
           date: true,
           isArchive: true,
           patient: {

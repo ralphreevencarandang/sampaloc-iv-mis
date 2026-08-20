@@ -127,6 +127,8 @@ function getMedicalRecordSelect() {
     diagnosis: true,
     treatment: true,
     prescription: true,
+    assignedNurse: true,
+    medicinesGiven: true,
     date: true,
     isArchive: true,
     patient: {
@@ -166,6 +168,8 @@ export async function submitMedicalRecordAction(
         symptoms: validation.parsed.data.notes,
         diagnosis: validation.parsed.data.diagnosis,
         treatment: validation.parsed.data.notes,
+        assignedNurse: validation.parsed.data.assignedNurse || null,
+        medicinesGiven: validation.parsed.data.medicinesGiven ?? [],
         prescription:
           validation.parsed.data.attachments.length > 0
             ? JSON.stringify(validation.parsed.data.attachments)
@@ -233,6 +237,8 @@ export async function updateMedicalRecordAction(
         symptoms: validation.parsed.data.notes,
         diagnosis: validation.parsed.data.diagnosis,
         treatment: validation.parsed.data.notes,
+        assignedNurse: validation.parsed.data.assignedNurse || null,
+        medicinesGiven: validation.parsed.data.medicinesGiven ?? [],
         prescription:
           validation.parsed.data.attachments.length > 0
             ? JSON.stringify(validation.parsed.data.attachments)

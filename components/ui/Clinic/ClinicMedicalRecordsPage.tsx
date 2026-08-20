@@ -9,11 +9,15 @@ import {
   Edit2,
   Eye,
   Loader2,
+  Pill,
   RotateCcw,
   Search,
+  UserCheck,
 } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import BulkActionBar from '@/components/ui/Admin/BulkActionBar'
+import BulkConfirmModal from '@/components/ui/Admin/BulkConfirmModal'
 import ClinicMedicalRecordDetailsModal from '@/components/ui/Clinic/ClinicMedicalRecordDetailsModal'
 import MedicalRecordModalForm from '@/components/ui/Clinic/MedicalRecordModalForm'
 import { fetchClinicMedicalRecords } from '@/lib/clinic-api'
@@ -22,6 +26,10 @@ import {
   archiveMedicalRecordAction,
   unarchiveMedicalRecordAction,
 } from '@/server/actions/clinic.actions'
+import {
+  bulkArchiveMedicalRecordsAction,
+  bulkUnarchiveMedicalRecordsAction,
+} from '@/server/actions/archive.actions'
 
 type PatientOption = {
   id: string
@@ -44,9 +52,14 @@ function MedicalRecordsSkeleton() {
       <table className="w-full">
         <thead>
           <tr className="border-b border-gray-100 bg-slate-50">
+            <th className="w-12 px-4 py-4 text-center">
+              <div className="h-4 w-4 mx-auto animate-pulse rounded bg-slate-200" />
+            </th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Patient Name</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Diagnosis</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Notes</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Assigned Nurse</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Medicines Given</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
             <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Actions</th>
@@ -55,12 +68,15 @@ function MedicalRecordsSkeleton() {
         <tbody>
           {Array.from({ length: 5 }, (_, index) => (
             <tr key={index} className="border-b border-gray-100">
-              <td className="px-6 py-4"><div className="h-4 w-40 animate-pulse rounded bg-slate-200" /></td>
-              <td className="px-6 py-4"><div className="h-4 w-32 animate-pulse rounded bg-slate-200" /></td>
-              <td className="px-6 py-4"><div className="h-4 w-full max-w-md animate-pulse rounded bg-slate-200" /></td>
-              <td className="px-6 py-4"><div className="h-4 w-24 animate-pulse rounded bg-slate-200" /></td>
+              <td className="w-12 px-4 py-4 text-center"><div className="h-4 w-4 mx-auto animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-36 animate-pulse rounded bg-slate-200" /></td>
               <td className="px-6 py-4"><div className="h-4 w-28 animate-pulse rounded bg-slate-200" /></td>
-              <td className="px-6 py-4"><div className="ml-auto h-8 w-28 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-36 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-24 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-32 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-20 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="h-4 w-24 animate-pulse rounded bg-slate-200" /></td>
+              <td className="px-6 py-4"><div className="ml-auto h-8 w-24 animate-pulse rounded bg-slate-200" /></td>
             </tr>
           ))}
         </tbody>
@@ -79,6 +95,10 @@ export default function ClinicMedicalRecordsPage({
   const [viewRecordId, setViewRecordId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
 
   const archived = activeTab === 'archived'
 
@@ -108,6 +128,28 @@ export default function ClinicMedicalRecordsPage({
     },
   })
 
+  const bulkActionMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      return archived
+        ? bulkUnarchiveMedicalRecordsAction(ids)
+        : bulkArchiveMedicalRecordsAction(ids)
+    },
+    onSuccess: async (result) => {
+      if (!result.success) {
+        toast.error(result.message)
+        return
+      }
+
+      toast.success(result.message)
+      setSelectedIds([])
+      setIsBulkModalOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['medical-records'] })
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to perform bulk action.')
+    },
+  })
+
   const filteredRecords = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
 
@@ -120,7 +162,9 @@ export default function ClinicMedicalRecordsPage({
         record.patientName.toLowerCase().includes(search) ||
         record.diagnosis.toLowerCase().includes(search) ||
         record.notes.toLowerCase().includes(search) ||
-        record.createdByName.toLowerCase().includes(search)
+        record.createdByName.toLowerCase().includes(search) ||
+        (record.assignedNurse && record.assignedNurse.toLowerCase().includes(search)) ||
+        (record.medicinesGiven && record.medicinesGiven.some((m) => m.toLowerCase().includes(search)))
       )
     })
   }, [medicalRecordsQuery.data, searchTerm])
@@ -128,6 +172,37 @@ export default function ClinicMedicalRecordsPage({
   const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const paginatedRecords = filteredRecords.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+
+  // Selection handlers
+  const handleSelectRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    )
+  }
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(filteredRecords.map((item) => item.id))
+  }
+
+  const isAllPageSelected =
+    paginatedRecords.length > 0 &&
+    paginatedRecords.every((item) => selectedIds.includes(item.id))
+
+  const handleToggleSelectAllPage = () => {
+    if (isAllPageSelected) {
+      const pageIds = paginatedRecords.map((item) => item.id)
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)))
+    } else {
+      const pageIds = paginatedRecords.map((item) => item.id)
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])))
+    }
+  }
+
+  const handleTabChange = (newTab: RecordTab) => {
+    setActiveTab(newTab)
+    setCurrentPage(1)
+    setSelectedIds([])
+  }
 
   useEffect(() => {
     if (totalPages === 0) {
@@ -151,7 +226,7 @@ export default function ClinicMedicalRecordsPage({
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Medical Records</h1>
             <p className="mt-1 text-slate-600">
-              Review, update, and archive clinic consultation records.
+              Review, update, and archive clinic consultation records and medications.
             </p>
           </div>
 
@@ -162,7 +237,7 @@ export default function ClinicMedicalRecordsPage({
                 setSelectedRecord(null)
                 setIsFormOpen(true)
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-teal-600 px-5 py-3 font-semibold text-white transition hover:bg-teal-700"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-teal-600 px-5 py-3 font-semibold text-white transition hover:bg-teal-700 shadow-md shadow-teal-900/10"
             >
               <CirclePlus className="h-5 w-5" />
               Add Medical Record
@@ -170,8 +245,21 @@ export default function ClinicMedicalRecordsPage({
           ) : null}
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
-          <nav className="flex border-b border-gray-100 px-4" aria-label="Medical record tabs">
+        {/* Floating Bulk Action Bar */}
+        <BulkActionBar
+          selectedCount={selectedIds.length}
+          totalCount={filteredRecords.length}
+          onClearSelection={() => setSelectedIds([])}
+          onSelectAll={handleSelectAllFiltered}
+          isAllSelected={selectedIds.length === filteredRecords.length && filteredRecords.length > 0}
+          onBulkAction={() => setIsBulkModalOpen(true)}
+          actionType={archived ? 'unarchive' : 'archive'}
+          actionLabel={archived ? 'Bulk Unarchive' : 'Bulk Archive'}
+          isLoading={bulkActionMutation.isPending}
+        />
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <nav className="flex border-b border-slate-200 px-4" aria-label="Medical record tabs">
             {[
               { id: 'active', label: 'Active Records' },
               { id: 'archived', label: 'Archived Records' },
@@ -182,10 +270,7 @@ export default function ClinicMedicalRecordsPage({
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => {
-                    setActiveTab(tab.id as RecordTab)
-                    setCurrentPage(1)
-                  }}
+                  onClick={() => handleTabChange(tab.id as RecordTab)}
                   className={`border-b-2 px-4 py-4 text-sm font-semibold transition-colors ${
                     isActive
                       ? 'border-teal-600 text-teal-700'
@@ -199,17 +284,17 @@ export default function ClinicMedicalRecordsPage({
           </nav>
 
           <div className="p-4">
-            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-slate-50 px-4 py-2.5">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
               <Search className="h-5 w-5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search by patient, diagnosis, notes, or staff..."
+                placeholder="Search by patient, diagnosis, notes, assigned nurse, or medicines..."
                 value={searchTerm}
                 onChange={(event) => {
                   setSearchTerm(event.target.value)
                   setCurrentPage(1)
                 }}
-                className="flex-1 bg-transparent text-slate-700 outline-none placeholder-slate-500"
+                className="flex-1 bg-transparent text-slate-700 outline-none placeholder-slate-400"
               />
             </div>
           </div>
@@ -239,79 +324,138 @@ export default function ClinicMedicalRecordsPage({
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-slate-50">
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Patient Name</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Diagnosis</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Notes</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="w-12 px-4 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isAllPageSelected}
+                          onChange={handleToggleSelectAllPage}
+                          aria-label="Select all medical records on this page"
+                          className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                        />
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Patient Name</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Diagnosis</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Notes</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Assigned Nurse</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Medicines Given</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Date</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Created By</th>
                       <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-700">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {paginatedRecords.map((record) => (
-                      <tr key={record.id} className="border-b border-gray-100 transition-colors hover:bg-slate-50">
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{record.patientName}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{record.diagnosis}</td>
-                        <td className="max-w-md px-6 py-4 text-sm text-slate-600">
-                          <p className="line-clamp-2">{record.notes}</p>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          {new Date(record.date).toLocaleDateString('en-PH')}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{record.createdByName}</td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setViewRecordId(record.id)}
-                              className="rounded-lg p-1.5 text-primary-600 transition-colors hover:bg-primary-50"
-                              title="View"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            {!archived ? (
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedRecords.map((record) => {
+                      const isSelected = selectedIds.includes(record.id)
+                      return (
+                        <tr
+                          key={record.id}
+                          className={`transition-colors ${
+                            isSelected ? 'bg-teal-50/50' : 'hover:bg-slate-50/80'
+                          }`}
+                        >
+                          <td className="w-12 px-4 py-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleSelectRow(record.id)}
+                              aria-label={`Select record for ${record.patientName}`}
+                              className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-slate-900 whitespace-nowrap">
+                            {record.patientName}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-slate-800">
+                            {record.diagnosis}
+                          </td>
+                          <td className="max-w-xs px-6 py-4 text-sm text-slate-600">
+                            <p className="line-clamp-2">{record.notes}</p>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">
+                            {record.assignedNurse ? (
+                              <div className="inline-flex items-center gap-1.5 font-medium text-slate-800">
+                                <UserCheck className="h-4 w-4 text-teal-600 shrink-0" />
+                                <span>{record.assignedNurse}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600 max-w-xs">
+                            {record.medicinesGiven && record.medicinesGiven.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {record.medicinesGiven.map((med, idx) => (
+                                  <span
+                                    key={`${med}-${idx}`}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800"
+                                  >
+                                    <Pill className="h-3 w-3 text-teal-600 shrink-0" />
+                                    <span>{med}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
+                            {new Date(record.date).toLocaleDateString('en-PH')}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{record.createdByName}</td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setSelectedRecord(record)
-                                  setIsFormOpen(true)
-                                }}
-                                className="rounded-lg p-1.5 text-amber-600 transition-colors hover:bg-amber-50"
-                                title="Edit"
+                                onClick={() => setViewRecordId(record.id)}
+                                className="rounded-lg p-2 text-teal-600 transition-colors hover:bg-teal-50"
+                                title="View details"
                               >
-                                <Edit2 className="h-4 w-4" />
+                                <Eye className="h-4 w-4" />
                               </button>
-                            ) : null}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                archiveMutation.mutate({
-                                  id: record.id,
-                                  archived: !record.isArchive,
-                                })
-                              }
-                              disabled={archiveMutation.isPending}
-                              className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                              title={record.isArchive ? 'Unarchive' : 'Archive'}
-                            >
-                              {record.isArchive ? (
-                                <RotateCcw className="h-4 w-4" />
-                              ) : (
-                                <Archive className="h-4 w-4" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {!archived ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRecord(record)
+                                    setIsFormOpen(true)
+                                  }}
+                                  className="rounded-lg p-2 text-amber-600 transition-colors hover:bg-amber-50"
+                                  title="Edit record"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  archiveMutation.mutate({
+                                    id: record.id,
+                                    archived: !record.isArchive,
+                                  })
+                                }
+                                disabled={archiveMutation.isPending}
+                                className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                title={record.isArchive ? 'Unarchive' : 'Archive'}
+                              >
+                                {record.isArchive ? (
+                                  <RotateCcw className="h-4 w-4" />
+                                ) : (
+                                  <Archive className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
 
-              <div className="flex items-center justify-between border-t border-gray-100 bg-slate-50 px-6 py-4">
+              <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
                 <div className="text-sm text-slate-600">
                   Showing <span className="font-semibold">{startIndex + 1}</span> to{' '}
                   <span className="font-semibold">
@@ -324,7 +468,7 @@ export default function ClinicMedicalRecordsPage({
                     type="button"
                     onClick={() => setCurrentPage((previous) => Math.max(previous - 1, 1))}
                     disabled={currentPage === 1}
-                    className="rounded-lg border border-gray-200 p-2 text-slate-600 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-slate-200 p-2 text-slate-600 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
@@ -334,10 +478,10 @@ export default function ClinicMedicalRecordsPage({
                         key={page}
                         type="button"
                         onClick={() => setCurrentPage(page)}
-                        className={`h-10 w-10 rounded-lg font-medium transition-colors ${
+                        className={`h-9 w-9 rounded-lg text-sm font-medium transition-colors ${
                           currentPage === page
-                            ? 'bg-primary-600 text-white'
-                            : 'border border-gray-200 text-slate-600 hover:bg-slate-100'
+                            ? 'bg-teal-600 text-white shadow-sm'
+                            : 'border border-slate-200 text-slate-600 hover:bg-slate-100'
                         }`}
                       >
                         {page}
@@ -348,7 +492,7 @@ export default function ClinicMedicalRecordsPage({
                     type="button"
                     onClick={() => setCurrentPage((previous) => Math.min(previous + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="rounded-lg border border-gray-200 p-2 text-slate-600 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-slate-200 p-2 text-slate-600 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChevronRight className="h-5 w-5" />
                   </button>
@@ -373,6 +517,20 @@ export default function ClinicMedicalRecordsPage({
         isOpen={Boolean(viewRecordId)}
         recordId={viewRecordId}
         onClose={() => setViewRecordId(null)}
+      />
+
+      {/* Bulk Confirm Modal */}
+      <BulkConfirmModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onConfirm={() => bulkActionMutation.mutate(selectedIds)}
+        title={archived ? 'Restore Selected Medical Records' : 'Archive Selected Medical Records'}
+        message={`Are you sure you want to ${archived ? 'restore' : 'archive'} ${selectedIds.length} selected medical record${
+          selectedIds.length !== 1 ? 's' : ''
+        }?`}
+        confirmText={archived ? 'Restore Selected' : 'Archive Selected'}
+        variant={archived ? 'primary' : 'warning'}
+        isPending={bulkActionMutation.isPending}
       />
     </>
   )

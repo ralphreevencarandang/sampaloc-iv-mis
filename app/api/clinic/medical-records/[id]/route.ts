@@ -39,6 +39,8 @@ export async function GET(
         diagnosis: true,
         treatment: true,
         prescription: true,
+        assignedNurse: true,
+        medicinesGiven: true,
         date: true,
         isArchive: true,
         patient: {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, RefreshCw, X } from 'lucide-react'
+import { Loader2, Pill, RefreshCw, UserCheck, X } from 'lucide-react'
 import React from 'react'
 import { fetchClinicMedicalRecordById } from '@/lib/clinic-api'
 
@@ -33,7 +33,7 @@ export default function ClinicMedicalRecordDetailsModal({
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Medical Record Details</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Review the full consultation entry in read-only mode.
+              Review full consultation, assigned nurse, and administered medicines.
             </p>
           </div>
           <button
@@ -69,43 +69,82 @@ export default function ClinicMedicalRecordDetailsModal({
             </div>
           ) : recordQuery.data ? (
             <div className="space-y-6">
-              <div className="grid gap-5 md:grid-cols-2">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Patient Name</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">
+                  <p className="mt-1.5 text-base font-semibold text-slate-900">
                     {recordQuery.data.patientName}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">
-                    {new Date(recordQuery.data.date).toLocaleDateString('en-PH')}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Consultation Date</p>
+                  <p className="mt-1.5 text-base font-semibold text-slate-900">
+                    {new Date(recordQuery.data.date).toLocaleDateString('en-PH', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Diagnosis</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">
+                  <p className="mt-1.5 text-base font-semibold text-slate-900">
                     {recordQuery.data.diagnosis}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created By</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">
-                    {recordQuery.data.createdByName}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Assigned Nurse</p>
+                  <p className="mt-1.5 text-base font-semibold text-slate-900 flex items-center gap-1.5">
+                    {recordQuery.data.assignedNurse ? (
+                      <>
+                        <UserCheck className="h-4 w-4 text-teal-600 shrink-0" />
+                        <span>{recordQuery.data.assignedNurse}</span>
+                      </>
+                    ) : (
+                      <span className="text-slate-400 font-normal">Not specified</span>
+                    )}
                   </p>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Medicines Given / Administered
+                </p>
+                {recordQuery.data.medicinesGiven && recordQuery.data.medicinesGiven.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {recordQuery.data.medicinesGiven.map((med, index) => (
+                      <span
+                        key={`${med}-${index}`}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-800"
+                      >
+                        <Pill className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                        <span>{med}</span>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-slate-500 italic">No medicines recorded for this visit.</p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes & Instructions</p>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
                   {recordQuery.data.notes}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Attachments</p>
-                {recordQuery.data.attachments.length > 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Recorded By: <strong className="text-slate-700">{recordQuery.data.createdByName}</strong></span>
+                  <span>Status: <strong className="text-slate-700">{recordQuery.data.isArchive ? 'Archived' : 'Active'}</strong></span>
+                </div>
+              </div>
+
+              {recordQuery.data.attachments && recordQuery.data.attachments.length > 0 ? (
+                <div className="rounded-2xl border border-slate-200 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Attachments</p>
                   <div className="mt-3 space-y-2">
                     {recordQuery.data.attachments.map((attachment) => (
                       <div
@@ -116,10 +155,8 @@ export default function ClinicMedicalRecordDetailsModal({
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="mt-3 text-sm text-slate-500">No attachments recorded.</p>
-                )}
-              </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

@@ -20,6 +20,8 @@ export const medicalRecordSchema = z.object({
   patientId: requiredString('Patient'),
   diagnosis: requiredString('Diagnosis'),
   notes: requiredString('Notes'),
+  assignedNurse: z.string().trim().optional(),
+  medicinesGiven: z.array(z.string().trim().min(1)).optional().default([]),
   date: validDateString,
   attachments: z.any().optional(),
 })
@@ -30,6 +32,8 @@ export const medicalRecordSubmissionSchema = z.object({
   patientId: requiredString('Patient'),
   diagnosis: requiredString('Diagnosis'),
   notes: requiredString('Notes'),
+  assignedNurse: z.string().trim().optional(),
+  medicinesGiven: z.array(z.string().trim().min(1)).optional().default([]),
   date: validDateString,
   attachments: z
     .array(
@@ -89,10 +93,32 @@ export function parseMedicalRecordFormData(formData: FormData) {
     }
   }
 
+  let medicinesGiven: string[] = []
+  const rawMedicines = formData.getAll('medicinesGiven')
+  if (rawMedicines.length === 1 && typeof rawMedicines[0] === 'string' && rawMedicines[0].trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(rawMedicines[0])
+      if (Array.isArray(parsed)) {
+        medicinesGiven = parsed.filter((m): m is string => typeof m === 'string' && m.trim().length > 0).map(m => m.trim())
+      }
+    } catch {
+      medicinesGiven = [rawMedicines[0].trim()].filter(Boolean)
+    }
+  } else {
+    medicinesGiven = rawMedicines
+      .filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+      .map((m) => m.trim())
+  }
+
+  const assignedNurseValue = formData.get('assignedNurse')
+  const assignedNurse = typeof assignedNurseValue === 'string' ? assignedNurseValue.trim() : undefined
+
   return medicalRecordSubmissionSchema.safeParse({
     patientId: formData.get('patientId'),
     diagnosis: formData.get('diagnosis'),
     notes: formData.get('notes'),
+    assignedNurse,
+    medicinesGiven,
     date: formData.get('date'),
     attachments: [...existingAttachments, ...uploadedAttachments],
   })

@@ -254,3 +254,54 @@ async function setInventoryArchiveStatusAction(
     };
   }
 }
+
+export type BulkInventoryArchiveResult = {
+  success: boolean;
+  message: string;
+  count?: number;
+};
+
+export async function bulkArchiveInventoryItemsAction(ids: string[]): Promise<BulkInventoryArchiveResult> {
+  return setBulkInventoryArchiveStatusAction(ids, true);
+}
+
+export async function bulkUnarchiveInventoryItemsAction(ids: string[]): Promise<BulkInventoryArchiveResult> {
+  return setBulkInventoryArchiveStatusAction(ids, false);
+}
+
+async function setBulkInventoryArchiveStatusAction(
+  ids: string[],
+  isArchived: boolean
+): Promise<BulkInventoryArchiveResult> {
+  if (!(await hasAdminPermission("inventory", "write"))) {
+    return { success: false, message: "You do not have permission to archive inventory items." };
+  }
+
+  try {
+    if (!ids || ids.length === 0) {
+      return { success: false, message: "No inventory items selected." };
+    }
+
+    const result = await prisma.inventoryItem.updateMany({
+      where: { id: { in: ids } },
+      data: { isArchived },
+    });
+
+    return {
+      success: true,
+      message: isArchived
+        ? `Successfully archived ${result.count} inventory item${result.count !== 1 ? "s" : ""}.`
+        : `Successfully restored ${result.count} inventory item${result.count !== 1 ? "s" : ""}.`,
+      count: result.count,
+    };
+  } catch (error) {
+    console.error("bulk inventory archive failed", error);
+    return {
+      success: false,
+      message: isArchived
+        ? "An unexpected error occurred while archiving inventory items."
+        : "An unexpected error occurred while restoring inventory items.",
+    };
+  }
+}
+

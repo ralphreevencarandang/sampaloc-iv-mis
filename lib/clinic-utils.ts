@@ -10,6 +10,8 @@ export type ClinicMedicalRecordListItem = {
   patientName: string
   diagnosis: string
   notes: string
+  assignedNurse: string | null
+  medicinesGiven: string[]
   date: string
   createdByName: string
   attachments: MedicalRecordAttachment[]
@@ -60,6 +62,8 @@ export function serializeClinicMedicalRecord(record: {
   diagnosis: string
   treatment: string
   prescription: string | null
+  assignedNurse?: string | null
+  medicinesGiven?: string[] | null
   date: Date
   isArchive: boolean
   patient: {
@@ -81,6 +85,8 @@ export function serializeClinicMedicalRecord(record: {
     patientName,
     diagnosis: record.diagnosis,
     notes: record.treatment || record.symptoms,
+    assignedNurse: record.assignedNurse ?? null,
+    medicinesGiven: Array.isArray(record.medicinesGiven) ? record.medicinesGiven : [],
     date: record.date.toISOString(),
     createdByName: record.checkedBy.name,
     attachments: safeParseAttachments(record.prescription),
