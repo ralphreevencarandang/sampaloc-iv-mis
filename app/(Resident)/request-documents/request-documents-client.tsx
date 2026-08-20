@@ -423,7 +423,7 @@ export default function RequestDocumentsClient({
         throw new Error("Resident session is missing.");
       }
 
-      return fetchResidentDocumentRequests();
+      return fetchResidentDocumentRequests(residentProfile.id);
     },
     enabled: Boolean(residentProfile?.id),
     staleTime: 60 * 1000,

@@ -14,6 +14,7 @@ type ResidentAuthContextValue = {
   resident: AuthenticatedResident | null;
   isAuthenticated: boolean;
   signIn: (nextResident: AuthenticatedResident) => void;
+  updateResident: (patch: Partial<AuthenticatedResident>) => void;
   signOut: () => void;
 };
 
@@ -37,6 +38,8 @@ export function ResidentAuthProvider({
       resident,
       isAuthenticated: resident !== null,
       signIn: (nextResident) => setResident(nextResident),
+      updateResident: (patch) =>
+        setResident((current) => (current ? { ...current, ...patch } : null)),
       signOut: () => setResident(null),
     }),
     [resident]

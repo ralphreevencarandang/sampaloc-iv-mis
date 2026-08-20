@@ -2,13 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-hot-toast";
 import {
   AlertCircle,
   CalendarDays,
+  Camera,
   FileText,
   Home,
+  Loader2,
   Mail,
   MapPin,
   PawPrint,
@@ -46,6 +49,7 @@ type ResidentProfile = {
   precinctNumber: string | null;
   isArchived: boolean;
   validIDImage: string | null;
+  image: string | null;
   status: ResidentStatus;
   createdAt: string;
 };
@@ -299,19 +303,156 @@ function ResidentSummary({
   resident: ResidentProfile;
 }) {
   const displayName = fullName(resident);
+  const { updateResident } = useResidentAuth();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      // 1. Upload image to Cloudinary via server endpoint
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const uploadRes = await apiClient.post<{ secure_url: string }>(
+        "/residents/upload-image",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      const secureUrl = uploadRes.data.secure_url;
+
+      // 2. Update resident image in database
+      const updateRes = await apiClient.patch<ResidentProfile>(
+        `/residents/${resident.id}`,
+        { image: secureUrl }
+      );
+
+      return { profile: updateRes.data, url: secureUrl };
+    },
+    onSuccess: ({ url }) => {
+      // 3. Update auth provider state and invalidate react-query cache
+      updateResident({ image: url });
+      void queryClient.invalidateQueries({
+        queryKey: ["resident-profile", resident.id],
+      });
+      toast.success("Profile photo updated successfully!");
+    },
+    onError: (error) => {
+      console.error("Failed to upload profile photo:", error);
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Failed to upload photo. Please try again.";
+      toast.error(message);
+    },
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate type and size
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Please upload a valid image file (JPEG, PNG, WEBP).");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be 5MB or less.");
+      return;
+    }
+
+    uploadMutation.mutate(file);
+
+    // Reset input value so same file can be re-selected if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <aside className="space-y-6 lg:sticky lg:top-6">
       <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
         <div className="bg-gradient-to-br from-primary-700 via-primary-600 to-sky-600 px-6 py-8 text-white">
-          <div className="flex items-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 text-2xl font-bold backdrop-blur">
-              {resident.firstName.charAt(0).toUpperCase()}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {/* Avatar with Edit Overlay */}
+            <div className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-white/20 ring-2 ring-white/30 backdrop-blur shadow-md flex items-center justify-center">
+              {resident.image ? (
+                <Image
+                  src={resident.image}
+                  alt={displayName}
+                  fill
+                  sizes="80px"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-3xl font-bold text-white">
+                  {resident.firstName.charAt(0).toUpperCase()}
+                </span>
+              )}
+
+              {/* Upload Overlay Button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadMutation.isPending}
+                aria-label="Upload profile photo"
+                className={`absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white transition-opacity duration-200 ${
+                  uploadMutation.isPending
+                    ? "opacity-100 bg-black/60"
+                    : "opacity-0 group-hover:opacity-100 cursor-pointer"
+                }`}
+              >
+                {uploadMutation.isPending ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                ) : (
+                  <>
+                    <Camera className="h-5 w-5" />
+                    <span className="mt-0.5 text-[10px] font-semibold tracking-wide">
+                      Edit
+                    </span>
+                  </>
+                )}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleFileChange}
+                className="hidden"
+              />
             </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-white/75">Resident Profile</p>
-              <h1 className="mt-1 text-2xl font-bold">{displayName}</h1>
-              <p className="mt-1 text-sm text-white/85">{resident.email}</p>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-xs uppercase tracking-[0.2em] text-white/75">
+                Resident Profile
+              </p>
+              <h1 className="mt-1 text-2xl font-bold truncate">{displayName}</h1>
+              <p className="mt-1 text-sm text-white/85 truncate">{resident.email}</p>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadMutation.isPending}
+                className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-all disabled:opacity-50"
+              >
+                {uploadMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Uploading photo...</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="h-3.5 w-3.5" />
+                    <span>{resident.image ? "Change Photo" : "Upload Photo"}</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -464,7 +605,7 @@ export default function MyAccountPage() {
         throw new Error("Resident session is missing.");
       }
 
-      return fetchResidentDocumentRequests();
+      return fetchResidentDocumentRequests(residentId);
     },
     enabled: Boolean(residentId && activeTab === "documents"),
     staleTime: 5 * 60 * 1000,

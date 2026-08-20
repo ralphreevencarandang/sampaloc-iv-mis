@@ -4,4 +4,5 @@ export type AuthenticatedResident = {
   firstName: string;
   lastName: string;
   status: string;
+  image?: string | null;
 };

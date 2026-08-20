@@ -124,6 +124,7 @@ export async function getCurrentResidentFromSession(): Promise<AuthenticatedResi
       firstName: true,
       lastName: true,
       status: true,
+      image: true,
     },
   });
 
@@ -137,6 +138,7 @@ export async function getCurrentResidentFromSession(): Promise<AuthenticatedResi
     firstName: resident.firstName,
     lastName: resident.lastName,
     status: resident.status,
+    image: resident.image,
   };
 }
 

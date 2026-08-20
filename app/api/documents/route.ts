@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const requestedType = searchParams.get('type')
+    const residentIdParam = searchParams.get('residentId')
 
     if (requestedType && !isDocumentTypeId(requestedType)) {
       return NextResponse.json({ message: 'Invalid document type filter.' }, { status: 400 })
@@ -21,7 +22,10 @@ export async function GET(request: Request) {
 
     if (await hasAdminPermission('documents')) {
       const documentRequests = await prisma.documentRequest.findMany({
-        where: requestedType ? { documentTypeId: requestedType } : undefined,
+        where: {
+          ...(requestedType ? { documentTypeId: requestedType } : {}),
+          ...(residentIdParam ? { residentId: residentIdParam } : {}),
+        },
         select: {
           id: true,
           documentTypeId: true,

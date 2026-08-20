@@ -27,9 +27,12 @@ export async function fetchAdminDocumentRequests(
   }
 }
 
-export async function fetchResidentDocumentRequests(): Promise<ResidentDocumentRequestRecord[]> {
+export async function fetchResidentDocumentRequests(
+  residentId?: string
+): Promise<ResidentDocumentRequestRecord[]> {
   try {
-    const response = await api.get<ResidentDocumentRequestRecord[]>('/documents')
+    const endpoint = residentId ? `/residents/${residentId}/documents` : '/documents'
+    const response = await api.get<ResidentDocumentRequestRecord[]>(endpoint)
 
     return response.data
   } catch (error) {

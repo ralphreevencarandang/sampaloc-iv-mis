@@ -12,10 +12,14 @@ import logo from "@/public/images/sampaloc-logo.png";
 
 function ResidentProfileMenu({
   residentInitial,
+  residentImage,
+  residentName,
   onLogout,
   isLoggingOut,
 }: {
   residentInitial: string;
+  residentImage?: string | null;
+  residentName?: string;
   onLogout: () => void;
   isLoggingOut: boolean;
 }) {
@@ -42,9 +46,20 @@ function ResidentProfileMenu({
       <button
         type="button"
         onClick={() => setIsProfileMenuOpen((current) => !current)}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-sm font-semibold text-white shadow-md shadow-primary-600/30 transition-all duration-300 hover:bg-primary-700"
+        aria-label="User menu"
+        className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-primary-600 text-sm font-semibold text-white shadow-md shadow-primary-600/30 ring-2 ring-primary-600/20 transition-all duration-300 hover:scale-105 hover:bg-primary-700"
       >
-        {residentInitial}
+        {residentImage ? (
+          <Image
+            src={residentImage}
+            alt={residentName ?? "Profile picture"}
+            width={40}
+            height={40}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          residentInitial
+        )}
       </button>
 
       {isProfileMenuOpen && (
@@ -129,6 +144,8 @@ const ResidentNavbar = () => {
             {isAuthenticated ? (
               <ResidentProfileMenu
                 residentInitial={residentInitial}
+                residentImage={resident?.image}
+                residentName={`${resident?.firstName ?? ""} ${resident?.lastName ?? ""}`.trim()}
                 onLogout={() => logoutMutation.mutate()}
                 isLoggingOut={logoutMutation.isPending}
               />
@@ -146,6 +163,8 @@ const ResidentNavbar = () => {
             {isAuthenticated ? (
               <ResidentProfileMenu
                 residentInitial={residentInitial}
+                residentImage={resident?.image}
+                residentName={`${resident?.firstName ?? ""} ${resident?.lastName ?? ""}`.trim()}
                 onLogout={() => logoutMutation.mutate()}
                 isLoggingOut={logoutMutation.isPending}
               />

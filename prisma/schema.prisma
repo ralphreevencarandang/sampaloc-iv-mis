@@ -125,6 +125,7 @@ model Resident {
   isArchived     Boolean @default(false)
 
   validIDImage String?
+  image        String?
   status       VerificationStatus @default(PENDING)
 
   createdAt DateTime @default(now())

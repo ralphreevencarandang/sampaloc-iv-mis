@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { serializeResidentDocumentRequest } from '@/lib/document-request-utils'
 import { prisma } from '@/lib/prisma'
 import { getCurrentResidentFromSession } from '@/lib/resident-session'
+import { hasAdminPermission } from '@/lib/admin-authorization'
 
 type RouteContext = {
   params: Promise<{ id: string }>
@@ -10,13 +11,14 @@ type RouteContext = {
 export async function GET(_: Request, { params }: RouteContext) {
   try {
     const currentResident = await getCurrentResidentFromSession()
+    const isAdmin = await hasAdminPermission('documents')
     const { id } = await params
 
-    if (!currentResident) {
+    if (!currentResident && !isAdmin) {
       return NextResponse.json({ message: 'Unauthorized.' }, { status: 401 })
     }
 
-    if (currentResident.id !== id) {
+    if (!isAdmin && currentResident?.id !== id) {
       return NextResponse.json({ message: 'Forbidden.' }, { status: 403 })
     }
 
