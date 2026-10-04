@@ -296,8 +296,8 @@ export default function RegisterPage() {
         {successMessage && (
           <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700">
             {successMessage} You can now proceed to{" "}
-            <Link href="/login" className="font-semibold underline">
-              login
+            <Link href="/Login" className="font-semibold underline">
+              Login
             </Link>
             .
           </div>
@@ -784,7 +784,7 @@ export default function RegisterPage() {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Link href="/login" className="font-medium text-primary-600 hover:text-primary-500">
+              <Link href="/Login" className="font-medium text-primary-600 hover:text-primary-500">
                 Sign In Here
               </Link>
             </p>
