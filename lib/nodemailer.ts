@@ -21,7 +21,7 @@ function getPortalUrl(path: string) {
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.APP_URL ??
     process.env.NEXTAUTH_URL ??
-    'http://localhost:3000'
+    'https://sampaloc-iv-mis.vercel.app'
 
   return new URL(path, baseUrl).toString()
 }
@@ -42,7 +42,7 @@ export async function sendResidentApprovalEmail(email: string, firstName: string
           'You can now log in to the Sampaloc IV MIS portal using your registered email address to access services and view your records.',
         ],
         ctaLabel: 'Log In to Portal',
-        ctaUrl: getPortalUrl('/login'),
+        ctaUrl: getPortalUrl('/Login'),
         footer:
           'If you did not request this registration, please contact the barangay hall immediately.',
       })
