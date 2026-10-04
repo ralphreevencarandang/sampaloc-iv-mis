@@ -18,7 +18,7 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
     'You can now log in to the Sampaloc IV MIS portal using your registered email address to access services and view your records.',
   ],
   ctaLabel = 'Log In to Portal',
-  ctaUrl = 'http://localhost:3000/login',
+  ctaUrl = 'https://sampaloc-iv-mis.vercel.app/Login',
   footer = 'If you did not request this registration, please contact the barangay hall immediately.',
 }) => (
   <div style={{ fontFamily: 'sans-serif', padding: '20px', color: '#333' }}>
