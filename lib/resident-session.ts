@@ -146,7 +146,7 @@ export async function requireResidentSession() {
   const resident = await getCurrentResidentFromSession();
 
   if (!resident) {
-    redirect("/login");
+    redirect("/Login");
   }
 
   return resident;
