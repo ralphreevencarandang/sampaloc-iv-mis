@@ -2,6 +2,7 @@
 
 import { AdminRole, VerificationStatus } from "@/app/generated/prisma/enums";
 import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
 import prismaModule from "@/lib/prisma";
 import type { AuthenticatedResident } from "@/lib/resident-auth";
 import {
@@ -46,7 +47,18 @@ export type ResidentLoginResult = {
 };
 
 export async function registerResidentAction(formData: FormData) {
-  return createResidentAccount(formData);
+  const result = await createResidentAccount(formData);
+  if (result.success) {
+    const cookieStore = await cookies();
+    cookieStore.set("resident_registration_success", "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/Login",
+      maxAge: 60,
+    });
+  }
+  return result;
 }
 
 export async function loginResidentAction(

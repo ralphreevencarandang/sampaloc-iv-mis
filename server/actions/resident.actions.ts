@@ -102,6 +102,9 @@ function validateResidentRegistration(formData: FormData): {
     isPwd: getFormValue(formData, "isPwd"),
     pwdCondition: getFormValue(formData, "pwdCondition"),
     validIDImageName: validIDImageFile.name,
+    idType: getFormValue(formData, "idType"),
+    idNumber: getFormValue(formData, "idNumber"),
+    otherIdType: getFormValue(formData, "otherIdType"),
   };
 
   const parsed = residentRegistrationSchema.safeParse(input);
@@ -145,6 +148,9 @@ function validateResidentRegistration(formData: FormData): {
       isPwd: data.isPwd === "Yes",
       pwdCondition: data.isPwd === "Yes" ? data.pwdCondition : null,
       validIDImageFile,
+      idType: data.idType,
+      idNumber: data.idNumber,
+      otherIdType: data.idType === "Other" ? data.otherIdType : "",
     },
   };
 }
@@ -215,13 +221,16 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
           isPwd: data.isPwd,
           pwdCondition: data.pwdCondition,
           validIDImage: uploadResult.secure_url,
+          idType: data.idType,
+          idNumber: data.idNumber,
+          otherIdType: data.otherIdType || null,
         },
       });
     });
 
     return {
       success: true,
-      message: "Resident registration submitted successfully.",
+      message: "Account registered successfully. Please log in.",
     };
   } catch (error) {
     if (error instanceof CloudinaryUploadError) {

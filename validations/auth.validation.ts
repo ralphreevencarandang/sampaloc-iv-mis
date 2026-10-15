@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { calculateAge, PWD_CONDITIONS } from "@/lib/resident-demographics";
+import { getRegistrationAge, VALID_ID_TYPES } from "@/lib/resident-registration";
 
 const requiredString = (label: string) =>
   z.string().trim().min(1, `${label} is required.`);
@@ -103,6 +104,9 @@ export const residentRegistrationSchema = z
       .regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character."),
     confirmPassword: z.string().min(1, "Please confirm your password."),
     validIDImageName: requiredString("Valid ID image"),
+    idType: z.enum(["", ...VALID_ID_TYPES]).refine((value) => value !== "", "ID type is required."),
+    idNumber: requiredString("ID number"),
+    otherIdType: z.string().trim().default(""),
     ...baseResidentFields,
   })
   .refine((value) => value.password === value.confirmPassword, {
@@ -111,6 +115,15 @@ export const residentRegistrationSchema = z
   })
   .superRefine((value, ctx) => {
     validateResidentDependencies(value, ctx);
+    if (value.idType === "Other" && !value.otherIdType) {
+      ctx.addIssue({ code: "custom", path: ["otherIdType"], message: "Specify ID type is required." });
+    }
+    const age = getRegistrationAge(value.birthDate);
+    if (age === null) {
+      ctx.addIssue({ code: "custom", path: ["birthDate"], message: "Enter a valid birth date that is not in the future." });
+    } else if (age < 15 && value.isVoter !== "No") {
+      ctx.addIssue({ code: "custom", path: ["isVoter"], message: "Residents younger than 15 must select No." });
+    }
   });
 
 export type ResidentRegistrationInput = z.infer<
