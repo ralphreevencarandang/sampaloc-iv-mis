@@ -114,4 +114,18 @@ ID controls follow type, conditional Other specification, number, then upload. I
 
 ## Registry Maintenance
 
+### Document request eligibility feedback
+
+Last updated: 2026-10-16. Files: `app/(Resident)/request-documents/request-documents-client.tsx`, `components/document-requests/admin-document-requests-page.tsx`.
+
+| Property | Pattern |
+| --- | --- |
+| Blocking notice | `rounded-lg border border-primary-200 bg-primary-50 p-4 text-sm text-primary-700`, `role="status"` |
+| Existing request link | `mt-2 inline-block font-semibold underline`, targets the request row's stable `request-{id}` anchor |
+| Submit state | Existing `disabled:cursor-not-allowed disabled:opacity-60`; blocked until history loads and while an active/lifetime restriction applies |
+| Job Seeker quantity | Disabled input fixed to 1, with `mt-2 text-sm text-primary-700` explanation; total displays ₱0.00 |
+| Admin terminal action | Single Reject request action: `rounded-lg px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50`, disabled on final/issued requests; confirmation before rejection |
+
+The document selector remains usable to inspect requirements. The selected document's Submit Request button enforces eligibility. History refreshes on focus and every 30 seconds; the server remains authoritative. Admin filters and badges include REJECTED as the single unsuccessful outcome. No new palette colors were introduced.
+
 After implementing a new reusable component, update this file with the component name, path, purpose, props, usage, dependencies, variants, and verification date.

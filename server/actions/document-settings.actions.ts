@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import prismaModule from '@/lib/prisma'
 import { documentTypeCatalog } from '@/lib/document-request-catalog'
 import { hasAdminPermission } from '@/lib/admin-authorization'
+import { documentUnitPrice, isJobSeekerDocument } from '@/lib/document-request-policy'
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule
 
@@ -105,7 +106,7 @@ export async function getAllDocumentsWithPricingAction(): Promise<DocumentSettin
       documentTypeId: doc.documentTypeId,
       name: doc.name,
       description: doc.description,
-      price: doc.price,
+      price: documentUnitPrice(doc.documentTypeId, doc.price),
       isActive: doc.isActive,
       createdAt: doc.createdAt.toISOString(),
       updatedAt: doc.updatedAt.toISOString(),
@@ -153,11 +154,15 @@ export async function updateDocumentPriceAction(input: {
     }
   }
 
-  if (typeof input.price !== 'number' || isNaN(input.price) || input.price < 0) {
+  if (typeof input.price !== 'number' || !Number.isFinite(input.price) || input.price < 0) {
     return {
       success: false,
       message: 'Please enter a valid price (₱0 or higher).',
     }
+  }
+
+  if (isJobSeekerDocument(input.documentTypeId) && input.price !== 0) {
+    return { success: false, message: 'The First-Time Job Seeker Certificate must remain free (₱0).' }
   }
 
   try {

@@ -37,6 +37,7 @@ export async function GET(request: Request) {
           serialNumber: true,
           generatedFileUrl: true,
           generatedAt: true,
+          releasedAt: true,
           status: true,
           requestedAt: true,
           resident: {
@@ -81,6 +82,7 @@ export async function GET(request: Request) {
         serialNumber: true,
         generatedFileUrl: true,
         generatedAt: true,
+        releasedAt: true,
         status: true,
         requestedAt: true,
       },

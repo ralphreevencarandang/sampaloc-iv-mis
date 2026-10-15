@@ -32,7 +32,7 @@ type PageProps = {
   documentType: DocumentTypeId
 }
 
-type AdminFilter = 'ALL' | 'PENDING' | 'REVIEW' | 'APPROVED' | 'GENERATED'
+type AdminFilter = 'ALL' | DocumentRequestStatus
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ')
@@ -78,6 +78,7 @@ function StatusBadge({ status }: { status: DocumentRequestStatus }) {
     REVIEW: 'border-sky-200 bg-sky-50 text-sky-700',
     APPROVED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     GENERATED: 'border-primary-200 bg-primary-50 text-primary-700',
+    REJECTED: 'border-primary-200 bg-primary-50 text-primary-700',
   } as const
 
   return (
@@ -165,6 +166,8 @@ function RowActionMenu({
   onReview,
   onSendEmail,
   onArchive,
+  canClose,
+  onCloseRequest,
 }: {
   isOpen: boolean
   canApprove: boolean
@@ -179,6 +182,8 @@ function RowActionMenu({
   onReview: () => void
   onSendEmail: () => void
   onArchive: () => void
+  canClose: boolean
+  onCloseRequest: () => void
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -260,6 +265,11 @@ function RowActionMenu({
             <Archive className="h-4 w-4 text-amber-600" />
             Archive
           </button>
+            <button type="button" disabled={!canClose || isMutating}
+              onClick={onCloseRequest}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-primary-700 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50">
+              Reject request
+            </button>
         </div>
       ) : null}
     </div>
@@ -492,7 +502,7 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
       <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4  lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
-            {(['ALL', 'PENDING',  'APPROVED', 'GENERATED'] as AdminFilter[]).map((filter) => (
+            {(['ALL', 'PENDING', 'REVIEW', 'APPROVED', 'GENERATED', 'REJECTED'] as AdminFilter[]).map((filter) => (
               <button
                 key={filter}
                 type="button"
@@ -627,6 +637,12 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
                               ) : null}
 
                               <RowActionMenu
+                                canClose={['PENDING', 'REVIEW', 'APPROVED'].includes(request.status) && !request.generatedAt}
+                                onCloseRequest={() => {
+                                  if (window.confirm('Reject this request? The resident may submit a new request.')) {
+                                    reviewMutation.mutate({ requestId: request.id, status: 'REJECTED' })
+                                  }
+                                }}
                                 isOpen={isMenuOpen}
                                 canApprove={canApprove}
                                 canMoveToReview={canMoveToReview}

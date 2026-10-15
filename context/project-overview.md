@@ -138,7 +138,7 @@ The application is implemented as a Next.js App Router project with route groups
 - Admin login excludes `HEALTH_WORKER`; health workers must use the clinic login.
 - Admin route access uses `proxy.ts` for optimistic redirects plus server-side checks in server actions and API handlers.
 - `PUNONG_BARANGAY` is read-only by RBAC.
-- Document request statuses in the active enum are `PENDING`, `REVIEW`, `APPROVED`, and `GENERATED`.
+- Document request statuses are `PENDING`, `REVIEW`, `APPROVED`, `GENERATED`, and `REJECTED`. Apply both document eligibility migrations, including `20261016010000_merge_cancelled_document_requests`, which merges cancelled requests into REJECTED. PDF generation is the issuance/release step; approval alone is active. One active request per resident/document type is allowed. First-Time Job Seeker is free, limited to one copy per new request, and unavailable after any prior issuance.
 - Blotter statuses are `OPEN` and `RESOLVED`.
 - VAWC statuses are `REPORTED`, `SUMMONED`, `RESOLVED`, and `DISMISSED`.
 - Archive fields vary by model: `isArchive` and `isArchived` both exist. Preserve existing names.

@@ -6,6 +6,9 @@ import { hasAdminPermission } from '@/lib/admin-authorization'
 import { sendDocumentRequestPdfEmail } from '@/lib/nodemailer'
 import prismaModule from '@/lib/prisma'
 import { getDocumentDefinition } from '@/lib/document-request-catalog'
+import { documentUnitPrice, getDocumentRequestBlock, isJobSeekerDocument, isActiveDocumentRequest, wasDocumentIssued } from '@/lib/document-request-policy'
+import { lockDocumentRequestResident } from '@/lib/document-request-lock'
+import { z } from 'zod'
 import {
   serializeAdminDocumentRequest,
   serializeResidentDocumentRequest,
@@ -30,9 +33,15 @@ export type CreateResidentDocumentRequestResult = {
   message: string
   fieldErrors?: Record<string, string>
   request?: ResidentDocumentRequestRecord
+  existingRequestId?: string
 }
 
-type AdminDocumentRequestStatus = 'APPROVED' | 'REVIEW'
+type AdminDocumentRequestStatus = 'APPROVED' | 'REVIEW' | 'REJECTED'
+
+const statusUpdateSchema = z.object({
+  requestId: z.string().min(1),
+  status: z.enum(['APPROVED', 'REVIEW', 'REJECTED']),
+})
 
 export type UpdateAdminDocumentRequestStatusResult = {
   success: boolean
@@ -88,51 +97,61 @@ export async function createResidentDocumentRequestAction(
     const relevantDetails = pickRelevantDocumentRequestData(parsed.data)
     const requestedCopies = Number(parsed.data.requestedCopies)
     
-    // Fetch dynamic price from database with fallback to catalog fee
-    const documentSetting = await prisma.document.findUnique({
-      where: { documentTypeId: definition.id },
-      select: { price: true },
-    })
-    const unitPrice = documentSetting?.price !== undefined ? documentSetting.price : definition.fee
-    const totalAmount = Math.round(unitPrice * requestedCopies)
+    const result = await prisma.$transaction(async (tx) => {
+      await lockDocumentRequestResident(tx, resident.id)
+      const history = await tx.documentRequest.findMany({
+        where: { residentId: resident.id, documentTypeId: isJobSeekerDocument(definition.id)
+          ? { in: [definition.id, 'FIRST_TIME_JOB_SEEKER'] } : definition.id },
+        select: { id: true, documentTypeId: true, status: true, generatedAt: true, releasedAt: true },
+      })
+      const block = getDocumentRequestBlock(definition.id, history.map((request) => ({ ...request, documentType: request.documentTypeId })))
+      if (block) return { success: false, message: block.message, existingRequestId: block.requestId }
 
-    const createdRequest = await prisma.documentRequest.create({
-      data: {
-        residentId: resident.id,
-        documentTypeId: definition.id,
-        type: definition.label,
-        purpose: parsed.data.purpose.trim() || null,
-        quantity: requestedCopies,
-        yearsOfResidency: parsed.data.yearsOfResidency ? parseInt(parsed.data.yearsOfResidency, 10) : 0,
-        placeOfBirth: parsed.data.placeOfBirth || null,
-        amount: totalAmount,
-        details: relevantDetails as Prisma.InputJsonValue,
-        status: 'PENDING',
-      },
-      select: {
-        id: true,
-        documentTypeId: true,
-        type: true,
-        purpose: true,
-        quantity: true,
-        amount: true,
-        details: true,
-        serialNumber: true,
-        generatedFileUrl: true,
-        generatedAt: true,
-        status: true,
-        requestedAt: true,
-      },
-    })
+      const documentSetting = await tx.document.findUnique({
+        where: { documentTypeId: definition.id },
+        select: { price: true },
+      })
+      const unitPrice = documentUnitPrice(definition.id, documentSetting?.price ?? definition.fee)
+      const totalAmount = Math.round(unitPrice * requestedCopies)
 
+      const createdRequest = await tx.documentRequest.create({
+        data: {
+          residentId: resident.id,
+          documentTypeId: definition.id,
+          type: definition.label,
+          purpose: parsed.data.purpose.trim() || null,
+          quantity: requestedCopies,
+          yearsOfResidency: parsed.data.yearsOfResidency ? parseInt(parsed.data.yearsOfResidency, 10) : 0,
+          placeOfBirth: parsed.data.placeOfBirth || null,
+          amount: totalAmount,
+          details: relevantDetails as Prisma.InputJsonValue,
+          status: 'PENDING',
+        },
+        select: {
+          id: true,
+          documentTypeId: true,
+          type: true,
+          purpose: true,
+          quantity: true,
+          amount: true,
+          details: true,
+          serialNumber: true,
+          generatedFileUrl: true,
+          generatedAt: true,
+          status: true,
+          requestedAt: true,
+        },
+      })
+
+      return {
+        success: true,
+        message: `${definition.label} request submitted successfully.`,
+        request: serializeResidentDocumentRequest(createdRequest),
+      }
+    }, { isolationLevel: 'ReadCommitted', maxWait: 15000, timeout: 15000 })
     revalidatePath('/request-documents')
     revalidatePath('/my-account')
-
-    return {
-      success: true,
-      message: `${definition.label} request submitted successfully.`,
-      request: serializeResidentDocumentRequest(createdRequest),
-    }
+    return result
   } catch (error) {
     console.error('create resident document request failed', error)
 
@@ -155,6 +174,7 @@ const adminDocumentRequestRevalidationPaths = [
   '/admin/documents/barangay-id',
   '/admin/documents/job-seeker',
   '/my-account',
+  '/request-documents',
 ]
 
 export async function updateAdminDocumentRequestStatusAction(input: {
@@ -168,102 +188,108 @@ export async function updateAdminDocumentRequestStatusAction(input: {
     }
   }
 
+  const parsed = statusUpdateSchema.safeParse(input)
+  if (!parsed.success) return { success: false, message: 'Invalid document request status update.' }
+
   try {
-    const existingRequest = await prisma.documentRequest.findUnique({
-      where: {
-        id: input.requestId,
-      },
-      select: {
-        id: true,
-        documentTypeId: true,
-        type: true,
-        purpose: true,
-        quantity: true,
-        amount: true,
-        details: true,
-        serialNumber: true,
-        generatedFileUrl: true,
-        generatedAt: true,
-        status: true,
-        requestedAt: true,
-        resident: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            middleName: true,
-            lastName: true,
-            houseNumber: true,
-            street: true,
+    const result = await prisma.$transaction(async (tx) => {
+      const owner = await tx.documentRequest.findUnique({ where: { id: parsed.data.requestId }, select: { residentId: true } })
+      if (!owner) return { success: false, message: 'Document request not found.' }
+      await lockDocumentRequestResident(tx, owner.residentId)
+      const existingRequest = await tx.documentRequest.findUnique({
+        where: {
+          id: input.requestId,
+        },
+        select: {
+          id: true,
+          documentTypeId: true,
+          type: true,
+          purpose: true,
+          quantity: true,
+          amount: true,
+          details: true,
+          serialNumber: true,
+          generatedFileUrl: true,
+          generatedAt: true,
+          releasedAt: true,
+          status: true,
+          requestedAt: true,
+          resident: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              houseNumber: true,
+              street: true,
+            },
           },
         },
-      },
-    })
+      })
 
-    if (!existingRequest) {
-      return {
-        success: false,
-        message: 'Document request not found.',
+      if (!existingRequest) {
+        return {
+          success: false,
+          message: 'Document request not found.',
+        }
       }
-    }
 
-    if (existingRequest.status === input.status) {
+      if (existingRequest.status === input.status) {
+        return {
+          success: true,
+          message:
+            `${existingRequest.type} request is already ${input.status.toLowerCase()}.`,
+          request: serializeAdminDocumentRequest(existingRequest),
+        }
+      }
+
+      if (!isActiveDocumentRequest(existingRequest.status) || wasDocumentIssued(existingRequest)) {
+        return { success: false, message: 'Completed or rejected requests cannot be reopened or changed.' }
+      }
+
+      const updatedRequest = await tx.documentRequest.update({
+        where: {
+          id: input.requestId,
+        },
+        data: {
+          status: input.status,
+        },
+        select: {
+          id: true,
+          documentTypeId: true,
+          type: true,
+          purpose: true,
+          quantity: true,
+          amount: true,
+          details: true,
+          serialNumber: true,
+          generatedFileUrl: true,
+          generatedAt: true,
+          status: true,
+          requestedAt: true,
+          resident: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              houseNumber: true,
+              street: true,
+            },
+          },
+        },
+      })
+
       return {
         success: true,
-        message:
-          input.status === 'APPROVED'
-            ? `${existingRequest.type} request is already approved.`
-            : `${existingRequest.type} request is already under review.`,
-        request: serializeAdminDocumentRequest(existingRequest),
+        message: `${updatedRequest.type} request ${input.status.toLowerCase()} successfully.`,
+        request: serializeAdminDocumentRequest(updatedRequest),
       }
-    }
-
-    const updatedRequest = await prisma.documentRequest.update({
-      where: {
-        id: input.requestId,
-      },
-      data: {
-        status: input.status,
-      },
-      select: {
-        id: true,
-        documentTypeId: true,
-        type: true,
-        purpose: true,
-        quantity: true,
-        amount: true,
-        details: true,
-        serialNumber: true,
-        generatedFileUrl: true,
-        generatedAt: true,
-        status: true,
-        requestedAt: true,
-        resident: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            middleName: true,
-            lastName: true,
-            houseNumber: true,
-            street: true,
-          },
-        },
-      },
-    })
-
-    for (const path of adminDocumentRequestRevalidationPaths) {
-      revalidatePath(path)
-    }
-
-    return {
-      success: true,
-      message:
-        input.status === 'APPROVED'
-          ? `${updatedRequest.type} request approved successfully.`
-          : `${updatedRequest.type} request moved to review successfully.`,
-      request: serializeAdminDocumentRequest(updatedRequest),
-    }
+    }, { isolationLevel: 'ReadCommitted', maxWait: 15000, timeout: 15000 })
+    for (const path of adminDocumentRequestRevalidationPaths) revalidatePath(path)
+    return result
   } catch (error) {
     console.error('update admin document request status failed', error)
 

@@ -1,5 +1,7 @@
 import prismaModule from '@/lib/prisma'
 import { generateDocumentRequestPdfBuffer } from '@/lib/pdf/document-request-pdf'
+import { lockDocumentRequestResident } from '@/lib/document-request-lock'
+import { documentUnitPrice, isJobSeekerDocument, JOB_SEEKER_AVAILED_MESSAGE, wasDocumentIssued } from '@/lib/document-request-policy'
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule
 
@@ -102,6 +104,7 @@ export async function generateStoredDocumentRequestPdf(
         serialNumber: true,
         generatedFileUrl: true,
         generatedAt: true,
+        releasedAt: true,
         status: true,
         requestedAt: true,
         resident: {
@@ -132,7 +135,7 @@ export async function generateStoredDocumentRequestPdf(
     }
 
     const now = new Date()
-    const effectiveGeneratedAt = documentRequest.generatedAt ?? now
+    const effectiveGeneratedAt = documentRequest.generatedAt ?? documentRequest.releasedAt ?? now
     const year = effectiveGeneratedAt.getFullYear()
     const latestWithYear = await prisma.documentRequest.findFirst({
       where: {
@@ -156,22 +159,46 @@ export async function generateStoredDocumentRequestPdf(
 
     const pdfBuffer = await generateDocumentRequestPdfBuffer({
       ...documentRequest,
+      amount: documentUnitPrice(documentRequest.documentTypeId, documentRequest.amount),
       serialNumber,
       generatedAt: effectiveGeneratedAt,
     })
 
     try {
-      await prisma.documentRequest.update({
-        where: {
-          id: documentRequest.id,
-        },
-        data: {
-          serialNumber,
-          generatedAt: effectiveGeneratedAt,
-          releasedAt: effectiveGeneratedAt,
-          status: 'GENERATED',
-        },
-      })
+      const saved = await prisma.$transaction(async (tx) => {
+        await lockDocumentRequestResident(tx, documentRequest.resident.id)
+        const current = await tx.documentRequest.findUnique({ where: { id: requestId } })
+        if (!current || !PDF_ELIGIBLE_STATUSES.has(current.status)) {
+          throw new DocumentRequestPdfGenerationError('This request is no longer eligible for issuance. Refresh the request list.', 409)
+        }
+        if (current.serialNumber && current.serialNumber !== serialNumber) return false
+        if (isJobSeekerDocument(current.documentTypeId) && !wasDocumentIssued(current)) {
+          const issued = await tx.documentRequest.findFirst({
+            where: {
+              residentId: current.residentId,
+              id: { not: current.id },
+              documentTypeId: { in: ['first-time-job-seeker', 'FIRST_TIME_JOB_SEEKER'] },
+              OR: [{ status: 'GENERATED' }, { generatedAt: { not: null } }, { releasedAt: { not: null } }],
+            },
+            select: { id: true },
+          })
+          if (issued) throw new DocumentRequestPdfGenerationError(JOB_SEEKER_AVAILED_MESSAGE, 409)
+        }
+        await tx.documentRequest.update({
+          where: {
+            id: documentRequest.id,
+          },
+          data: {
+            serialNumber,
+            generatedAt: current.generatedAt ?? effectiveGeneratedAt,
+            releasedAt: current.releasedAt ?? effectiveGeneratedAt,
+            amount: documentUnitPrice(current.documentTypeId, current.amount),
+            status: 'GENERATED',
+          },
+        })
+        return true
+      }, { isolationLevel: 'ReadCommitted', maxWait: 15000, timeout: 15000 })
+      if (!saved) continue
     } catch (updateError) {
       if (!documentRequest.serialNumber && isUniqueConstraintError(updateError) && attempt < 2) {
         continue
@@ -186,6 +213,7 @@ export async function generateStoredDocumentRequestPdf(
       serialNumber,
       documentRequest: {
         ...documentRequest,
+        amount: documentUnitPrice(documentRequest.documentTypeId, documentRequest.amount),
         serialNumber,
         generatedAt: effectiveGeneratedAt,
         status: 'GENERATED',

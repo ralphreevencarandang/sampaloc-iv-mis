@@ -5,6 +5,7 @@ export type DocumentRequestStatus =
   | 'REVIEW'
   | 'APPROVED'
   | 'GENERATED'
+  | 'REJECTED'
 
 export type DocumentDetailLine = {
   label: string
@@ -138,6 +139,7 @@ export function serializeResidentDocumentRequest(record: {
   serialNumber: string | null
   generatedFileUrl: string | null
   generatedAt: Date | null
+  releasedAt?: Date | null
   requestedAt: Date
 }): ResidentDocumentRequestRecord {
   const details = (record.details ?? {}) as Record<string, string | undefined>
@@ -157,7 +159,7 @@ export function serializeResidentDocumentRequest(record: {
     }),
     serialNumber: record.serialNumber,
     generatedFileUrl: record.generatedFileUrl,
-    generatedAt: record.generatedAt?.toISOString() ?? null,
+    generatedAt: (record.generatedAt ?? record.releasedAt)?.toISOString() ?? null,
     submittedAt: record.requestedAt.toISOString(),
   }
 }
@@ -174,6 +176,7 @@ export function serializeAdminDocumentRequest(record: {
   serialNumber: string | null
   generatedFileUrl: string | null
   generatedAt: Date | null
+  releasedAt?: Date | null
   requestedAt: Date
   resident: {
     id: string

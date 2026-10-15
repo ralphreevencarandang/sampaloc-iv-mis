@@ -5,8 +5,8 @@ Last updated: 2026-10-16
 ## Current Status
 
 - Current development phase: Existing BMIS implementation with new AI context documentation baseline.
-- Last verified completed feature: Resident registration ID details, login redirect without session creation, and voting age controls; verified by focused tests and production build.
-- Current active feature: None. Prisma client and development route cache recovery verified; real registration retry remains a manual integration check.
+- Last verified completed feature: Document request eligibility and free one-time Job Seeker issuance; focused policy/UI and isolated PostgreSQL lifecycle/concurrency tests passed on 2026-10-16.
+- Current active feature: None. Document request rules are implemented and verified; application database migration remains pending deployment.
 - Next recommended feature: Security and authorization audit of server actions and API route handlers.
 - Known blockers: No automated test suite is configured; several sensitive workflows need manual verification in a configured environment.
 
@@ -88,6 +88,10 @@ Last updated: 2026-10-16
 
 ## In-Progress Features
 
+Follow-up consolidation: `REJECTED` is now the only unsuccessful terminal document outcome. Migration `20261016010000_merge_cancelled_document_requests` preserves existing cancelled records by converting their status to REJECTED and retaining timestamps. Apply both pending document migrations with `npx prisma migrate deploy`, regenerate the client, and restart the application; application tables have not been migrated by the agent.
+
+Document migration `20261016000000_document_request_eligibility` is prepared and tested in an isolated PostgreSQL schema; it has not been applied to application tables. Deploy it with `npx prisma migrate deploy`, regenerate the client, and restart the application. Existing duplicate active records are retained and prevent additional requests until closed; legacy duplicate Job Seeker records cannot both be newly issued. An older migration mapped REJECTED to REVIEW and RELEASED to APPROVED; retained release timestamps preserve issuance, but lost historical rejection statuses cannot be reconstructed automatically.
+
 The configured database reports all 28 migrations applied as of 2026-10-16. Verify a real Cloudinary-backed submission and login notice after the Prisma cache recovery; no real resident registration was submitted by the agent.
 
 ## Known Issues
@@ -112,6 +116,8 @@ The configured database reports all 28 migrations applied as of 2026-10-16. Veri
 
 | Date | Files | Summary |
 | --- | --- | --- |
+| 2026-10-16 | Document action/status type, admin document UI, Prisma schema/follow-up migration, focused tests, context | Consolidated duplicate Reject/Cancel behavior into Reject request at the user's request; removed CANCELLED from accepted mutations, filters, badges, and the final database enum. Existing cancelled requests migrate to REJECTED without deleting history. |
+| 2026-10-16 | Document actions, policy/lock helpers, validation, PDF delivery, request APIs/serializer, resident/admin document UI, Prisma schema/migration, tests, context | Enforced free single-copy Job Seeker requests and permanent issuance history; serialized eligibility checks/creation/status transitions using a resident row lock; added rejected/cancelled outcomes, exact feedback and history links. Archive visibility is not part of eligibility. |
 | 2026-10-16 | Local Next.js development cache (no application source changes) | Diagnosed `/Login` 404: stale dev manifest listed lowercase `login`, despite uppercase source folder and correct production manifest. Restart alone did not persist; stopped the project dev server, preserved `.next/dev` under `.next/dev-recovery-*`, and restarted on port 3000 with a fresh cache. |
 | 2026-10-16 | Registration redirect, login page, auth action, registration test, UI registry | Removed `?registered=1` from navigation. A 60-second HttpOnly cookie scoped to `/Login` carries the fixed registration success notice without creating an authenticated session. |
 | 2026-10-16 | `lib/prisma.ts`, `tests/prisma-cache.test.ts` | Fixed development hot-reload reuse of a client generated before resident ID fields existed. Cached resident scalar fields must match the current generated field enum before reuse. |
@@ -122,6 +128,12 @@ The configured database reports all 28 migrations applied as of 2026-10-16. Veri
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-10-16 | Rejected-only consolidation: policy/UI tests, isolated PostgreSQL suite, production build, focused ESLint, diff check | All 4 policy/UI tests and 8 database subtests plus parent passed. Verified cancelled-record conversion preserves release timestamps and the final enum rejects CANCELLED; retries and concurrent issuance protections remain intact. Build and diff check passed; focused ESLint has no errors and 3 pre-existing warnings. Both migrations remain unapplied to application tables. |
+| 2026-10-16 | Document rules: `npm run build`, focused ESLint, `git diff --check` | Production build passed, including TypeScript and all 64 pages. Focused ESLint has no errors (three pre-existing unused review-control props in the admin document component). Diff whitespace check passed. UI verification used rendered-component tests, not a live authenticated browser session. |
+| 2026-10-16 | `node --import tsx --test tests/document-request-policy.test.ts` | 4 tests passed: free pricing/copy validation, rendered resident form behavior, active per-type restrictions, and permanent/legacy issuance checks. |
+| 2026-10-16 | `RUN_DOCUMENT_DB_TESTS=1 node --import tsx --test tests/document-request-database.test.ts` | 8 PostgreSQL subtests plus parent passed in a temporary schema, cleaned up afterward. Verified migration/data preservation and fee constraints, authenticated identity, eight concurrent submissions producing one active request, different types, unsuccessful retries, archive-independent checks, legacy release history, competing Job Seeker issuance, and cancellation during rendering. PDF bytes/email were mocked; real database transactions and application action/delivery logic were exercised. Initial stress run exposed the default transaction wait limit; explicit 15-second wait/transaction bounds fixed the rerun. |
+| 2026-10-16 | Prisma generation and TypeScript `--noEmit` | Passed for document eligibility changes. |
+| 2026-10-16 | `npm run lint` | Same baseline 6 errors and 26 warnings; errors remain in untouched pet registration, ResidentContactUs, ResidentHero, EditDocumentPriceModal, and OfficialModalForm. |
 | 2026-10-16 | Live HTTP verification after dev cache recovery | `/Login` returned 200 with the login form; repeated request with `resident_registration_success=1` returned 200 and the exact success message. No resident session cookie set. Fresh dev manifest correctly lists `/(Resident)/Login/page`. No new production build needed for this cache-only recovery. |
 | 2026-10-16 | Clean login redirect correction: six focused tests, TypeScript `--noEmit`, focused ESLint | All passed. Updated navigation assertion requires exactly `/Login`. |
 | 2026-10-16 | `npx prisma migrate status` | All 28 migrations applied. Initial sandbox check returned a schema-engine error; network-approved retry succeeded. No database mutation performed. |

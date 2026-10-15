@@ -225,6 +225,10 @@ Supported scripts: `npm run dev`, `npm run build`, `npm run start`, `npm run lin
 
 ## Architectural Decisions
 
+- Document request eligibility (2026-10-16): creation and all status/issuance mutations lock the owning `Resident` row with `SELECT ... FOR UPDATE` in a ReadCommitted transaction. Eligibility queries run after acquiring the lock and include every historical request. Future request writers must use `lib/document-request-lock.ts`; do not introduce unlocked request writes. Different document types remain independently eligible, although brief writes for the same resident serialize.
+- Active document statuses are `PENDING`, `REVIEW`, and `APPROVED` without an issuance timestamp. `GENERATED` is the existing issuance step: PDF generation records the serial, `generatedAt`, and `releasedAt`. `REJECTED` is the single unsuccessful terminal outcome. Final requests cannot be reopened. Legacy release/generation timestamps also preserve issuance history. Migration `20261016010000_merge_cancelled_document_requests` converts existing CANCELLED requests to REJECTED and removes CANCELLED from the enum, preserving records and timestamps.
+- First-Time Job Seeker is always free and new requests are limited to one copy. Any prior issuance permanently blocks another request; reprinting the same issued request remains available. Migration `20261016000000_document_request_eligibility` adds terminal statuses, a lookup index, zero-price database checks, and corrects existing Job Seeker amounts/settings to zero. Existing records and historical quantities remain intact. There is currently no document archive field/workflow; eligibility must never be filtered by archive visibility.
+
 - Next.js 16 uses `proxy.ts`, not legacy `middleware.ts`. The installed docs state proxy is for pre-request checks and should not be the full authorization solution.
 - Prisma 7 generated client is committed under `app/generated/prisma`; imports use `@/app/generated/prisma/client` and `@/app/generated/prisma/enums`.
 - The project favors server actions for mutations and route handlers for API-style reads and bulk operations.
