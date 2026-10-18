@@ -77,7 +77,7 @@ ID controls follow type, conditional Other specification, number, then upload. I
 | `ResidentFormModal` | `components/ui/Admin/ResidentFormModal.tsx` | Edit resident and verification status. | `ModalProps` | Resident page | Includes approval fields. |
 | `BlotterModalForm` | `components/ui/Admin/BlotterModalForm.tsx` | Create/edit blotter records. | `BlotterModalFormProps` | Blotter page | Optional image. |
 | `VawcModalForm` | `components/ui/Admin/VawcModalForm.tsx` | Create/edit VAWC records. | `VawcModalFormProps` | VAWC page | Sensitive case data. |
-| `PetsFormModal` | `components/ui/Admin/PetsFormModal.tsx` | Create/edit pet records. | `PetsFormModalProps` | Pets page | Owner dropdown. |
+| `PetsFormModal` | `components/ui/Admin/PetsFormModal.tsx` | Create/edit pet records. | `PetsFormModalProps` | Pets page | Owner dropdown; standardized pet type select with conditional required custom type. Existing unlisted types load through Other for compatibility. |
 | `InventoryFormModal` | `components/ui/Admin/InventoryFormModal.tsx` | Create/edit inventory items. | `InventoryFormModalProps` | Inventory page | Uses inventory validation schema. |
 
 ## Admin Shared Components
@@ -88,6 +88,7 @@ ID controls follow type, conditional Other specification, number, then upload. I
 | `BulkConfirmModal` | `components/ui/Admin/BulkConfirmModal.tsx` | Confirm bulk archive/unarchive. | `BulkConfirmModalProps` | Admin list pages | Reusable confirmation pattern. |
 | `ArchiveCard` | `components/ui/Admin/ArchiveCard.tsx` | Archived item card with restore action. | `ArchiveCardProps` | Archived page | Reusable archive pattern. |
 | `AdminHealthRecordsPage` | `components/ui/Admin/AdminHealthRecordsPage.tsx` | Admin-facing medical record table. | `AdminHealthRecordsPageProps` | `/admin/health` | Uses clinic API serialization. |
+| `SummaryDashboardCards` | `components/ui/Admin/SummaryDashboardCards.tsx` | Compact responsive statistic cards with icon, label, count, and loading spinner. | `{ stats: SummaryDashboardStat[]; isLoading: boolean }` | `/admin/vawc`, `/admin/blotter`, `/admin/pets` | Client UI only; counts come from each page's existing active-record query. |
 
 ## Clinic Components
 
@@ -104,7 +105,19 @@ ID controls follow type, conditional Other specification, number, then upload. I
 | Component | Path | Purpose | Props / Types | Used By | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `MyAccountPage` | `app/(Resident)/my-account/page.tsx` | Resident dashboard/profile/documents/pets/blotters. | Page component with local helpers | `/my-account` | Local `Badge`, `InfoTile`, `SectionCard`, tables. |
-| `ResidentPetRegistrationPage` | `app/(Resident)/pet-registration/page.tsx` | Resident pet self-registration and list. | Page component with local helpers | `/pet-registration` | Uses `createResidentPet`. |
+| `ResidentPetRegistrationPage` | `app/(Resident)/pet-registration/page.tsx` | Resident pet self-registration and list. | Page component with local helpers | `/pet-registration` | Uses `createResidentPet`; pet type select provides Dog, Cat, Bird, Fish and required custom Other type. |
+
+### Pet type controls
+
+Last updated: 2026-10-18. Files: `components/ui/Admin/PetsFormModal.tsx`, `app/(Resident)/pet-registration/page.tsx`.
+
+| Property | Pattern |
+| --- | --- |
+| Admin input | `rounded-lg border border-gray-200 px-4 py-2`; `focus:border-primary-500 focus:outline-none` |
+| Resident input | `rounded-2xl border border-slate-200 px-4 py-3 text-sm`; `focus:border-primary-500` |
+| Options | Dog, Cat, Bird, Fish, Other |
+| Custom type | Show a required text field only when Other is selected; value is saved to the existing `Pet.type` string |
+| Legacy edit | Known values select their standard option case-insensitively; any other saved type selects Other and pre-fills the custom field |
 | `ResidentBlotterPage` | `app/(Resident)/blotter/page.tsx` | Resident blotter filing and recent filings. | Page component with local helpers | `/blotter` | Uses `createResidentBlotter`. |
 
 ## Templates

@@ -18,7 +18,30 @@ export const petSchema = z.object({
     }),
 });
 
-export type PetFormInput = z.input<typeof petSchema>;
+const petTypeOption = z.string().refine(
+  (value) => ["Dog", "Cat", "Bird", "Fish", "Other"].includes(value),
+  "Select a valid pet type."
+);
+
+function validateOtherPetType<T extends { type: string; otherType?: string }>(
+  value: T,
+  context: z.RefinementCtx
+) {
+  if (value.type === "Other" && !value.otherType?.trim()) {
+    context.addIssue({
+      code: "custom",
+      path: ["otherType"],
+      message: "Please specify the pet type.",
+    });
+  }
+}
+
+export const petFormSchema = petSchema.extend({
+  type: petTypeOption,
+  otherType: z.string().trim().max(80, "Pet type must be 80 characters or less.").optional(),
+}).superRefine(validateOtherPetType);
+
+export type PetFormInput = z.input<typeof petFormSchema>;
 export type PetInput = z.output<typeof petSchema>;
 
 export const residentPetSchema = petSchema.pick({
@@ -32,7 +55,12 @@ export const residentPetSchema = petSchema.pick({
   ownerName: z.string().min(1, { message: "Owner name is required." }),
 });
 
-export type ResidentPetFormInput = z.input<typeof residentPetSchema>;
+export const residentPetFormSchema = residentPetSchema.extend({
+  type: petTypeOption,
+  otherType: z.string().trim().max(80, "Pet type must be 80 characters or less.").optional(),
+}).superRefine(validateOtherPetType);
+
+export type ResidentPetFormInput = z.input<typeof residentPetFormSchema>;
 
 export function getPetFieldErrors(error: z.ZodError) {
   const fieldErrors = error.flatten().fieldErrors;
