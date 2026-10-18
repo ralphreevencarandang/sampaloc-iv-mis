@@ -92,7 +92,9 @@ function parsePetForm(formData: FormData) {
   const parsed = petSchema.safeParse({
     ownerId: getFormValue(formData, "ownerId"),
     name: getFormValue(formData, "name"),
-    type: getFormValue(formData, "type"),
+    type: getFormValue(formData, "type") === "Other"
+      ? getFormValue(formData, "otherType")
+      : getFormValue(formData, "type"),
     breed: getFormValue(formData, "breed"),
     color: getFormValue(formData, "color"),
     vaccinationDate: getFormValue(formData, "vaccinationDate"),
@@ -334,7 +336,9 @@ export async function createResidentPet(formData: FormData): Promise<PetMutation
     ownerId: resident.id,
     ownerName,
     name: getFormValue(formData, "name"),
-    type: getFormValue(formData, "type"),
+    type: getFormValue(formData, "type") === "Other"
+      ? getFormValue(formData, "otherType")
+      : getFormValue(formData, "type"),
     breed: getFormValue(formData, "breed"),
     color: getFormValue(formData, "color"),
     vaccinationDate: getFormValue(formData, "vaccinationDate"),

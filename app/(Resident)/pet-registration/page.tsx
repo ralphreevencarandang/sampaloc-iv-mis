@@ -5,11 +5,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ArrowLeft, CalendarDays, Loader2, MapPin, PawPrint, Send, ShieldCheck, User } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useResidentAuth } from "@/components/providers/resident-auth-provider";
 import apiClient from "@/lib/axios";
 import { createResidentPet, type PetMutationResult } from "@/server/actions/pet.action";
-import { residentPetSchema, type ResidentPetFormInput } from "@/validations/pet.validation";
+import { residentPetFormSchema, type ResidentPetFormInput } from "@/validations/pet.validation";
 import Link from "next/link";
 
 type ResidentProfile = {
@@ -144,18 +145,21 @@ export default function ResidentPetRegistrationPage() {
     reset,
     setError,
     setValue,
+    control,
     formState: { errors },
   } = useForm<ResidentPetFormInput>({
-    resolver: zodResolver(residentPetSchema),
+    resolver: zodResolver(residentPetFormSchema),
     defaultValues: {
       ownerName: "",
       name: "",
       type: "",
+      otherType: "",
       breed: "",
       color: "",
       vaccinationDate: "",
     },
   });
+  const selectedType = useWatch({ control, name: "type" });
 
   const profileQuery = useQuery({
     queryKey: ["resident-profile", residentId],
@@ -193,7 +197,7 @@ export default function ResidentPetRegistrationPage() {
     mutationFn: async (data: ResidentPetFormInput) => {
       const submission = new FormData();
       submission.set("name", data.name);
-      submission.set("type", data.type);
+      submission.set("type", data.type === "Other" ? data.otherType ?? "" : data.type);
       if (data.breed) submission.set("breed", data.breed);
       if (data.color) submission.set("color", data.color);
       if (data.vaccinationDate) submission.set("vaccinationDate", data.vaccinationDate);
@@ -211,6 +215,7 @@ export default function ResidentPetRegistrationPage() {
         ownerName: profileQuery.data ? fullName(profileQuery.data) : "",
         name: "",
         type: "",
+        otherType: "",
         breed: "",
         color: "",
         vaccinationDate: "",
@@ -354,7 +359,7 @@ export default function ResidentPetRegistrationPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-900">Pet Details</h2>
-              <p className="text-sm text-slate-600">Provide your pet's details below.</p>
+              <p className="text-sm text-slate-600">Provide your pet&apos;s details below.</p>
             </div>
           </div>
 
@@ -398,15 +403,36 @@ export default function ResidentPetRegistrationPage() {
                 <label htmlFor="type" className="text-sm font-medium text-slate-700">
                   Pet Type <span className="text-rose-500">*</span>
                 </label>
-                <input
+                <select
                   id="type"
-                  type="text"
-                  placeholder="e.g. Dog, Cat, Bird"
                   {...register("type")}
                   className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-primary-500"
-                />
+                >
+                  <option value="">Select pet type</option>
+                  <option value="Dog">Dog</option>
+                  <option value="Cat">Cat</option>
+                  <option value="Bird">Bird</option>
+                  <option value="Fish">Fish</option>
+                  <option value="Other">Other</option>
+                </select>
                 {errors.type && <p className="text-xs text-rose-500">{errors.type.message}</p>}
               </div>
+
+              {selectedType === "Other" && (
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="otherType" className="text-sm font-medium text-slate-700">
+                    Specify Pet Type <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="otherType"
+                    type="text"
+                    placeholder="Enter pet type"
+                    {...register("otherType")}
+                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-primary-500"
+                  />
+                  {errors.otherType && <p className="text-xs text-rose-500">{errors.otherType.message}</p>}
+                </div>
+              )}
 
               <div className="flex flex-col gap-2">
                 <label htmlFor="breed" className="text-sm font-medium text-slate-700">

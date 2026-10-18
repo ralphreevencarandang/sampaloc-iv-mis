@@ -14,6 +14,8 @@ import { revalidatePath } from "next/cache";
 
 import { sendResidentApprovalEmail } from "@/lib/nodemailer";
 import { hasAdminPermission } from "@/lib/admin-authorization";
+import { getCurrentAdminFromSession } from "@/lib/admin-session";
+import { AdminRole } from "@/app/generated/prisma/enums";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -102,6 +104,9 @@ function validateResidentRegistration(formData: FormData): {
     isPwd: getFormValue(formData, "isPwd"),
     pwdCondition: getFormValue(formData, "pwdCondition"),
     validIDImageName: validIDImageFile.name,
+    idType: getFormValue(formData, "idType"),
+    idNumber: getFormValue(formData, "idNumber"),
+    otherIdType: getFormValue(formData, "otherIdType"),
   };
 
   const parsed = residentRegistrationSchema.safeParse(input);
@@ -145,6 +150,9 @@ function validateResidentRegistration(formData: FormData): {
       isPwd: data.isPwd === "Yes",
       pwdCondition: data.isPwd === "Yes" ? data.pwdCondition : null,
       validIDImageFile,
+      idType: data.idType,
+      idNumber: data.idNumber,
+      otherIdType: data.idType === "Other" ? data.otherIdType : "",
     },
   };
 }
@@ -157,7 +165,16 @@ export async function verifyPassword(password: string, hashedPassword: string) {
   return bcrypt.compare(password, hashedPassword);
 }
 
-export async function createResidentAccount(formData: FormData): Promise<RegisterResidentResult> {
+export async function createResidentAccount(
+  formData: FormData,
+  options: { adminInitiated?: boolean } = {}
+): Promise<RegisterResidentResult> {
+  if (options.adminInitiated) {
+    const admin = await getCurrentAdminFromSession();
+    if (!admin || (admin.role !== AdminRole.ADMIN && admin.role !== AdminRole.CLERK)) {
+      return { success: false, message: "You do not have permission to create residents." };
+    }
+  }
   const { data, fieldErrors } = validateResidentRegistration(formData);
 
   if (!data) {
@@ -182,6 +199,19 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
           email: "Email is already registered.",
         },
       };
+    }
+
+    const [existingAdmin, existingId] = await Promise.all([
+      prisma.admin.findUnique({ where: { email: data.email }, select: { id: true } }),
+      data.idNumber
+        ? prisma.resident.findFirst({ where: { idNumber: data.idNumber }, select: { id: true } })
+        : Promise.resolve(null),
+    ]);
+    if (existingAdmin) {
+      return { success: false, message: "That email is already used by an account.", fieldErrors: { email: "Email is already registered." } };
+    }
+    if (existingId) {
+      return { success: false, message: "A resident with that ID number already exists.", fieldErrors: { idNumber: "ID number is already registered." } };
     }
 
     const hashedPassword = await hashPassword(data.password);
@@ -215,13 +245,16 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
           isPwd: data.isPwd,
           pwdCondition: data.pwdCondition,
           validIDImage: uploadResult.secure_url,
+          idType: data.idType,
+          idNumber: data.idNumber,
+          otherIdType: data.otherIdType || null,
         },
       });
     });
 
     return {
       success: true,
-      message: "Resident registration submitted successfully.",
+      message: "Account registered successfully. Please log in.",
     };
   } catch (error) {
     if (error instanceof CloudinaryUploadError) {
@@ -241,6 +274,12 @@ export async function createResidentAccount(formData: FormData): Promise<Registe
       message: "An unexpected error occurred while submitting your registration.",
     };
   }
+}
+
+export async function createAdminResidentAction(formData: FormData): Promise<RegisterResidentResult> {
+  const result = await createResidentAccount(formData, { adminInitiated: true });
+  if (result.success) revalidatePath("/admin/resident");
+  return result;
 }
 
 export type UpdateResidentResult = {

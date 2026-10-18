@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Loader2, Pill, RefreshCw, UserCheck, X } from 'lucide-react'
 import React from 'react'
 import { fetchClinicMedicalRecordById } from '@/lib/clinic-api'
+import MedicineDispensingPanel from '@/components/ui/Clinic/MedicineDispensingPanel'
 
 type ClinicMedicalRecordDetailsModalProps = {
   isOpen: boolean
@@ -69,6 +70,7 @@ export default function ClinicMedicalRecordDetailsModal({
             </div>
           ) : recordQuery.data ? (
             <div className="space-y-6">
+              <MedicineDispensingPanel key={recordQuery.data.id} recordId={recordQuery.data.id} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Patient Name</p>

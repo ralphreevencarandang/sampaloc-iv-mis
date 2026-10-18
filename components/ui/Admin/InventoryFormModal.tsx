@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2, X } from 'lucide-react'
 import React, { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import {
   createInventoryItem,
   updateInventoryItem,
@@ -40,6 +40,7 @@ export default function InventoryFormModal({
     handleSubmit,
     reset,
     setError,
+    control,
     formState: { errors },
   } = useForm<InventoryFormInput>({
     resolver: zodResolver(inventorySchema),
@@ -50,8 +51,11 @@ export default function InventoryFormModal({
       unit: 'pcs',
       storageLocation: '',
       description: '',
+      isMedicine: false,
+      expiresOn: '',
     },
   })
+  const isMedicine = useWatch({ control, name: 'isMedicine' })
 
   useEffect(() => {
     if (!isOpen) return
@@ -63,6 +67,8 @@ export default function InventoryFormModal({
       unit: initialData?.unit ?? 'pcs',
       storageLocation: initialData?.storageLocation ?? '',
       description: initialData?.description ?? '',
+      isMedicine: initialData?.isMedicine ?? false,
+      expiresOn: initialData?.expiresOn ?? '',
     })
   }, [initialData, isOpen, reset])
 
@@ -75,6 +81,9 @@ export default function InventoryFormModal({
       formData.set('unit', data.unit)
       formData.set('storageLocation', data.storageLocation)
       formData.set('description', data.description ?? '')
+      formData.set('isMedicine', String(data.isMedicine ?? false))
+      formData.set('expiresOn', data.expiresOn ?? '')
+      if (initialData) formData.set('stockVersion', String(initialData.stockVersion))
 
       return isEditMode && initialData
         ? updateInventoryItem(initialData.id, formData)
@@ -82,6 +91,7 @@ export default function InventoryFormModal({
     },
     onSuccess: (result) => {
       if (!result.success) {
+        void queryClient.invalidateQueries({ queryKey: ['inventory'] })
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, message]) => {
             setError(field as keyof InventoryFormInput, {
@@ -99,6 +109,7 @@ export default function InventoryFormModal({
       }
 
       void queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      void queryClient.invalidateQueries({ queryKey: ['clinic-medicines'] })
       handleModalClose()
     },
     onError: (error) => {
@@ -122,6 +133,8 @@ export default function InventoryFormModal({
       unit: 'pcs',
       storageLocation: '',
       description: '',
+      isMedicine: false,
+      expiresOn: '',
     })
     onClose()
   }
@@ -164,6 +177,21 @@ export default function InventoryFormModal({
           )}
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div className="space-y-2 rounded-lg border border-primary-200 p-4 md:col-span-2">
+              <label className="flex items-center gap-2 text-sm font-medium" htmlFor="isMedicine">
+                <input id="isMedicine" type="checkbox" {...register('isMedicine')} />
+                Medicine available to the clinic
+              </label>
+              {isMedicine && (
+                <>
+                  <label htmlFor="expiresOn" className="block text-sm font-medium">Expiry date</label>
+                  <input id="expiresOn" type="date" {...register('expiresOn')} className="rounded-lg border border-primary-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  <p className="text-sm text-primary-700">Dispensing is blocked without an expiry date or after this date. Track stock in the unit actually given to patients; quantities are not converted between boxes and individual doses.</p>
+                  <p className="text-sm text-primary-700">Keep stock with different expiry dates in separate inventory entries.</p>
+                  {errors.expiresOn && <p role="alert" className="text-sm">{errors.expiresOn.message}</p>}
+                </>
+              )}
+            </div>
             <div className="flex flex-col gap-1.5 md:col-span-2">
               <label htmlFor="name" className="text-sm font-medium text-slate-700">
                 Product Name<RequiredMark />

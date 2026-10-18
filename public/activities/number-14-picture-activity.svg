@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1550" viewBox="0 0 1100 1550" role="img" aria-labelledby="title desc">
+  <title id="title">Number 14 Picture Activity</title>
+  <desc id="desc">A printable worksheet where children identify picture sets with exactly fourteen objects.</desc>
+  <defs>
+    <style>
+      .page { fill: #fffaf0; }
+      .ink { fill: #243042; }
+      .muted { fill: #596579; }
+      .panel { fill: #ffffff; stroke: #243042; stroke-width: 4; }
+      .answer-box { fill: #ffffff; stroke: #243042; stroke-width: 4; }
+      .label { font-family: Arial, Helvetica, sans-serif; font-weight: 700; fill: #243042; }
+      .body { font-family: Arial, Helvetica, sans-serif; fill: #243042; }
+      .trace { fill: none; stroke: #243042; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+      .soft-line { fill: none; stroke: #9aa3b2; stroke-width: 3; stroke-linecap: round; }
+    </style>
+
+    <symbol id="pencil" viewBox="0 0 80 80">
+      <rect x="16" y="35" width="44" height="12" rx="4" fill="#ffd86f" stroke="#243042" stroke-width="3"/>
+      <polygon points="60,35 72,41 60,47" fill="#f2c6a0" stroke="#243042" stroke-width="3"/>
+      <polygon points="70,40 75,41 70,42" fill="#243042"/>
+      <rect x="8" y="35" width="10" height="12" rx="2" fill="#f28aa5" stroke="#243042" stroke-width="3"/>
+      <line x1="24" y1="35" x2="24" y2="47" stroke="#243042" stroke-width="2"/>
+    </symbol>
+
+    <symbol id="notebook" viewBox="0 0 80 80">
+      <rect x="16" y="12" width="46" height="56" rx="5" fill="#91d8f7" stroke="#243042" stroke-width="3"/>
+      <rect x="16" y="12" width="10" height="56" rx="4" fill="#6fb9df" stroke="#243042" stroke-width="3"/>
+      <line x1="34" y1="28" x2="54" y2="28" class="soft-line"/>
+      <line x1="34" y1="40" x2="54" y2="40" class="soft-line"/>
+      <line x1="34" y1="52" x2="50" y2="52" class="soft-line"/>
+    </symbol>
+
+    <symbol id="bag" viewBox="0 0 80 80">
+      <path d="M25 30c0-10 30-10 30 0" class="trace"/>
+      <rect x="18" y="28" width="44" height="38" rx="8" fill="#a9df86" stroke="#243042" stroke-width="3"/>
+      <path d="M28 41h24" class="soft-line"/>
+      <path d="M28 52h24" class="soft-line"/>
+      <circle cx="30" cy="33" r="3" fill="#243042"/>
+      <circle cx="50" cy="33" r="3" fill="#243042"/>
+    </symbol>
+
+    <symbol id="crayon" viewBox="0 0 80 80">
+      <rect x="18" y="32" width="42" height="16" rx="5" fill="#ff9a76" stroke="#243042" stroke-width="3"/>
+      <polygon points="60,32 72,40 60,48" fill="#ff6f61" stroke="#243042" stroke-width="3"/>
+      <rect x="9" y="32" width="12" height="16" rx="3" fill="#ffe2bb" stroke="#243042" stroke-width="3"/>
+      <line x1="28" y1="32" x2="28" y2="48" stroke="#243042" stroke-width="2"/>
+      <line x1="50" y1="32" x2="50" y2="48" stroke="#243042" stroke-width="2"/>
+    </symbol>
+
+    <symbol id="eraser" viewBox="0 0 80 80">
+      <path d="M18 44l24-24 22 22-24 24z" fill="#f6a6c8" stroke="#243042" stroke-width="3"/>
+      <path d="M42 20l10 10-24 24-10-10z" fill="#ffd1df" stroke="#243042" stroke-width="3"/>
+      <path d="M45 59l8-8" class="soft-line"/>
+    </symbol>
+  </defs>
+
+  <rect class="page" width="1100" height="1550"/>
+
+  <text x="550" y="78" text-anchor="middle" class="label" font-size="46">Number 14 Picture Activity</text>
+  <text x="550" y="124" text-anchor="middle" class="body" font-size="26">Check and color the picture sets with 14 objects. Cross out the sets that are not 14.</text>
+  <text x="80" y="178" class="body" font-size="24">Name: ________________________________</text>
+  <text x="730" y="178" class="body" font-size="24">Date: __________________</text>
+
+  <g transform="translate(70 220)">
+    <rect class="panel" width="960" height="230" rx="18"/>
+    <rect class="answer-box" x="24" y="24" width="42" height="42" rx="6"/>
+    <text x="86" y="54" class="label" font-size="30">Pencils</text>
+    <text x="840" y="54" class="muted body" font-size="24">Count: ____</text>
+    <g transform="translate(94 78)">
+      <use href="#pencil" x="0" y="0" width="66" height="66"/>
+      <use href="#pencil" x="68" y="0" width="66" height="66"/>
+      <use href="#pencil" x="136" y="0" width="66" height="66"/>
+      <use href="#pencil" x="204" y="0" width="66" height="66"/>
+      <use href="#pencil" x="272" y="0" width="66" height="66"/>
+      <use href="#pencil" x="340" y="0" width="66" height="66"/>
+      <use href="#pencil" x="408" y="0" width="66" height="66"/>
+      <use href="#pencil" x="0" y="72" width="66" height="66"/>
+      <use href="#pencil" x="68" y="72" width="66" height="66"/>
+      <use href="#pencil" x="136" y="72" width="66" height="66"/>
+      <use href="#pencil" x="204" y="72" width="66" height="66"/>
+      <use href="#pencil" x="272" y="72" width="66" height="66"/>
+      <use href="#pencil" x="340" y="72" width="66" height="66"/>
+      <use href="#pencil" x="408" y="72" width="66" height="66"/>
+    </g>
+  </g>
+
+  <g transform="translate(70 480)">
+    <rect class="panel" width="960" height="230" rx="18"/>
+    <rect class="answer-box" x="24" y="24" width="42" height="42" rx="6"/>
+    <text x="86" y="54" class="label" font-size="30">Crayons</text>
+    <text x="840" y="54" class="muted body" font-size="24">Count: ____</text>
+    <g transform="translate(94 78)">
+      <use href="#crayon" x="0" y="0" width="66" height="66"/>
+      <use href="#crayon" x="68" y="0" width="66" height="66"/>
+      <use href="#crayon" x="136" y="0" width="66" height="66"/>
+      <use href="#crayon" x="204" y="0" width="66" height="66"/>
+      <use href="#crayon" x="272" y="0" width="66" height="66"/>
+      <use href="#crayon" x="340" y="0" width="66" height="66"/>
+      <use href="#crayon" x="0" y="72" width="66" height="66"/>
+      <use href="#crayon" x="68" y="72" width="66" height="66"/>
+      <use href="#crayon" x="136" y="72" width="66" height="66"/>
+      <use href="#crayon" x="204" y="72" width="66" height="66"/>
+      <use href="#crayon" x="272" y="72" width="66" height="66"/>
+      <use href="#crayon" x="340" y="72" width="66" height="66"/>
+    </g>
+  </g>
+
+  <g transform="translate(70 740)">
+    <rect class="panel" width="960" height="230" rx="18"/>
+    <rect class="answer-box" x="24" y="24" width="42" height="42" rx="6"/>
+    <text x="86" y="54" class="label" font-size="30">Notebooks</text>
+    <text x="840" y="54" class="muted body" font-size="24">Count: ____</text>
+    <g transform="translate(94 78)">
+      <use href="#notebook" x="0" y="0" width="66" height="66"/>
+      <use href="#notebook" x="68" y="0" width="66" height="66"/>
+      <use href="#notebook" x="136" y="0" width="66" height="66"/>
+      <use href="#notebook" x="204" y="0" width="66" height="66"/>
+      <use href="#notebook" x="272" y="0" width="66" height="66"/>
+      <use href="#notebook" x="340" y="0" width="66" height="66"/>
+      <use href="#notebook" x="408" y="0" width="66" height="66"/>
+      <use href="#notebook" x="0" y="72" width="66" height="66"/>
+      <use href="#notebook" x="68" y="72" width="66" height="66"/>
+      <use href="#notebook" x="136" y="72" width="66" height="66"/>
+      <use href="#notebook" x="204" y="72" width="66" height="66"/>
+      <use href="#notebook" x="272" y="72" width="66" height="66"/>
+      <use href="#notebook" x="340" y="72" width="66" height="66"/>
+      <use href="#notebook" x="408" y="72" width="66" height="66"/>
+    </g>
+  </g>
+
+  <g transform="translate(70 1000)">
+    <rect class="panel" width="960" height="230" rx="18"/>
+    <rect class="answer-box" x="24" y="24" width="42" height="42" rx="6"/>
+    <text x="86" y="54" class="label" font-size="30">Erasers</text>
+    <text x="840" y="54" class="muted body" font-size="24">Count: ____</text>
+    <g transform="translate(94 78)">
+      <use href="#eraser" x="0" y="0" width="62" height="62"/>
+      <use href="#eraser" x="60" y="0" width="62" height="62"/>
+      <use href="#eraser" x="120" y="0" width="62" height="62"/>
+      <use href="#eraser" x="180" y="0" width="62" height="62"/>
+      <use href="#eraser" x="240" y="0" width="62" height="62"/>
+      <use href="#eraser" x="300" y="0" width="62" height="62"/>
+      <use href="#eraser" x="360" y="0" width="62" height="62"/>
+      <use href="#eraser" x="420" y="0" width="62" height="62"/>
+      <use href="#eraser" x="0" y="70" width="62" height="62"/>
+      <use href="#eraser" x="60" y="70" width="62" height="62"/>
+      <use href="#eraser" x="120" y="70" width="62" height="62"/>
+      <use href="#eraser" x="180" y="70" width="62" height="62"/>
+      <use href="#eraser" x="240" y="70" width="62" height="62"/>
+      <use href="#eraser" x="300" y="70" width="62" height="62"/>
+      <use href="#eraser" x="360" y="70" width="62" height="62"/>
+      <use href="#eraser" x="420" y="70" width="62" height="62"/>
+    </g>
+  </g>
+
+  <g transform="translate(70 1260)">
+    <rect class="panel" width="960" height="230" rx="18"/>
+    <rect class="answer-box" x="24" y="24" width="42" height="42" rx="6"/>
+    <text x="86" y="54" class="label" font-size="30">School Bags</text>
+    <text x="840" y="54" class="muted body" font-size="24">Count: ____</text>
+    <g transform="translate(94 78)">
+      <use href="#bag" x="0" y="0" width="66" height="66"/>
+      <use href="#bag" x="68" y="0" width="66" height="66"/>
+      <use href="#bag" x="136" y="0" width="66" height="66"/>
+      <use href="#bag" x="204" y="0" width="66" height="66"/>
+      <use href="#bag" x="272" y="0" width="66" height="66"/>
+      <use href="#bag" x="340" y="0" width="66" height="66"/>
+      <use href="#bag" x="408" y="0" width="66" height="66"/>
+      <use href="#bag" x="0" y="72" width="66" height="66"/>
+      <use href="#bag" x="68" y="72" width="66" height="66"/>
+      <use href="#bag" x="136" y="72" width="66" height="66"/>
+      <use href="#bag" x="204" y="72" width="66" height="66"/>
+      <use href="#bag" x="272" y="72" width="66" height="66"/>
+      <use href="#bag" x="340" y="72" width="66" height="66"/>
+      <use href="#bag" x="408" y="72" width="66" height="66"/>
+    </g>
+  </g>
+</svg>

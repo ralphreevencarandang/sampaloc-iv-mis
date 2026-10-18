@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from 'react'
-import { Search, Plus, Edit2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, ShieldAlert, Archive } from 'lucide-react'
+import { Search, Plus, Edit2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, ShieldAlert, Archive, FileText, ClipboardList, Users, CheckCircle2, CircleOff } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import VawcModalForm from '@/components/ui/Admin/VawcModalForm'
@@ -11,6 +11,7 @@ import axios from '@/lib/axios'
 import type { VawcRecordType } from '@/server/actions/vawc.actions'
 import { archiveVawcAction, bulkArchiveVawcAction } from '@/server/actions/archive.actions'
 import Link from 'next/link'
+import SummaryDashboardCards from '@/components/ui/Admin/SummaryDashboardCards'
 
 const ITEMS_PER_PAGE = 10
 
@@ -153,6 +154,17 @@ export default function VawcPage() {
           File VAWC Case
         </button>
       </div>
+
+      <SummaryDashboardCards
+        isLoading={isLoading}
+        stats={[
+          { label: 'Total Cases', value: vawcs.filter((record) => !record.isArchive).length, icon: FileText },
+          { label: 'Reported', value: vawcs.filter((record) => !record.isArchive && record.status === 'REPORTED').length, icon: ClipboardList },
+          { label: 'Summoned', value: vawcs.filter((record) => !record.isArchive && record.status === 'SUMMONED').length, icon: Users },
+          { label: 'Resolved', value: vawcs.filter((record) => !record.isArchive && record.status === 'RESOLVED').length, icon: CheckCircle2 },
+          { label: 'Dismissed', value: vawcs.filter((record) => !record.isArchive && record.status === 'DISMISSED').length, icon: CircleOff },
+        ]}
+      />
 
       {/* Floating Bulk Action Bar */}
       <BulkActionBar

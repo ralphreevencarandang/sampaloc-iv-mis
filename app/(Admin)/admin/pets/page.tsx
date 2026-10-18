@@ -10,6 +10,9 @@ import {
   Edit2,
   Loader2,
   PawPrint,
+  Dog,
+  Cat,
+  Bird,
   Plus,
   Search,
 } from 'lucide-react'
@@ -24,6 +27,7 @@ import {
   bulkArchivePetsAction,
 } from '@/server/actions/archive.actions'
 import type { PetRecord } from '@/server/actions/pet.action'
+import SummaryDashboardCards from '@/components/ui/Admin/SummaryDashboardCards'
 
 const ITEMS_PER_PAGE = 10
 const PETS_ALL_QUERY_KEY = ['pets', 'all'] as const
@@ -185,6 +189,16 @@ export default function PetsPage() {
           Add Pet
         </button>
       </div>
+
+      <SummaryDashboardCards
+        isLoading={isLoading}
+        stats={[
+          { label: 'Total Pets', value: pets.filter((pet) => !pet.isArchive).length, icon: PawPrint },
+          { label: 'Dogs', value: pets.filter((pet) => !pet.isArchive && pet.type.trim().toLowerCase() === 'dog').length, icon: Dog },
+          { label: 'Cats', value: pets.filter((pet) => !pet.isArchive && pet.type.trim().toLowerCase() === 'cat').length, icon: Cat },
+          { label: 'Other Pets', value: pets.filter((pet) => !pet.isArchive && !['dog', 'cat'].includes(pet.type.trim().toLowerCase())).length, icon: Bird },
+        ]}
+      />
 
       {/* Floating Bulk Action Bar */}
       <BulkActionBar

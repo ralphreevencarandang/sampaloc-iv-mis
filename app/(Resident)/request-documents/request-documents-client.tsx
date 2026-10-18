@@ -1,5 +1,7 @@
 "use client";
 
+import { DocumentProcessingNotice } from '@/components/document-requests/document-processing-notice';
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +26,7 @@ import {
   createResidentDocumentRequestAction,
 } from "@/server/actions/document.actions";
 import type { DocumentSettingRecord } from "@/server/actions/document-settings.actions";
+import { documentUnitPrice, getDocumentRequestBlock, isJobSeekerDocument } from "@/lib/document-request-policy";
 
 export type RequestResidentProfile = {
   id: string;
@@ -360,6 +363,7 @@ export default function RequestDocumentsClient({
   const [quantity, setQuantity] = useState<number>(1);
   const [submissionMessage, setSubmissionMessage] = useState("");
   const [submissionError, setSubmissionError] = useState("");
+  const [existingRequestId, setExistingRequestId] = useState<string | null>(null);
 
   const documentsQuery = useQuery({
     queryKey: ["document-types-settings"],
@@ -389,7 +393,7 @@ export default function RequestDocumentsClient({
         ...doc,
         label: dbDoc?.name || doc.label,
         description: dbDoc?.description !== undefined && dbDoc.description !== null ? dbDoc.description : doc.description,
-        fee: dbDoc?.price !== undefined ? dbDoc.price : doc.fee,
+        fee: documentUnitPrice(doc.id, dbDoc?.price ?? doc.fee),
       };
     });
   }, [dbDocMap]);
@@ -426,13 +430,16 @@ export default function RequestDocumentsClient({
       return fetchResidentDocumentRequests(residentProfile.id);
     },
     enabled: Boolean(residentProfile?.id),
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchInterval: 30 * 1000,
   });
 
   const requestHistory = useMemo(
     () => (requestHistoryQuery.data ?? []).map(mapRequestRecord),
     [requestHistoryQuery.data]
   );
+  const requestBlock = getDocumentRequestBlock(selectedDocument.id, requestHistoryQuery.data ?? []);
+  const isJobSeeker = isJobSeekerDocument(selectedDocument.id);
 
   const createRequestMutation = useMutation({
     mutationFn: async (formData: FormData) => createResidentDocumentRequestAction(formData),
@@ -451,6 +458,8 @@ export default function RequestDocumentsClient({
         setFormErrors(nextErrors);
         setSubmissionError(result.message);
         setSubmissionMessage("");
+        setExistingRequestId(result.existingRequestId ?? null);
+        await queryClient.invalidateQueries({ queryKey: ["resident-document-requests", residentProfile?.id] });
         return;
       }
 
@@ -463,6 +472,7 @@ export default function RequestDocumentsClient({
 
       setFormErrors({});
       setSubmissionError("");
+      setExistingRequestId(null);
       setSubmissionMessage(result.message);
       setFormValues(initialFormValues);
       setQuantity(1);
@@ -502,10 +512,12 @@ export default function RequestDocumentsClient({
     setQuantity(1);
     setSubmissionMessage("");
     setSubmissionError("");
+    setExistingRequestId(null);
   };
 
   const handleRequestSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (createRequestMutation.isPending || !requestHistoryQuery.isSuccess || requestBlock) return;
     setSubmissionMessage("");
     setSubmissionError("");
 
@@ -530,7 +542,7 @@ export default function RequestDocumentsClient({
 
     const payload: DocumentRequestDraftInput = {
       documentType: selectedDocument.id,
-      requestedCopies: quantity.toString(),
+      requestedCopies: isJobSeeker ? "1" : quantity.toString(),
       ...formValues,
     };
 
@@ -654,7 +666,17 @@ export default function RequestDocumentsClient({
                 {submissionError ? (
                   <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                     {submissionError}
+                    {existingRequestId ? <a className="mt-2 block underline" href={`#request-${existingRequestId}`}>View existing request</a> : null}
                   </div>
+                ) : null}
+
+                {requestBlock ? (
+                  <div role="status" className="rounded-lg border border-primary-200 bg-primary-50 p-4 text-sm text-primary-700">
+                    <p>{requestBlock.message}</p>
+                    <a className="mt-2 inline-block font-semibold underline" href={`#request-${requestBlock.requestId}`}>View existing request</a>
+                  </div>
+                ) : !requestHistoryQuery.isSuccess ? (
+                  <p role="status">{requestHistoryQuery.isError ? "Unable to check existing requests. Refresh request history before submitting." : "Checking existing requests..."}</p>
                 ) : null}
 
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
@@ -667,7 +689,7 @@ export default function RequestDocumentsClient({
                     <div className="rounded-2xl border border-primary-200 bg-white px-4 py-3 text-right">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Fee</p>
                       <p className="mt-1 text-lg font-bold text-slate-900">
-                        {selectedDocument.fee * quantity === 0 ? "Free" : formatCurrency(selectedDocument.fee * quantity)}
+                        {formatCurrency(selectedDocument.fee * (isJobSeeker ? 1 : quantity))}
                       </p>
                     </div>
                   </div>
@@ -708,12 +730,15 @@ export default function RequestDocumentsClient({
                   ))}
 
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Quantity</label>
+                    <label htmlFor="request-quantity" className="text-sm font-medium text-slate-700">Quantity</label>
                     <input
+                      id="request-quantity"
                       type="number"
                       min="1"
+                      max={isJobSeeker ? 1 : 5}
+                      disabled={isJobSeeker}
                       step="1"
-                      value={quantity}
+                      value={isJobSeeker ? 1 : quantity}
                       onChange={(e) => {
                         const val = parseInt(e.target.value, 10);
                         if (!isNaN(val) && val >= 1) {
@@ -730,14 +755,16 @@ export default function RequestDocumentsClient({
                       }}
                       className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 outline-none transition-colors focus:border-primary-500"
                     />
+                    {isJobSeeker ? <p className="mt-2 text-sm text-primary-700">One free copy. Available once per resident.</p> : null}
                   </div>
                  
                 </div>
 
+                <DocumentProcessingNotice />
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row">
                   <button
                     type="submit"
-                    disabled={createRequestMutation.isPending}
+                    disabled={createRequestMutation.isPending || !requestHistoryQuery.isSuccess || Boolean(requestBlock)}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {createRequestMutation.isPending ? (
@@ -801,7 +828,7 @@ export default function RequestDocumentsClient({
                 ) : (
                   <TableShell columns="Document|Created|Amount|Status|Details">
                     {requestHistory.map((request) => (
-                      <tr key={request.id} className="border-b border-slate-100 align-top last:border-b-0">
+                      <tr key={request.id} id={`request-${request.id}`} tabIndex={-1} className="border-b border-slate-100 align-top last:border-b-0">
                         <td className="px-5 py-4">
                           <div className="min-w-45">
                             <p className="text-sm font-semibold text-slate-900">{request.documentType}</p>

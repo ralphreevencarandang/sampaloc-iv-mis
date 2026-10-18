@@ -11,6 +11,9 @@ import {
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
 type InventoryEntity = {
+  isMedicine: boolean;
+  expiresOn: Date | null;
+  stockVersion: number;
   id: string;
   name: string;
   category: string;
@@ -26,6 +29,9 @@ type InventoryEntity = {
 export type InventoryStatus = "In Stock" | "Low Stock" | "Out of Stock";
 
 export type InventoryRecord = {
+  isMedicine: boolean;
+  expiresOn: string | null;
+  stockVersion: number;
   id: string;
   name: string;
   category: string;
@@ -59,6 +65,9 @@ function getInventoryStatus(quantity: number): InventoryStatus {
 
 function mapInventoryRecord(item: InventoryEntity): InventoryRecord {
   return {
+    isMedicine: item.isMedicine,
+    expiresOn: item.expiresOn?.toISOString().slice(0, 10) ?? null,
+    stockVersion: item.stockVersion,
     id: item.id,
     name: item.name,
     category: item.category,
@@ -81,6 +90,8 @@ function parseInventoryForm(formData: FormData) {
     unit: getFormValue(formData, "unit"),
     storageLocation: getFormValue(formData, "storageLocation"),
     description: getFormValue(formData, "description"),
+    isMedicine: formData.get('isMedicine') === 'true',
+    expiresOn: getFormValue(formData, 'expiresOn'),
   });
 
   if (!parsed.success) {
@@ -95,6 +106,7 @@ function parseInventoryForm(formData: FormData) {
 }
 
 export async function getInventoryFromDb(options: { archived?: boolean } = {}): Promise<InventoryRecord[]> {
+  if (!(await hasAdminPermission('inventory', 'read'))) throw new Error('Inventory access denied.');
   const items = await prisma.inventoryItem.findMany({
     where: {
       isArchived: options.archived ?? false,
@@ -123,6 +135,8 @@ export async function createInventoryItem(formData: FormData): Promise<Inventory
   try {
     const createdItem = await prisma.inventoryItem.create({
       data: {
+        isMedicine: data.isMedicine,
+        expiresOn: data.expiresOn ? new Date(`${data.expiresOn}T00:00:00Z`) : null,
         name: data.name,
         category: data.category,
         quantity: data.quantity,
@@ -177,9 +191,16 @@ export async function updateInventoryItem(
       };
     }
 
-    const updatedItem = await prisma.inventoryItem.update({
-      where: { id },
+    const version = formData.get('stockVersion');
+    if (typeof version !== 'string' || !/^\d+$/.test(version) || !Number.isSafeInteger(Number(version))) {
+      return { success: false, message: 'Reload this item before updating stock.' };
+    }
+    const updatedItems = await prisma.inventoryItem.updateManyAndReturn({
+      where: { id, stockVersion: Number(version) },
       data: {
+        isMedicine: data.isMedicine,
+        expiresOn: data.expiresOn ? new Date(`${data.expiresOn}T00:00:00Z`) : null,
+        stockVersion: { increment: 1 },
         name: data.name,
         category: data.category,
         quantity: data.quantity,
@@ -188,6 +209,9 @@ export async function updateInventoryItem(
         description: data.description || null,
       },
     });
+
+    const updatedItem = updatedItems[0];
+    if (!updatedItem) return { success: false, message: 'Stock changed while this form was open. Close and reopen the item to review the latest quantity.' };
 
     return {
       success: true,
@@ -234,7 +258,7 @@ async function setInventoryArchiveStatusAction(
 
     const item = await prisma.inventoryItem.update({
       where: { id },
-      data: { isArchived },
+      data: { isArchived, stockVersion: { increment: 1 } },
     });
 
     return {
@@ -284,7 +308,7 @@ async function setBulkInventoryArchiveStatusAction(
 
     const result = await prisma.inventoryItem.updateMany({
       where: { id: { in: ids } },
-      data: { isArchived },
+      data: { isArchived, stockVersion: { increment: 1 } },
     });
 
     return {

@@ -3,7 +3,8 @@
 import { useMutation } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
 import { registerResidentAction } from "@/server/actions/auth.actions";
 import {
   MAX_VALID_ID_IMAGE_SIZE_BYTES,
@@ -15,10 +16,12 @@ import {
   type ResidentRegistrationInput,
 } from "@/validations/resident.validation";
 import { PWD_CONDITIONS } from "@/lib/resident-demographics";
+import { getRegistrationAge, getRegistrationVotingFields, VALID_ID_TYPES } from "@/lib/resident-registration";
 import logo from '@/public/images/sampaloc-logo.png'
 
 
-type RegisterFormState = Omit<ResidentRegistrationInput, "validIDImageName"> & {
+type RegisterFormState = Omit<ResidentRegistrationInput, "validIDImageName" | "idType"> & {
+  idType: ResidentRegistrationInput["idType"] | "";
   validIDImage: File | null;
   validIDImagePreview: string;
   validIDImageName: string;
@@ -47,6 +50,9 @@ const initialFormState: RegisterFormState = {
   isPwd: "No",
   pwdCondition: "",
   validIDImageName: "",
+  idType: "",
+  idNumber: "",
+  otherIdType: "",
   validIDImage: null,
   validIDImagePreview: "",
 };
@@ -74,9 +80,12 @@ function getSubmissionErrorMessage(error: unknown): Record<string, string> {
 }
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState<RegisterFormState>(initialFormState);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [successMessage, setSuccessMessage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const age = getRegistrationAge(formData.birthDate);
+  const canSelectVoting = age !== null && age >= 15;
 
   useEffect(() => {
     return () => {
@@ -90,7 +99,6 @@ export default function RegisterPage() {
     mutationFn: registerResidentAction,
     onSuccess: (result) => {
       if (!result) {
-        setSuccessMessage("");
         setErrors({
           submit: "Registration failed. Please try again.",
         });
@@ -99,7 +107,6 @@ export default function RegisterPage() {
 
       if (!result.success) {
         setErrors(result.fieldErrors ?? {});
-        setSuccessMessage("");
 
         if (!result.fieldErrors) {
           setErrors({ submit: result.message });
@@ -109,11 +116,9 @@ export default function RegisterPage() {
       }
 
       setErrors({});
-      setSuccessMessage(result.message);
-      setFormData({ ...initialFormState });
+      router.replace("/Login");
     },
     onError: (error) => {
-      setSuccessMessage("");
       setErrors(getSubmissionErrorMessage(error));
     },
   });
@@ -124,6 +129,14 @@ export default function RegisterPage() {
     const { name, value } = event.target;
 
     setFormData((current) => {
+      if (name === "birthDate") {
+        return { ...current, birthDate: value, ...getRegistrationVotingFields(value, current.isVoter, current.precinctNumber) };
+      }
+
+      if (name === "idType") {
+        return { ...current, idType: value as RegisterFormState["idType"], otherIdType: value === "Other" ? current.otherIdType : "" };
+      }
+
       if (name === "isVoter" && value === "No") {
         return {
           ...current,
@@ -150,6 +163,8 @@ export default function RegisterPage() {
       ...current,
       [name]: "",
       submit: "",
+      ...(name === "birthDate" ? { isVoter: "", precinctNumber: "" } : {}),
+      ...(name === "idType" ? { otherIdType: "" } : {}),
       ...(name === "isVoter" && value === "No" ? { precinctNumber: "" } : {}),
       ...(name === "isPwd" && value === "No" ? { pwdCondition: "" } : {}),
     }));
@@ -166,6 +181,8 @@ export default function RegisterPage() {
     const imageValidationError = validateValidIdImageFile(file);
 
     if (imageValidationError) {
+      event.target.value = "";
+      setFormData((current) => ({ ...current, validIDImage: null, validIDImageName: "", validIDImagePreview: "" }));
       nextErrors.validIDImageName = imageValidationError;
       setErrors(nextErrors);
       return;
@@ -217,6 +234,9 @@ export default function RegisterPage() {
       isPwd: formData.isPwd,
       pwdCondition: formData.pwdCondition,
       validIDImageName: formData.validIDImageName,
+      idType: formData.idType,
+      idNumber: formData.idNumber,
+      otherIdType: formData.otherIdType,
     });
 
     if (parsed.success) {
@@ -230,7 +250,6 @@ export default function RegisterPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSuccessMessage("");
 
     if (!validateForm()) {
       return;
@@ -268,6 +287,9 @@ export default function RegisterPage() {
     submission.set("isPwd", formData.isPwd);
     submission.set("pwdCondition", formData.pwdCondition);
     submission.set("validIDImage", formData.validIDImage);
+    submission.set("idType", formData.idType);
+    submission.set("idNumber", formData.idNumber);
+    submission.set("otherIdType", formData.otherIdType);
 
     await registerMutation.mutateAsync(submission);
   };
@@ -290,16 +312,6 @@ export default function RegisterPage() {
         {errors.submit && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {errors.submit}
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-            {successMessage} You can now proceed to{" "}
-            <Link href="/Login" className="font-semibold underline">
-              Login
-            </Link>
-            .
           </div>
         )}
 
@@ -605,9 +617,11 @@ export default function RegisterPage() {
                 </label>
                 <select
                   name="isVoter"
+                  disabled={!canSelectVoting}
+                  required
                   value={formData.isVoter}
                   onChange={handleInputChange}
-                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 ${
                     errors.isVoter ? "border-red-500" : "border-gray-300"
                   }`}
                 >
@@ -713,14 +727,48 @@ export default function RegisterPage() {
             <h2 className="mb-4 border-b-2 border-primary-600 pb-2 text-lg font-semibold text-gray-900">
               Identity Verification
             </h2>
+            <div className="mb-4 space-y-4">
+              <div>
+                <label htmlFor="idType" className="mb-2 block text-sm font-medium">
+                  ID Type<RequiredMark />
+                </label>
+                <select id="idType" name="idType" required value={formData.idType} onChange={handleInputChange}
+                  aria-invalid={Boolean(errors.idType)}
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 border-gray-300">
+                  <option value="">Select ID Type</option>
+                  {VALID_ID_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                </select>
+                {errors.idType && <p role="alert" className="mt-1 text-sm">{errors.idType}</p>}
+              </div>
+              {formData.idType === "Other" && (
+                <div>
+                  <label htmlFor="otherIdType" className="mb-2 block text-sm font-medium">
+                    Specify ID Type<RequiredMark />
+                  </label>
+                  <input id="otherIdType" name="otherIdType" type="text" required value={formData.otherIdType}
+                    onChange={handleInputChange} aria-invalid={Boolean(errors.otherIdType)}
+                    className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 border-gray-300" />
+                  {errors.otherIdType && <p role="alert" className="mt-1 text-sm">{errors.otherIdType}</p>}
+                </div>
+              )}
+              <div>
+                <label htmlFor="idNumber" className="mb-2 block text-sm font-medium">
+                  ID Number<RequiredMark />
+                </label>
+                <input id="idNumber" name="idNumber" type="text" required disabled={!formData.idType}
+                  value={formData.idNumber} onChange={handleInputChange} aria-invalid={Boolean(errors.idNumber)}
+                  className="w-full rounded-lg border px-4 py-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50" />
+                {errors.idNumber && <p role="alert" className="mt-1 text-sm">{errors.idNumber}</p>}
+              </div>
+            </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
+              <label htmlFor="validIDImage" className="mb-2 block text-sm font-medium text-gray-700">
                 Upload Valid ID<RequiredMark />
               </label>
               <label className="relative block w-full">
-                <input type="file" accept="image/*" onChange={handleIDImageChange} className="sr-only" />
+                <input ref={fileInputRef} id="validIDImage" type="file" accept="image/jpeg,image/png,image/webp" required disabled={!formData.idType} onChange={handleIDImageChange} className="peer sr-only" />
                 <div
-                  className={`rounded-lg border-2 border-dashed p-4 text-center transition-colors ${
+                  className={`rounded-lg border-2 border-dashed p-4 text-center transition-colors peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500 ${
                     errors.validIDImageName
                       ? "border-red-400 bg-red-50"
                       : "cursor-pointer border-gray-300 bg-gray-50 hover:bg-gray-100"
@@ -773,7 +821,7 @@ export default function RegisterPage() {
                 }
                 setFormData({ ...initialFormState });
                 setErrors({});
-                setSuccessMessage("");
+                if (fileInputRef.current) fileInputRef.current.value = "";
               }}
               className="flex-1 rounded-lg border-2 border-gray-300 px-4 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
             >

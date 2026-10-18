@@ -53,6 +53,9 @@ export const documentRequestSchema = z
 
     if (value.documentType === 'first-time-job-seeker') {
       requireField('yearsOfResidency', 'Years of residency')
+      if (value.requestedCopies !== '1') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['requestedCopies'], message: 'The First-Time Job Seeker Certificate is limited to one copy per request.' })
+      }
     }
   })
 

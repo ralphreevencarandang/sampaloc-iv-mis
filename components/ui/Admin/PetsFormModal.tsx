@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2, X } from 'lucide-react'
 import React, { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import {
   createPet,
   getPetOwnersForDropdown,
@@ -12,7 +12,7 @@ import {
   type PetOwnerOption,
   type PetRecord,
 } from '@/server/actions/pet.action'
-import { petSchema, type PetFormInput } from '@/validations/pet.validation'
+import { petFormSchema, type PetFormInput } from '@/validations/pet.validation'
 
 type PetsFormModalProps = {
   isOpen: boolean
@@ -39,18 +39,21 @@ export default function PetsFormModal({
     handleSubmit,
     reset,
     setError,
+    control,
     formState: { errors },
   } = useForm<PetFormInput>({
-    resolver: zodResolver(petSchema),
+    resolver: zodResolver(petFormSchema),
     defaultValues: {
       ownerId: '',
       name: '',
       type: '',
+      otherType: '',
       breed: '',
       color: '',
       vaccinationDate: '',
     },
   })
+  const selectedType = useWatch({ control, name: 'type' })
 
   const {
     data: owners = [],
@@ -71,7 +74,14 @@ export default function PetsFormModal({
     reset({
       ownerId: initialData?.ownerId ?? '',
       name: initialData?.name ?? '',
-      type: initialData?.type ?? '',
+      type: initialData?.type
+        ? (['dog', 'cat', 'bird', 'fish'].includes(initialData.type.trim().toLowerCase())
+          ? initialData.type.trim().toLowerCase().replace(/^./, (letter) => letter.toUpperCase())
+          : 'Other')
+        : '',
+      otherType: initialData?.type && !['dog', 'cat', 'bird', 'fish'].includes(initialData.type.trim().toLowerCase())
+        ? initialData.type
+        : '',
       breed: initialData?.breed ?? '',
       color: initialData?.color ?? '',
       vaccinationDate: initialData?.vaccinationDate
@@ -85,7 +95,7 @@ export default function PetsFormModal({
       const formData = new FormData()
       formData.set('ownerId', data.ownerId)
       formData.set('name', data.name)
-      formData.set('type', data.type)
+      formData.set('type', data.type === 'Other' ? data.otherType ?? '' : data.type)
       formData.set('breed', data.breed ?? '')
       formData.set('color', data.color ?? '')
       formData.set('vaccinationDate', data.vaccinationDate ?? '')
@@ -137,6 +147,7 @@ export default function PetsFormModal({
       ownerId: '',
       name: '',
       type: '',
+      otherType: '',
       breed: '',
       color: '',
       vaccinationDate: '',
@@ -228,15 +239,36 @@ export default function PetsFormModal({
               <label htmlFor="type" className="text-sm font-medium text-slate-700">
                 Type<RequiredMark />
               </label>
-              <input
+              <select
                 id="type"
-                type="text"
-                placeholder="Dog, Cat, Bird..."
                 {...register('type')}
                 className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-primary-500 focus:outline-none"
-              />
+              >
+                <option value="">Select pet type</option>
+                <option value="Dog">Dog</option>
+                <option value="Cat">Cat</option>
+                <option value="Bird">Bird</option>
+                <option value="Fish">Fish</option>
+                <option value="Other">Other</option>
+              </select>
               {errors.type && <p className="text-xs text-red-500">{errors.type.message}</p>}
             </div>
+
+            {selectedType === 'Other' && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="otherType" className="text-sm font-medium text-slate-700">
+                  Specify Pet Type<RequiredMark />
+                </label>
+                <input
+                  id="otherType"
+                  type="text"
+                  placeholder="Enter pet type"
+                  {...register('otherType')}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-primary-500 focus:outline-none"
+                />
+                {errors.otherType && <p className="text-xs text-red-500">{errors.otherType.message}</p>}
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="breed" className="text-sm font-medium text-slate-700">

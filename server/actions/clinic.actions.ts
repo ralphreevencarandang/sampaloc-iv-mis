@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { DispensingError } from '@/lib/medicine-dispensing'
 import { AdminRole } from '@/app/generated/prisma/enums'
 import { getCurrentAdminFromSession } from '@/lib/admin-session'
 import { getCurrentHealthWorkerFromSession } from '@/lib/health-worker-session'
@@ -129,6 +130,7 @@ function getMedicalRecordSelect() {
     prescription: true,
     assignedNurse: true,
     medicinesGiven: true,
+    dispensingTransactions: { select: { itemName: true, itemUnit: true, quantity: true }, orderBy: { date: 'asc' } },
     date: true,
     isArchive: true,
     patient: {
@@ -169,7 +171,7 @@ export async function submitMedicalRecordAction(
         diagnosis: validation.parsed.data.diagnosis,
         treatment: validation.parsed.data.notes,
         assignedNurse: validation.parsed.data.assignedNurse || null,
-        medicinesGiven: validation.parsed.data.medicinesGiven ?? [],
+        medicinesGiven: [],
         prescription:
           validation.parsed.data.attachments.length > 0
             ? JSON.stringify(validation.parsed.data.attachments)
@@ -230,23 +232,31 @@ export async function updateMedicalRecordAction(
       return residentValidation
     }
 
-    const updatedRecord = await prisma.medicalRecord.update({
-      where: { id },
-      data: {
-        patientId: validation.parsed.data.patientId,
-        symptoms: validation.parsed.data.notes,
-        diagnosis: validation.parsed.data.diagnosis,
-        treatment: validation.parsed.data.notes,
-        assignedNurse: validation.parsed.data.assignedNurse || null,
-        medicinesGiven: validation.parsed.data.medicinesGiven ?? [],
-        prescription:
-          validation.parsed.data.attachments.length > 0
-            ? JSON.stringify(validation.parsed.data.attachments)
-            : null,
-        date: new Date(validation.parsed.data.date),
-      },
-      select: getMedicalRecordSelect(),
-    })
+    const updatedRecord = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "MedicalRecord" WHERE "id" = ${id} FOR UPDATE`
+      const current = await tx.medicalRecord.findUnique({ where: { id }, select: { patientId: true } })
+      if (!current) throw new DispensingError('Medical record not found.')
+      const hasDispensing = await tx.inventoryTransaction.count({ where: { medicalRecordId: id } })
+      if (hasDispensing && current.patientId !== validation.parsed.data.patientId) {
+        throw new DispensingError('The patient cannot be changed after medicines have been dispensed. Create a separate consultation instead.')
+      }
+      return tx.medicalRecord.update({
+        where: { id },
+        data: {
+          patientId: validation.parsed.data.patientId,
+          symptoms: validation.parsed.data.notes,
+          diagnosis: validation.parsed.data.diagnosis,
+          treatment: validation.parsed.data.notes,
+          assignedNurse: validation.parsed.data.assignedNurse || null,
+          prescription:
+            validation.parsed.data.attachments.length > 0
+              ? JSON.stringify(validation.parsed.data.attachments)
+              : null,
+          date: new Date(validation.parsed.data.date),
+        },
+        select: getMedicalRecordSelect(),
+      })
+    }, { isolationLevel: 'ReadCommitted', maxWait: 15000, timeout: 15000 })
 
     revalidatePath('/clinic')
     revalidatePath('/clinic/medical-records')
@@ -257,7 +267,8 @@ export async function updateMedicalRecordAction(
       record: serializeClinicMedicalRecord(updatedRecord),
     }
   } catch (error) {
-    console.error('update medical record failed', error)
+    if (error instanceof DispensingError) return { success: false, message: error.message }
+    console.error('update medical record failed')
 
     return {
       success: false,

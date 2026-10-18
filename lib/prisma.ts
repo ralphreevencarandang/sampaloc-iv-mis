@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { PrismaClient } from "../app/generated/prisma/client"; 
+import { Prisma, PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg"; 
 
 if (!process.env.DATABASE_URL) {
@@ -10,9 +10,21 @@ const globalForPrisma = global as unknown as {
   prisma: PrismaClient; 
 }; 
 const adapter = new PrismaPg(process.env.DATABASE_URL);
+const cachedPrisma = globalForPrisma.prisma;
+const residentFields = Object.keys(Prisma.ResidentScalarFieldEnum);
+// Hot reload preserves globals, including clients generated before schema changes.
+const hasCurrentResidentFields = cachedPrisma?.resident?.fields
+  && Object.keys(cachedPrisma.resident.fields).length === residentFields.length
+  && residentFields.every((field) => field in cachedPrisma.resident.fields);
+const hasCurrentInventoryFields = cachedPrisma?.inventoryItem?.fields
+  && Object.keys(Prisma.InventoryItemScalarFieldEnum).every((field) => field in cachedPrisma.inventoryItem.fields)
+  && cachedPrisma?.inventoryTransaction?.fields
+  && Object.keys(Prisma.InventoryTransactionScalarFieldEnum).every((field) => field in cachedPrisma.inventoryTransaction.fields);
+const hasCurrentDocumentFields = cachedPrisma?.documentRequest?.fields
+  && Object.keys(Prisma.DocumentRequestScalarFieldEnum).every((field) => field in cachedPrisma.documentRequest.fields);
 const prisma =
-  (globalForPrisma.prisma && "document" in globalForPrisma.prisma)
-    ? globalForPrisma.prisma
+  (cachedPrisma && "document" in cachedPrisma && hasCurrentResidentFields && hasCurrentInventoryFields && hasCurrentDocumentFields)
+    ? cachedPrisma
     : new PrismaClient({
         adapter,
       });

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from 'react'
-import { Search, Plus, Edit2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Archive, RotateCcw } from 'lucide-react'
+import { Search, Plus, Edit2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle, Archive, RotateCcw, FileText, CircleDot, CheckCircle2 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import BlotterModalForm from '@/components/ui/Admin/BlotterModalForm'
@@ -14,6 +14,7 @@ import {
   unarchiveBlotterAction,
   bulkArchiveBlottersAction,
 } from '@/server/actions/archive.actions'
+import SummaryDashboardCards from '@/components/ui/Admin/SummaryDashboardCards'
 
 const ITEMS_PER_PAGE = 10
 
@@ -161,6 +162,15 @@ export default function BlotterPage() {
           Add Blotter
         </button>
       </div>
+
+      <SummaryDashboardCards
+        isLoading={isLoading}
+        stats={[
+          { label: 'Total Cases', value: blotters.filter((record) => !record.isArchive).length, icon: FileText },
+          { label: 'Open Cases', value: blotters.filter((record) => !record.isArchive && record.status === 'Open').length, icon: CircleDot },
+          { label: 'Resolved Cases', value: blotters.filter((record) => !record.isArchive && record.status === 'Resolved').length, icon: CheckCircle2 },
+        ]}
+      />
 
       {/* Floating Bulk Action Bar */}
       <BulkActionBar

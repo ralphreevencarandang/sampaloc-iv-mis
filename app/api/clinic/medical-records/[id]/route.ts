@@ -41,6 +41,7 @@ export async function GET(
         prescription: true,
         assignedNurse: true,
         medicinesGiven: true,
+        dispensingTransactions: { select: { itemName: true, itemUnit: true, quantity: true }, orderBy: { date: 'asc' } },
         date: true,
         isArchive: true,
         patient: {

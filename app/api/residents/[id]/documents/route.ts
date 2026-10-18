@@ -35,6 +35,7 @@ export async function GET(_: Request, { params }: RouteContext) {
         serialNumber: true,
         generatedFileUrl: true,
         generatedAt: true,
+        releasedAt: true,
         status: true,
         requestedAt: true,
       },

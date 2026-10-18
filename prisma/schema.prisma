@@ -40,6 +40,7 @@ enum RequestStatus {
   REVIEW
   APPROVED
   GENERATED
+  REJECTED
 }
 
 enum VerificationStatus {
@@ -90,6 +91,7 @@ model Admin {
   createdAt DateTime  @default(now())
 
   medicalRecordsChecked MedicalRecord[] @relation("CheckedByHealthWorker")
+  medicinesDispensed InventoryTransaction[] @relation("DispensedBy")
 }
 
 model Resident {
@@ -125,6 +127,9 @@ model Resident {
   isArchived     Boolean @default(false)
 
   validIDImage String?
+  idType       String?
+  idNumber     String?
+  otherIdType  String?
   image        String?
   status       VerificationStatus @default(PENDING)
 
@@ -219,6 +224,9 @@ model InventoryItem {
   storageLocation String
   description     String? @db.Text
   isArchived      Boolean @default(false)
+  isMedicine      Boolean @default(false)
+  expiresOn       DateTime? @db.Date
+  stockVersion    Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -241,6 +249,18 @@ model InventoryTransaction {
   distributedTo   Resident? @relation("DistributedTo", fields: [distributedToId], references: [id])
 
   date DateTime @default(now())
+
+  // Nullable for existing non-clinic inventory transactions.
+  medicalRecordId String?
+  medicalRecord MedicalRecord? @relation(fields: [medicalRecordId], references: [id], onDelete: Restrict)
+  dispensedById String?
+  dispensedBy Admin? @relation("DispensedBy", fields: [dispensedById], references: [id], onDelete: Restrict)
+  dispenseKey String?
+  itemName String?
+  itemUnit String?
+
+  @@unique([dispenseKey, itemId])
+  @@index([medicalRecordId, date])
 }
 
 model DocumentRequest {
@@ -260,10 +280,15 @@ model DocumentRequest {
   proofOfPaymentUrl      String? @map("paymentProofFileName")
   serialNumber          String? @unique
   generatedFileUrl      String?
+  generatedPdf          Bytes?
+  pdfGenerationToken    String?
+  pdfGenerationExpiresAt DateTime?
   status RequestStatus @default(PENDING)
   requestedAt DateTime  @default(now())
   generatedAt DateTime?
   releasedAt  DateTime?
+
+  @@index([residentId, documentTypeId, status])
 }
 
 model Document {
@@ -295,6 +320,7 @@ model MedicalRecord {
 
   date DateTime @default(now())
   isArchive Boolean @default(false)
+  dispensingTransactions InventoryTransaction[]
 }
 
 model VawcRecord {
