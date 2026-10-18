@@ -218,3 +218,42 @@ Last updated: 2026-10-16. Files: `app/(Resident)/request-documents/request-docum
 The document selector remains usable to inspect requirements. The selected document's Submit Request button enforces eligibility. History refreshes on focus and every 30 seconds; the server remains authoritative. Admin filters and badges include REJECTED as the single unsuccessful outcome. No new palette colors were introduced.
 
 After implementing a new reusable component, update this file with the component name, path, purpose, props, usage, dependencies, variants, and verification date.
+
+### Clinic appointment components
+
+Files: `components/ui/Clinic/AppointmentHistory.tsx`, `ClinicAppointmentsPage.tsx`, `ResidentAppointmentBooking.tsx`, `AppointmentDialog.tsx`. Last updated: 2026-10-18.
+
+| Property | Pattern |
+| --- | --- |
+| Surface / border | `bg-surface`, `bg-surface-muted`, `border-outline` |
+| Radius / shadow | `rounded-lg`, `shadow-sm`; dialog `shadow-lg` |
+| Text | `text-content`, `text-content-muted`; page heading `text-3xl font-bold`, section `text-xl font-semibold`, controls/body `text-sm` |
+| Controls | `rounded-lg border border-outline bg-surface px-3 py-2 text-sm` |
+| Focus / hover | `focus:ring-2 focus:ring-primary-500 focus:outline-none`, `hover:bg-primary-50` |
+| Spacing | `space-y-4` / `space-y-6`; cards `p-4`, forms/dialog contents `p-6` |
+| Status | Text badges, `rounded-full border px-2.5 py-1 text-xs font-medium`; primary tokens for Confirmed/Completed, stock-low tokens for Pending, stock-empty tokens for Cancelled/Rejected/No Show |
+| Disabled | Actual disabled controls plus `disabled:cursor-not-allowed disabled:opacity-50` |
+
+`AppointmentHistory({ mode, onConsult?, onViewRecord? })` is shared by clinic/admin management, resident booking and My Account. It provides ten-row pagination, combined name/reason/date/status filters, refresh, status details/history and reason-required cancellation/rejection. Read-only roles see no mutation controls. Failed refreshes show stale-data feedback and block mutations. Staff get total/status cards and today's appointments; resident data comes only from their authenticated owner query. Queries refresh every 15 seconds and on focus.
+
+`AppointmentDialog` uses native modal dialogs for focus containment, Escape and focus restoration; saving prevents dismissal. `ConsultationSummary({ records })` shows Total Consultations, Walk-In Visits and Appointment Visits on Clinic/Admin records pages. Existing medical-record forms accept an optional appointmentId, fix the patient and date for linked visits, invalidate appointment caches after save and open the same medicine-dispensing details workflow. Classification is visible in lists and details.
+
+Resident booking uses existing React Hook Form/Zod patterns and lists only dates/times with capacity in a rolling 90-day display. All appointment times use Asia/Manila. The Resident Services card follows the existing card geometry using semantic/primary tokens. No raw palette or hex values were added.
+
+### MedicineCombobox and early appointment consultation
+
+Files: `components/ui/combobox.tsx`, `components/ui/Clinic/MedicineCombobox.tsx`, `MedicineDispensingPanel.tsx`, `AppointmentHistory.tsx`, `ClinicAppointmentsPage.tsx`, `MedicalRecordModalForm.tsx`. Updated: 2026-10-18.
+
+| Property | Pattern |
+| --- | --- |
+| Input / popup | `rounded-lg border border-outline bg-surface text-content`; popup `shadow-lg` |
+| Input size | `px-3 py-2 text-base sm:text-sm` to keep mobile input legible |
+| Focus / highlight | `focus-within:ring-2 focus-within:ring-primary-500`; options `data-[highlighted]:bg-primary-50`, `data-[highlighted]:text-primary-700` |
+| Option spacing | `px-3 py-3 text-sm`; stock/unit detail `text-xs` |
+| Disabled | Real disabled options and controls, `data-[disabled]:opacity-50`, `disabled:opacity-50` |
+| Scroll | List `max-h-[min(20rem,var(--available-height))] overflow-y-auto overscroll-contain`; selected-quantity list retains `max-h-80 overflow-y-auto` |
+| Responsive popup | Anchor-width popup constrained to viewport width; portal above existing detail modals |
+
+`MedicineCombobox({ id, medicines, selectedIds, disabled, onSelect })` uses Shadcn's Base UI composition with accessible keyboard navigation, name search, live stock/unit labels and a bounded dropdown. Selecting adds one medicine to the existing ID-keyed quantity map; already selected IDs and expired entries are excluded. Empty stock or missing expiry disables an option. Multiple selections, removed stock cleanup, server-authoritative validation and stable dispensing retry UUIDs are preserved. Read-only viewers get no selection controls.
+
+Confirmed appointments show Start Consultation regardless of scheduled date/time, switching to Resume Consultation once a canonical server start is stored. The form shows Scheduled appointment and Actual consultation started as separate Manila timestamps. The original date/time stays visible in the table/details, and save remains the finalization command.

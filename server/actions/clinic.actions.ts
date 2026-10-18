@@ -1,6 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { AppointmentError } from '@/lib/appointment-policy'
+import { lockAppointmentConsultation, appointmentTransactionOptions } from '@/lib/appointments'
 import { DispensingError } from '@/lib/medicine-dispensing'
 import { AdminRole } from '@/app/generated/prisma/enums'
 import { getCurrentAdminFromSession } from '@/lib/admin-session'
@@ -124,6 +126,8 @@ function getMedicalRecordSelect() {
   return {
     id: true,
     patientId: true,
+    visitType: true,
+    appointmentId: true,
     symptoms: true,
     diagnosis: true,
     treatment: true,
@@ -164,9 +168,18 @@ export async function submitMedicalRecordAction(
       return residentValidation
     }
 
-    const createdRecord = await prisma.medicalRecord.create({
+    const appointmentValue = formData.get('appointmentId')
+    if (appointmentValue !== null && (typeof appointmentValue !== 'string' || !appointmentValue || appointmentValue.length > 100)) {
+      return { success: false, message: 'Invalid appointment.' }
+    }
+    const appointmentId = typeof appointmentValue === 'string' ? appointmentValue : null
+    const createdRecord = await prisma.$transaction(async tx => {
+      const actualStartedAt = appointmentId ? await lockAppointmentConsultation(tx, appointmentId, validation.parsed.data.patientId, validation.actor.id) : null
+      return tx.medicalRecord.create({
       data: {
         patientId: validation.parsed.data.patientId,
+        visitType: appointmentId ? 'APPOINTMENT' : 'WALK_IN',
+        appointmentId,
         symptoms: validation.parsed.data.notes,
         diagnosis: validation.parsed.data.diagnosis,
         treatment: validation.parsed.data.notes,
@@ -177,13 +190,17 @@ export async function submitMedicalRecordAction(
             ? JSON.stringify(validation.parsed.data.attachments)
             : null,
         checkedById: validation.actor.id,
-        date: new Date(validation.parsed.data.date),
+        date: actualStartedAt ?? new Date(validation.parsed.data.date),
       },
       select: getMedicalRecordSelect(),
-    })
+      })
+    }, appointmentTransactionOptions)
 
     revalidatePath('/clinic')
     revalidatePath('/clinic/medical-records')
+    revalidatePath('/clinic/appointments')
+    revalidatePath('/my-account')
+    revalidatePath('/admin/health')
 
     return {
       success: true,
@@ -191,7 +208,8 @@ export async function submitMedicalRecordAction(
       record: serializeClinicMedicalRecord(createdRecord),
     }
   } catch (error) {
-    console.error('submit medical record failed', error)
+    if (error instanceof AppointmentError) return { success: false, message: error.message }
+    console.error('submit medical record failed')
 
     return {
       success: false,
@@ -234,8 +252,9 @@ export async function updateMedicalRecordAction(
 
     const updatedRecord = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "MedicalRecord" WHERE "id" = ${id} FOR UPDATE`
-      const current = await tx.medicalRecord.findUnique({ where: { id }, select: { patientId: true } })
+      const current = await tx.medicalRecord.findUnique({ where: { id }, select: { patientId: true, appointmentId: true, date: true } })
       if (!current) throw new DispensingError('Medical record not found.')
+      if (current.appointmentId && current.patientId !== validation.parsed.data.patientId) throw new DispensingError('The patient cannot be changed for an appointment consultation.')
       const hasDispensing = await tx.inventoryTransaction.count({ where: { medicalRecordId: id } })
       if (hasDispensing && current.patientId !== validation.parsed.data.patientId) {
         throw new DispensingError('The patient cannot be changed after medicines have been dispensed. Create a separate consultation instead.')
@@ -252,7 +271,7 @@ export async function updateMedicalRecordAction(
             validation.parsed.data.attachments.length > 0
               ? JSON.stringify(validation.parsed.data.attachments)
               : null,
-          date: new Date(validation.parsed.data.date),
+          date: current.appointmentId ? current.date : new Date(validation.parsed.data.date),
         },
         select: getMedicalRecordSelect(),
       })

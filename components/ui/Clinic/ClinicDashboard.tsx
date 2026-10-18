@@ -4,6 +4,7 @@ import { CalendarClock, ChevronRight, CirclePlus, ClipboardList, FileStack, Hear
 import Link from 'next/link'
 import React, { useMemo, useState } from 'react'
 import MedicalRecordModalForm from '@/components/ui/Clinic/MedicalRecordModalForm'
+import ClinicMedicalRecordDetailsModal from '@/components/ui/Clinic/ClinicMedicalRecordDetailsModal'
 
 type StatCard = {
   label: string
@@ -41,6 +42,7 @@ export default function ClinicDashboard({
   summary,
 }: ClinicDashboardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [viewRecordId, setViewRecordId] = useState<string | null>(null)
 
   const patientOptions = useMemo(
     () =>
@@ -183,7 +185,9 @@ export default function ClinicDashboard({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         patients={patientOptions}
+        onRecordCreated={setViewRecordId}
       />
+      <ClinicMedicalRecordDetailsModal isOpen={Boolean(viewRecordId)} recordId={viewRecordId} onClose={() => setViewRecordId(null)} />
     </>
   )
 }

@@ -13,6 +13,9 @@ test("Prisma hot reload replaces an outdated resident client and reuses a curren
     inventoryTransaction = { fields: { id: 'id', dispenseKey: 'dispenseKey' } };
     document = {};
     documentRequest = { fields: { id: 'id', generatedPdf: 'generatedPdf' } };
+    clinicAppointment = { fields: { id: 'id', consultationStartedAt: 'consultationStartedAt', consultationStartedById: 'consultationStartedById' } };
+    clinicSchedule = {};
+    medicalRecord = { fields: { id: 'id', visitType: 'visitType', appointmentId: 'appointmentId' } };
     constructor() { created++; }
   }
   const modules: Record<string, unknown> = {
@@ -21,6 +24,8 @@ test("Prisma hot reload replaces an outdated resident client and reuses a curren
       InventoryItemScalarFieldEnum: { id: 'id', isMedicine: 'isMedicine' },
       InventoryTransactionScalarFieldEnum: { id: 'id', dispenseKey: 'dispenseKey' },
       DocumentRequestScalarFieldEnum: { id: 'id', generatedPdf: 'generatedPdf' },
+      MedicalRecordScalarFieldEnum: { id: 'id', visitType: 'visitType', appointmentId: 'appointmentId' },
+      ClinicAppointmentScalarFieldEnum: { id: 'id', consultationStartedAt: 'consultationStartedAt', consultationStartedById: 'consultationStartedById' },
     } },
     "@prisma/adapter-pg": { PrismaPg: class {} },
   };
@@ -49,4 +54,7 @@ test("Prisma hot reload replaces an outdated resident client and reuses a curren
   globals.prisma = { ...fresh, documentRequest: { fields: { id: 'id' } } };
   assert.notEqual(load(), fresh);
   assert.equal(created, 3);
+  globals.prisma = { ...fresh, clinicAppointment: undefined };
+  assert.notEqual(load(), fresh);
+  assert.equal(created, 4);
 });

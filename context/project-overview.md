@@ -161,3 +161,11 @@ Not verified as implemented: SMS notifications, online payment gateway verificat
 - Document request records can progress through review, approval, generation, and email delivery.
 - Sensitive resident, medical, blotter, and VAWC records are never exposed through unauthenticated endpoints.
 - Future agents can update the project by reading this context directory before code changes.
+
+## Clinic Appointments — 2026-10-18
+
+Clinic appointments are implemented at `/clinic-appointment`, `/clinic/appointments`, and `/admin/health/appointments`, with resident history in My Account and a Resident Services card. Staff configure operating days/hours, duration and capacity before opening bookings. Pending/Confirmed capacity, one-active-per-resident, cancellation/rejection history, Manila times, no-show rules and notification privacy are enforced server-side. Confirmed consultations reuse existing medical records and dispensing, with Walk-In/Appointment classification and summaries. Deployment requires `20261018020000_clinic_appointments`; authenticated browser/SMTP verification remains a release check.
+
+## Medicine selection and early appointment consultations — 2026-10-18
+
+Medicine dispensing now uses a searchable, scrollable Shadcn Base UI chooser, excludes expired stock, disables unavailable items and supports multiple distinct medicines without changing inventory deductions. Authorized staff may start any CONFIRMED appointment regardless of schedule date/time. Original schedule and actual start are retained separately; duplicate starts resume one consultation and only finalized medical-record save marks COMPLETED. Deploy follow-up migration `20261018030000_appointment_consultation_start` before rollout.

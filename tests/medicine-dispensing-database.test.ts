@@ -13,6 +13,7 @@ import * as inventoryValidation from '../validations/inventory.validation'
 import * as clinicValidation from '../validations/clinic.validation'
 import * as clinicUtils from '../lib/clinic-utils'
 import * as rbac from '../lib/rbac'
+import * as appointmentPolicy from '../lib/appointment-policy'
 import { AdminRole } from '../app/generated/prisma/enums'
 import 'dotenv/config'
 
@@ -64,10 +65,13 @@ test('PostgreSQL dispensing lifecycle, retries and concurrent stock changes', {
       INSERT INTO "InventoryTransaction" ("id", "itemId", "quantity", "type") VALUES ('legacy-log', 'legacy', 9, 'IN');
     `)
     await pool.query(readFileSync('prisma/migrations/20261018000000_clinic_inventory_dispensing/migration.sql', 'utf8'))
+    await pool.query(readFileSync('prisma/migrations/20261018020000_clinic_appointments/migration.sql', 'utf8'))
+    await pool.query(readFileSync('prisma/migrations/20261018030000_appointment_consultation_start/migration.sql', 'utf8'))
     let worker: { id: string; name: string; role: 'HEALTH_WORKER' } | null = { id: 'worker', name: 'Synthetic Worker', role: 'HEALTH_WORKER' }
     let inventoryAllowed = true
     const modules: Record<string, unknown> = {
       'server-only': {}, '@/lib/prisma': prisma, '@/lib/medicine-inventory': policy,
+      '@/lib/appointment-policy': appointmentPolicy,
       '@/validations/dispensing.validation': validation, '@/validations/inventory.validation': inventoryValidation,
       '@/validations/clinic.validation': clinicValidation, '@/lib/clinic-utils': clinicUtils,
       '@/lib/rbac': rbac, '@/app/generated/prisma/enums': { AdminRole },
@@ -80,6 +84,7 @@ test('PostgreSQL dispensing lifecycle, retries and concurrent stock changes', {
     modules['@/lib/medicine-dispensing'] = service
     const actions = loadModule<typeof import('../server/actions/dispensing.actions')>('server/actions/dispensing.actions.ts', modules)
     const inventory = loadModule<typeof import('../server/actions/inventory.actions')>('server/actions/inventory.actions.ts', modules)
+    modules['@/lib/appointments'] = loadModule<typeof import('../lib/appointments')>('lib/appointments.ts', modules)
     const clinic = loadModule<typeof import('../server/actions/clinic.actions')>('server/actions/clinic.actions.ts', modules)
     const item = async (quantity = 10, options: Record<string, unknown> = {}) => prisma.inventoryItem.create({ data: {
       name: 'Synthetic medicine', category: 'Medical Supplies', quantity, unit: 'tablets', storageLocation: 'Clinic',
@@ -186,6 +191,23 @@ test('PostgreSQL dispensing lifecycle, retries and concurrent stock changes', {
       const medicine = await item(10)
       await assert.rejects(() => prisma.inventoryItem.update({ where: { id: medicine.id }, data: { quantity: -1 } }))
       await assert.rejects(() => prisma.inventoryTransaction.create({ data: { itemId: medicine.id, quantity: 1, type: 'OUT', dispenseKey: randomUUID() } }))
+    })
+    await t.test('appointment consultations use the same dispensing and archive workflow as walk-ins', async () => {
+      const appointment = await prisma.clinicAppointment.create({ data: {
+        residentId: 'patient', startsAt: new Date(Date.now() - 1800000), endsAt: new Date(), reason: 'Synthetic appointment', status: 'COMPLETED',
+      } })
+      const visit = await prisma.medicalRecord.create({ data: {
+        patientId: 'patient', checkedById: 'worker', symptoms: 'Synthetic', diagnosis: 'Synthetic', treatment: 'Synthetic',
+        visitType: 'APPOINTMENT', appointmentId: appointment.id,
+      } })
+      const medicine = await item(10)
+      assert.equal((await actions.dispenseMedicinesAction(request(visit.id, medicine.id, 3))).success, true)
+      assert.equal(await stock(medicine.id), 7)
+      assert.equal(await prisma.inventoryTransaction.count({ where: { medicalRecordId: visit.id } }), 1)
+      assert.equal((await clinic.archiveMedicalRecordAction(visit.id)).success, true)
+      assert.equal((await clinic.unarchiveMedicalRecordAction(visit.id)).success, true)
+      assert.equal(await stock(medicine.id), 7)
+      assert.equal((await prisma.clinicAppointment.findUniqueOrThrow({ where: { id: appointment.id } })).status, 'COMPLETED')
     })
   } finally {
     await prisma.$disconnect()

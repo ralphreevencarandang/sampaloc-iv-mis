@@ -70,6 +70,7 @@ export default function ClinicMedicalRecordDetailsModal({
             </div>
           ) : recordQuery.data ? (
             <div className="space-y-6">
+              <p className="text-sm font-medium text-content">Visit Type: {recordQuery.data.visitType === 'APPOINTMENT' ? 'Appointment' : 'Walk-In'}</p>
               <MedicineDispensingPanel key={recordQuery.data.id} recordId={recordQuery.data.id} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">

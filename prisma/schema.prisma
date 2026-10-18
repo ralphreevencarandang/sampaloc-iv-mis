@@ -141,6 +141,7 @@ model Resident {
   itemsReceived    InventoryTransaction[] @relation("DistributedTo")
   documentRequests DocumentRequest[]      @relation("RequestedByResident")
   medicalRecords   MedicalRecord[]        @relation("Patient")
+  clinicAppointments ClinicAppointment[]
 }
 
 model Official {
@@ -304,6 +305,9 @@ model Document {
 
 model MedicalRecord {
   id String @id @default(cuid())
+  visitType VisitType @default(WALK_IN)
+  appointmentId String? @unique
+  appointment ClinicAppointment? @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
 
   patientId String
   patient   Resident @relation("Patient", fields: [patientId], references: [id], onDelete: Cascade)
@@ -321,6 +325,64 @@ model MedicalRecord {
   date DateTime @default(now())
   isArchive Boolean @default(false)
   dispensingTransactions InventoryTransaction[]
+}
+
+enum VisitType {
+  WALK_IN
+  APPOINTMENT
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  REJECTED
+  NO_SHOW
+}
+
+model ClinicSchedule {
+  id String @id
+  operatingDays Int[]
+  opensAt String
+  closesAt String
+  slotMinutes Int
+  capacity Int
+  enabled Boolean @default(false)
+  version Int @default(1)
+  updatedAt DateTime @updatedAt
+}
+
+model ClinicAppointment {
+  id String @id @default(cuid())
+  residentId String
+  resident Resident @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  startsAt DateTime @db.Timestamptz(3)
+  endsAt DateTime @db.Timestamptz(3)
+  consultationStartedAt DateTime? @db.Timestamptz(3)
+  consultationStartedById String?
+  reason String @db.Text
+  notes String? @db.Text
+  status AppointmentStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  medicalRecord MedicalRecord?
+  history ClinicAppointmentHistory[]
+
+  @@index([startsAt, status])
+  @@index([residentId, createdAt])
+}
+
+model ClinicAppointmentHistory {
+  id String @id @default(cuid())
+  appointmentId String
+  appointment ClinicAppointment @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  fromStatus AppointmentStatus?
+  status AppointmentStatus
+  reason String? @db.Text
+  actorId String
+  actorType String
+  createdAt DateTime @default(now())
 }
 
 model VawcRecord {

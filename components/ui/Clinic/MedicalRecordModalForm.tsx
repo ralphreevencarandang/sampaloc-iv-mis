@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import type { ClinicMedicalRecordListItem } from '@/lib/clinic-utils'
 import { submitMedicalRecordAction, updateMedicalRecordAction } from '@/server/actions/clinic.actions'
 import { medicalRecordSchema, type MedicalRecordFormInput } from '@/validations/clinic.validation'
+import { manilaDate, appointmentLabel } from '@/lib/appointment-policy'
 
 type PatientOption = {
   id: string
@@ -22,6 +23,9 @@ type MedicalRecordModalFormProps = {
   onClose: () => void
   patients: PatientOption[]
   defaultPatientId?: string
+  appointmentId?: string
+  appointmentSchedule?: string
+  consultationStartedAt?: string | null
   initialData?: ClinicMedicalRecordListItem | null
   onRecordCreated?: (recordId: string) => void
 }
@@ -30,17 +34,19 @@ type MedicalRecordFormValues = MedicalRecordFormInput & {
   attachments?: FileList
 }
 
-const today = new Date().toISOString().split('T')[0]
-
 export default function MedicalRecordModalForm({
   isOpen,
   onClose,
   patients,
   defaultPatientId,
+  appointmentId,
+  appointmentSchedule,
+  consultationStartedAt,
   initialData,
   onRecordCreated,
 }: MedicalRecordModalFormProps) {
   const isEditMode = Boolean(initialData)
+  const today = manilaDate()
 
   const {
     register,
@@ -94,6 +100,8 @@ export default function MedicalRecordModalForm({
       }
 
       await queryClient.invalidateQueries({ queryKey: ['medical-records'] })
+      await queryClient.invalidateQueries({ queryKey: ['clinic-appointments'] })
+      await queryClient.invalidateQueries({ queryKey: ['clinic-appointment-availability'] })
       if (initialData?.id) {
         await queryClient.invalidateQueries({ queryKey: ['medical-record', initialData.id] })
       }
@@ -134,16 +142,17 @@ export default function MedicalRecordModalForm({
       notes: initialData?.notes ?? '',
       assignedNurse: initialData?.assignedNurse ?? '',
       medicinesGiven: initialData?.medicinesGiven ? [...initialData.medicinesGiven] : [],
-      date: initialData?.date ? new Date(initialData.date).toISOString().split('T')[0] : today,
+      date: initialData?.date ? manilaDate(new Date(initialData.date)) : consultationStartedAt ? manilaDate(new Date(consultationStartedAt)) : today,
       attachments: undefined,
     })
     clearErrors()
-  }, [clearErrors, defaultPatientId, initialData, isOpen, reset])
+  }, [clearErrors, defaultPatientId, initialData, isOpen, reset, today, consultationStartedAt])
 
   const onSubmit = handleSubmit(async (values) => {
     clearErrors()
 
     const formData = new FormData()
+    if (appointmentId) formData.append('appointmentId', appointmentId)
     formData.append('patientId', values.patientId)
     formData.append('diagnosis', values.diagnosis)
     formData.append('notes', values.notes)
@@ -185,7 +194,7 @@ export default function MedicalRecordModalForm({
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              {isEditMode ? 'Edit Medical Record' : 'New Medical Record'}
+              {isEditMode ? 'Edit Medical Record' : appointmentId ? 'Appointment Consultation' : 'Walk-In Consultation'}
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               {isEditMode
@@ -206,6 +215,7 @@ export default function MedicalRecordModalForm({
 
         <form onSubmit={onSubmit} className="flex-1 overflow-y-auto px-6 py-6" noValidate>
           <div className="space-y-5">
+            {appointmentSchedule && <div className="rounded-lg border border-primary-200 bg-primary-50 p-4 text-sm text-primary-700"><p>Scheduled appointment: {appointmentLabel(appointmentSchedule)}</p>{consultationStartedAt && <p className="mt-1">Actual consultation started: {appointmentLabel(consultationStartedAt)}</p>}<p className="mt-2">Saving this consultation finalizes the medical record and completes the appointment. Closing the form leaves it available to resume.</p></div>}
             {errors.root?.message && (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {errors.root.message}
@@ -219,13 +229,14 @@ export default function MedicalRecordModalForm({
                 </label>
                 <select
                   id="patientId"
+                  disabled={Boolean(appointmentId || initialData?.appointmentId)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                   {...register('patientId')}
                 >
                   <option value="">Select a resident</option>
                   {patients.map((patient) => (
                     <option key={patient.id} value={patient.id}>
-                      {patient.name} - Age {patient.age} - {patient.barangayZone}
+                      {appointmentId ? patient.name : `${patient.name} - Age ${patient.age} - ${patient.barangayZone}`}
                     </option>
                   ))}
                 </select>
@@ -239,6 +250,7 @@ export default function MedicalRecordModalForm({
                 <div className="relative">
                   <input
                     id="date"
+                    readOnly={Boolean(appointmentId || initialData?.appointmentId)}
                     type="date"
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-11 text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                     {...register('date')}

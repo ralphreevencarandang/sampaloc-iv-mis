@@ -35,6 +35,8 @@ export async function GET(
       select: {
         id: true,
         patientId: true,
+        visitType: true,
+        appointmentId: true,
         symptoms: true,
         diagnosis: true,
         treatment: true,
