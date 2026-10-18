@@ -75,6 +75,20 @@ ID controls follow type, conditional Other specification, number, then upload. I
 | `AnnouncementModalForm` | `components/ui/Admin/AnnouncementModalForm.tsx` | Create/edit announcements. | `AnnouncementModalFormProps` | Announcements page | Uploads optional image. |
 | `OfficialModalForm` | `components/ui/Admin/OfficialModalForm.tsx` | Create/edit officials. | `OfficialModalFormProps` | Officials page | Uploads optional profile. |
 | `ResidentFormModal` | `components/ui/Admin/ResidentFormModal.tsx` | Edit resident and verification status. | `ModalProps` | Resident page | Includes approval fields. |
+| `CreateResidentModal` | `components/ui/Admin/CreateResidentModal.tsx` | Create residents from admin management using public registration fields, validation, valid ID upload, and account credentials. | `{ isOpen, onClose }` | Resident page | Uses `residentRegistrationSchema`, shared age/voting helpers and the authorized resident creation action; invalidates the resident query after success. |
+
+### Admin resident creation modal
+
+Last updated: 2026-10-18. Files: `components/ui/Admin/CreateResidentModal.tsx`, `app/(Admin)/admin/resident/page.tsx`.
+
+| Property | Pattern |
+| --- | --- |
+| Surface | Fixed, dimmed overlay with a centered, scrollable white dialog; closes with the close/cancel buttons or backdrop click |
+| Sections | Credentials, personal information, contact/address, identity verification |
+| Validation | Shared `residentRegistrationSchema`; shared Manila age/voting helper; shared valid ID image file validator |
+| Account | Password and confirmation use the public registration policy; server hashes before saving |
+| Permissions | Admin and Secretary (`CLERK`) can create; Secretary has resident-list read access; existing resident write controls stay Admin-only |
+| Feedback | Field-level messages and success/error toast; resident query invalidated after success |
 | `BlotterModalForm` | `components/ui/Admin/BlotterModalForm.tsx` | Create/edit blotter records. | `BlotterModalFormProps` | Blotter page | Optional image. |
 | `VawcModalForm` | `components/ui/Admin/VawcModalForm.tsx` | Create/edit VAWC records. | `VawcModalFormProps` | VAWC page | Sensitive case data. |
 | `PetsFormModal` | `components/ui/Admin/PetsFormModal.tsx` | Create/edit pet records. | `PetsFormModalProps` | Pets page | Owner dropdown; standardized pet type select with conditional required custom type. Existing unlisted types load through Other for compatibility. |

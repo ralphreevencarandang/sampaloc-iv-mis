@@ -1,5 +1,5 @@
 export const VALID_ID_TYPES = [
-  "Student ID", "National ID", "Driver License", "TIN ID", "PhilHealth ID", "Other",
+  "Student ID", "National ID", "Driver's License", "TIN ID", "PhilHealth ID", "Other",
 ] as const;
 
 // Use the barangay's calendar date on both the client and server.

@@ -35,7 +35,7 @@ const ALL_ADMIN_RESOURCES: AdminResource[] = [
 
 const READABLE_RESOURCES_BY_ROLE: Record<BarangayAdminRole, AdminResource[]> = {
   [AdminRole.ADMIN]: ALL_ADMIN_RESOURCES,
-  [AdminRole.CLERK]: ["announcements", "officials", "voters", "documents"],
+  [AdminRole.CLERK]: ["announcements", "officials", "residents", "voters", "documents"],
   [AdminRole.PEACE_AND_ORDER]: ["blotter", "vawc"],
   [AdminRole.PUNONG_BARANGAY]: ALL_ADMIN_RESOURCES,
   [AdminRole.SK]: ["announcements"],

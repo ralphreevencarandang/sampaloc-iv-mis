@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Edit2, Eye, Archive, RotateCcw, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Edit2, Eye, Archive, RotateCcw, Search, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -14,6 +14,9 @@ import {
   bulkArchiveResidentsAction,
 } from '@/server/actions/resident.actions'
 import { calculateAge, getDemographicGroup } from '@/lib/resident-demographics'
+import CreateResidentModal from '@/components/ui/Admin/CreateResidentModal'
+import { useAdminRbac } from '@/components/providers/admin-rbac-provider'
+import { AdminRole } from '@/app/generated/prisma/enums'
 
 export interface ResidentRecord {
   id: string
@@ -68,6 +71,7 @@ export default function ResidentPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
   const [selectedResident, setSelectedResident] = useState<ResidentRecord | null>(null)
   const [actionError, setActionError] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -80,6 +84,9 @@ export default function ResidentPage() {
   const [pwdFilter, setPwdFilter] = useState('All')
   const [civilStatusFilter, setCivilStatusFilter] = useState('All')
   const queryClient = useQueryClient()
+  const { role } = useAdminRbac()
+  const canCreateResident = role === AdminRole.ADMIN || role === AdminRole.CLERK
+  const canManageResidents = role === AdminRole.ADMIN
 
   const {
     data: residents = [],
@@ -263,11 +270,12 @@ export default function ResidentPage() {
         </div>
 
         <div className="flex flex-wrap gap-3">
+          {canCreateResident && <button type="button" onClick={() => setCreateModalOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"><Plus className="h-4 w-4" />Create Resident</button>}
         </div>
       </div>
 
       {/* Floating Bulk Action Bar */}
-      <BulkActionBar
+      {canManageResidents && <BulkActionBar
         selectedCount={selectedIds.length}
         totalCount={filteredResidents.length}
         onClearSelection={() => setSelectedIds([])}
@@ -277,7 +285,7 @@ export default function ResidentPage() {
         actionType="archive"
         actionLabel="Bulk Archive"
         isLoading={bulkArchiveMutation.isPending}
-      />
+      />}
 
       <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-slate-50 px-4 py-2.5">
@@ -385,7 +393,7 @@ export default function ResidentPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-slate-50">
-                    <th className="w-12 px-4 py-4 text-center">
+                    {canManageResidents && <th className="w-12 px-4 py-4 text-center">
                       <input
                         type="checkbox"
                         checked={isCurrentPageAllSelected}
@@ -393,7 +401,7 @@ export default function ResidentPage() {
                         aria-label="Select all residents on this page"
                         className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
-                    </th>
+                    </th>}
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Name</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Email</th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Age</th>
@@ -422,7 +430,7 @@ export default function ResidentPage() {
                             isSelected ? 'bg-primary-50/60' : 'hover:bg-slate-50'
                           }`}
                         >
-                          <td className="w-12 px-4 py-4 text-center">
+                          {canManageResidents && <td className="w-12 px-4 py-4 text-center">
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -430,7 +438,7 @@ export default function ResidentPage() {
                               aria-label={`Select ${fullName}`}
                               className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                             />
-                          </td>
+                          </td>}
                           <td className="px-6 py-4 text-sm font-medium text-slate-900">{fullName}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{resident.email}</td>
                           <td className="px-6 py-4 text-sm text-slate-600">{age}</td>
@@ -464,7 +472,7 @@ export default function ResidentPage() {
                               >
                                 <Eye className="h-4 w-4" />
                               </Link>
-                              <button
+                              {canManageResidents && <button
                                 onClick={() => {
                                   setSelectedResident(resident)
                                   setIsModalOpen(true)
@@ -473,8 +481,8 @@ export default function ResidentPage() {
                                 title="Edit"
                               >
                                 <Edit2 className="h-4 w-4" />
-                              </button>
-                              <button
+                              </button>}
+                              {canManageResidents && <button
                                 onClick={() => handleArchiveToggle(resident)}
                                 disabled={archiveMutation.isPending}
                                 className="rounded-lg p-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -485,7 +493,7 @@ export default function ResidentPage() {
                                 ) : (
                                   <Archive className="h-4 w-4" />
                                 )}
-                              </button>
+                              </button>}
                             </div>
                           </td>
                         </tr>
@@ -493,7 +501,7 @@ export default function ResidentPage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={12} className="px-6 py-12 text-center">
+                      <td colSpan={canManageResidents ? 12 : 11} className="px-6 py-12 text-center">
                         <p className="font-medium text-slate-600">
                           No active residents found matching your criteria
                         </p>
@@ -556,6 +564,8 @@ export default function ResidentPage() {
         }}
         initialData={selectedResident}
       />
+
+      <CreateResidentModal isOpen={createModalOpen} onClose={() => setCreateModalOpen(false)} />
 
       {/* Confirmation Modal */}
       <BulkConfirmModal
