@@ -29,7 +29,7 @@ const ResidentServices = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="flex flex-col rounded-3xl border border-outline bg-surface-muted p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 text-primary-600"><CalendarDays className="h-8 w-8" /></div>
             <h4 className="mb-4 text-2xl font-bold text-content">Clinic Appointment</h4>
