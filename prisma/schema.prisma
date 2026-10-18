@@ -280,6 +280,9 @@ model DocumentRequest {
   proofOfPaymentUrl      String? @map("paymentProofFileName")
   serialNumber          String? @unique
   generatedFileUrl      String?
+  generatedPdf          Bytes?
+  pdfGenerationToken    String?
+  pdfGenerationExpiresAt DateTime?
   status RequestStatus @default(PENDING)
   requestedAt DateTime  @default(now())
   generatedAt DateTime?

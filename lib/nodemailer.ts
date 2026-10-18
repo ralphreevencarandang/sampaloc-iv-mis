@@ -3,6 +3,7 @@ import * as dotenv from 'dotenv'
 import { render } from '@react-email/render'
 import { EmailTemplate } from '@/components/templates/email-template'
 import * as React from 'react'
+import { DOCUMENT_PROCESSING_NOTICE, DOCUMENT_WORKING_HOURS_NOTICE } from '@/lib/document-processing-notice'
 
 dotenv.config()
 
@@ -81,6 +82,8 @@ export async function sendDocumentRequestPdfEmail(input: {
         paragraphs: [
           `You may claim your document at the barangay hall. Please present a valid ID and provide your serial number: ${input.serialNumber}.`,
           'You can also review your request status in the Sampaloc IV MIS resident portal.',
+          DOCUMENT_PROCESSING_NOTICE,
+          DOCUMENT_WORKING_HOURS_NOTICE,
         ],
         ctaLabel: 'Open My Account',
         ctaUrl: getPortalUrl('/my-account'),
@@ -106,7 +109,39 @@ export async function sendDocumentRequestPdfEmail(input: {
     console.log('Document request email sent successfully via Nodemailer:', info.messageId)
     return { success: true, messageId: info.messageId }
   } catch (error) {
-    console.error('Exception sending document request email via Nodemailer:', error)
+    console.error('Exception sending document request email via Nodemailer:', { errorType: error instanceof Error ? error.name : 'UnknownError' })
     return { success: false, error }
+  }
+}
+
+export async function sendDocumentRequestNotificationEmail(input: {
+  email: string
+  firstName: string
+  documentLabel: string
+  status: 'PENDING' | 'REVIEW' | 'APPROVED' | 'REJECTED'
+}) {
+  try {
+    const descriptions = {
+      PENDING: 'has been received and is awaiting review',
+      REVIEW: 'is under review',
+      APPROVED: 'has been approved and is ready for download from My Account',
+      REJECTED: 'has been rejected. Please contact the barangay for further information',
+    }
+    const html = await render(React.createElement(EmailTemplate, {
+      firstName: input.firstName,
+      heading: input.status === 'PENDING' ? 'Document Request Received' : 'Document Request Status Update',
+      intro: `Your ${input.documentLabel} request ${descriptions[input.status]}.`,
+      paragraphs: [DOCUMENT_PROCESSING_NOTICE, DOCUMENT_WORKING_HOURS_NOTICE],
+      ctaLabel: 'Open My Account', ctaUrl: getPortalUrl('/my-account'),
+      footer: 'For questions about your request, please contact the barangay hall.',
+    }))
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || '"Sampaloc IV MIS" <no-reply@sampalocivmis.com>',
+      to: input.email, subject: `${input.documentLabel} — ${input.status === 'PENDING' ? 'Request Received' : input.status}`, html,
+    })
+    return { success: true }
+  } catch {
+    console.error('Document request notification email failed')
+    return { success: false }
   }
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { DocumentProcessingNotice } from '@/components/document-requests/document-processing-notice';
+
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
@@ -9,6 +11,7 @@ import {
   AlertCircle,
   CalendarDays,
   Camera,
+  Download,
   FileText,
   Home,
   Loader2,
@@ -25,7 +28,7 @@ import {
 } from "lucide-react";
 import { useResidentAuth } from "@/components/providers/resident-auth-provider";
 import apiClient from "@/lib/axios";
-import { fetchResidentDocumentRequests } from "@/lib/document-requests-api";
+import { downloadResidentDocumentPdf, fetchResidentDocumentRequests } from "@/lib/document-requests-api";
 import type { ResidentDocumentRequestRecord } from "@/lib/document-request-utils";
 
 type ResidentStatus = "PENDING" | "APPROVED" | "DECLINED";
@@ -578,6 +581,22 @@ export default function MyAccountPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("documents");
 
   const residentId = resident?.id;
+  const queryClient = useQueryClient();
+  const downloadMutation = useMutation({
+    mutationFn: downloadResidentDocumentPdf,
+    onSuccess: ({ blob, fileName }) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Unable to download your document."),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["resident-document-requests", residentId] }),
+  });
 
   const {
     data: profile,
@@ -713,6 +732,7 @@ export default function MyAccountPage() {
           </SectionCard>
 
           <SectionCard title="Transactions" icon={FileText}>
+            {activeTab === 'documents' ? <div className="mb-4"><DocumentProcessingNotice /></div> : null}
             <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2">
               {tabConfig.map((tab) => {
                 const TabIcon = tab.icon;
@@ -765,7 +785,7 @@ export default function MyAccountPage() {
                     }}
                   />
                 ) : documentsQuery.data && documentsQuery.data.length > 0 ? (
-                  <TableShell columns="Document Type|Purpose|Copies|Amount|Status|Submitted">
+                  <TableShell columns="Document Type|Purpose|Copies|Amount|Status|Submitted|Download Document">
                     {documentsQuery.data.map((record) => (
                       <tr key={record.id} className="border-b border-slate-100 last:border-b-0">
                         <td className="px-5 py-4 text-sm font-medium text-slate-900">{record.type}</td>
@@ -780,6 +800,22 @@ export default function MyAccountPage() {
                           </Badge>
                         </td>
                         <td className="px-5 py-4 text-sm text-slate-600">{formatDateTime(record.submittedAt)}</td>
+                        <td className="px-5 py-4 text-sm text-content-muted">
+                          {record.status === "APPROVED" ? (
+                            <button
+                              type="button"
+                              onClick={() => downloadMutation.mutate(record.id)}
+                              disabled={downloadMutation.isPending}
+                              className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+                              aria-label={`Download ${record.type} PDF`}
+                            >
+                              {downloadMutation.isPending && downloadMutation.variables === record.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                              ) : <Download className="h-4 w-4" aria-hidden="true" />}
+                              Download PDF
+                            </button>
+                          ) : "Not Available"}
+                        </td>
                       </tr>
                     ))}
                   </TableShell>

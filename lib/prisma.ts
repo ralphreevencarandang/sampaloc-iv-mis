@@ -20,8 +20,10 @@ const hasCurrentInventoryFields = cachedPrisma?.inventoryItem?.fields
   && Object.keys(Prisma.InventoryItemScalarFieldEnum).every((field) => field in cachedPrisma.inventoryItem.fields)
   && cachedPrisma?.inventoryTransaction?.fields
   && Object.keys(Prisma.InventoryTransactionScalarFieldEnum).every((field) => field in cachedPrisma.inventoryTransaction.fields);
+const hasCurrentDocumentFields = cachedPrisma?.documentRequest?.fields
+  && Object.keys(Prisma.DocumentRequestScalarFieldEnum).every((field) => field in cachedPrisma.documentRequest.fields);
 const prisma =
-  (cachedPrisma && "document" in cachedPrisma && hasCurrentResidentFields && hasCurrentInventoryFields)
+  (cachedPrisma && "document" in cachedPrisma && hasCurrentResidentFields && hasCurrentInventoryFields && hasCurrentDocumentFields)
     ? cachedPrisma
     : new PrismaClient({
         adapter,

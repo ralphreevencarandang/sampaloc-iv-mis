@@ -12,6 +12,7 @@ test("Prisma hot reload replaces an outdated resident client and reuses a curren
     inventoryItem = { fields: { id: 'id', isMedicine: 'isMedicine' } };
     inventoryTransaction = { fields: { id: 'id', dispenseKey: 'dispenseKey' } };
     document = {};
+    documentRequest = { fields: { id: 'id', generatedPdf: 'generatedPdf' } };
     constructor() { created++; }
   }
   const modules: Record<string, unknown> = {
@@ -19,6 +20,7 @@ test("Prisma hot reload replaces an outdated resident client and reuses a curren
     "../app/generated/prisma/client": { PrismaClient: Client, Prisma: { ResidentScalarFieldEnum: fields,
       InventoryItemScalarFieldEnum: { id: 'id', isMedicine: 'isMedicine' },
       InventoryTransactionScalarFieldEnum: { id: 'id', dispenseKey: 'dispenseKey' },
+      DocumentRequestScalarFieldEnum: { id: 'id', generatedPdf: 'generatedPdf' },
     } },
     "@prisma/adapter-pg": { PrismaPg: class {} },
   };
@@ -44,4 +46,7 @@ test("Prisma hot reload replaces an outdated resident client and reuses a curren
   globals.prisma = { document: {}, resident: { fields }, inventoryItem: { fields: { id: 'id' } } };
   assert.notEqual(load(), fresh);
   assert.equal(created, 2);
+  globals.prisma = { ...fresh, documentRequest: { fields: { id: 'id' } } };
+  assert.notEqual(load(), fresh);
+  assert.equal(created, 3);
 });

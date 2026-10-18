@@ -129,7 +129,7 @@ The application is implemented as a Next.js App Router project with route groups
 2. Admin with resident write permission reviews and updates resident status in `/admin/resident`; approval can trigger an email via Nodemailer.
 3. Approved resident signs in at `/Login`; session is stored in an HMAC-signed `resident_session` cookie.
 4. Resident creates document requests at `/request-documents`; requests start as `PENDING`.
-5. Admin document staff review requests, move them to `REVIEW` or `APPROVED`, generate PDFs, email generated PDFs, and mark generated records.
+5. Admin document staff review requests and move them to `REVIEW` or `APPROVED`. Admin or the owning resident can generate/download the shared stored PDF with one immutable serial; generation preserves APPROVED. Manual document-ready emails use the same service. Submission/status emails include processing guidance.
 6. Resident files blotters and pet registrations from resident routes; staff can manage corresponding admin records.
 7. Health worker signs into `/ClinicLogin`, records medical visits, and archives/restores medical records.
 
@@ -140,7 +140,7 @@ The application is implemented as a Next.js App Router project with route groups
 - Admin login excludes `HEALTH_WORKER`; health workers must use the clinic login.
 - Admin route access uses `proxy.ts` for optimistic redirects plus server-side checks in server actions and API handlers.
 - `PUNONG_BARANGAY` is read-only by RBAC.
-- Document request statuses are `PENDING`, `REVIEW`, `APPROVED`, `GENERATED`, and `REJECTED`. Apply both document eligibility migrations, including `20261016010000_merge_cancelled_document_requests`, which merges cancelled requests into REJECTED. PDF generation is the issuance/release step; approval alone is active. One active request per resident/document type is allowed. First-Time Job Seeker is free, limited to one copy per new request, and unavailable after any prior issuance.
+- Document request statuses are `PENDING`, `REVIEW`, `APPROVED`, legacy `GENERATED`, and `REJECTED`. Apply document eligibility migrations plus `20261018010000_shared_document_pdf` for persistent shared PDFs. First PDF persistence is issuance/release but preserves APPROVED; approval without issuance is active. One active request per resident/document type is allowed. First-Time Job Seeker is free, limited to one copy per new request, and unavailable after any prior issuance. Processing guidance is up to 24 working hours, excluding non-working periods, weekends and holidays; no date is promised without a working-hours calendar.
 - Blotter statuses are `OPEN` and `RESOLVED`.
 - VAWC statuses are `REPORTED`, `SUMMONED`, `RESOLVED`, and `DISMISSED`.
 - Archive fields vary by model: `isArchive` and `isArchived` both exist. Preserve existing names.

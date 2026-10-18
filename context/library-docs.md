@@ -113,6 +113,8 @@ This file records project-specific usage for installed libraries that matter to 
 - Used in: `lib/pdf/document-request-delivery.ts`, `lib/pdf/document-request-pdf.tsx`, HTML templates under `lib/pdf/templates`.
 - Boundary: route `app/api/document/generate/route.ts` forces `runtime = 'nodejs'` and `dynamic = 'force-dynamic'`.
 - Common mistake: running PDF generation on Edge runtime or without production browser dependencies.
+- Admin generation, Resident download and manual document-ready email now share `generateStoredDocumentRequestPdf`: reserve one immutable serial, coordinate a generation lease, persist private PDF bytes and reuse them thereafter. Generation preserves approval status. Puppeteer launch/content/PDF operations have explicit time bounds, and both PDF client calls allow 120 seconds. Legacy saved files are imported through a bounded trusted-reference reader, never regenerated silently when unavailable.
+- Document confirmation/status emails use Next.js 16 `after` (installed API guide reviewed) after successful commits; SMTP failures return safely without reverting document actions. UI, success messages and emails share `lib/document-processing-notice.ts`.
 
 ## Recharts 3.8.1
 

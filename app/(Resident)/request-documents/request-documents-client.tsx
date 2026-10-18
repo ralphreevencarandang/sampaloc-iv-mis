@@ -1,5 +1,7 @@
 "use client";
 
+import { DocumentProcessingNotice } from '@/components/document-requests/document-processing-notice';
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -758,6 +760,7 @@ export default function RequestDocumentsClient({
                  
                 </div>
 
+                <DocumentProcessingNotice />
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row">
                   <button
                     type="submit"

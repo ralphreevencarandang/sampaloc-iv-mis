@@ -255,6 +255,8 @@ function createDocumentRequestHtml(request: PdfDocumentRequest) {
 export async function generateDocumentRequestPdfBuffer(request: PdfDocumentRequest) {
   const browser = await puppeteer.launch({
     headless: true,
+    timeout: 15000,
+    protocolTimeout: 30000,
   })
 
   try {
@@ -262,10 +264,12 @@ export async function generateDocumentRequestPdfBuffer(request: PdfDocumentReque
 
     await page.setContent(createDocumentRequestHtml(request), {
       waitUntil: 'networkidle0',
+      timeout: 15000,
     })
     await page.emulateMediaType('screen')
 
     const pdf = await page.pdf({
+      timeout: 30000,
       format: 'A4',
       printBackground: true,
       margin: {

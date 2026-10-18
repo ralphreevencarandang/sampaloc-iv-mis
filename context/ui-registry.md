@@ -142,6 +142,29 @@ Last updated: 2026-10-18. Files: `components/ui/Admin/PetsFormModal.tsx`, `app/(
 
 ## Registry Maintenance
 
+### Resident transaction document download and admin rejection
+
+Files: `app/(Resident)/my-account/page.tsx`, `components/document-requests/admin-document-requests-page.tsx`. Updated: 2026-10-18.
+
+- History adds a Download Document column within the existing horizontally scrolling table. Only APPROVED rows show the button; all other statuses display Not Available.
+- Download button: `rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm font-semibold text-primary-700`, `gap-2`, `hover:bg-primary-100`, `focus:ring-2 focus:ring-primary-500`, and disabled opacity/cursor. Download/spinner icons use `h-4 w-4`; accessible label includes the document type. Errors use the existing toast.
+- Shared admin Reject request menu entry adds an inherited-color `XCircle`, `h-4 w-4 shrink-0`, within the existing `gap-2` row. Rejection permissions, confirmation and behavior remain unchanged across document pages.
+- Admin/Resident downloads and manual document-ready email use a shared persisted PDF and immutable serial. First generation saves the PDF and issuance metadata while preserving approval status; subsequent downloads reuse its exact bytes. History refreshes and the button remains available while APPROVED. Legacy GENERATED rows remain unavailable to residents and remain downloadable to authorized Admins. Admin buttons use Generate & Download PDF until generatedAt is present, then Download PDF.
+
+### DocumentProcessingNotice
+
+File: `components/document-requests/document-processing-notice.tsx`. Updated: 2026-10-18.
+
+| Property | Pattern |
+| --- | --- |
+| Surface/border | `bg-primary-50 border border-primary-200` |
+| Radius/spacing | `rounded-lg p-4`; `mt-2` between paragraphs |
+| Text | `text-sm text-primary-700` |
+| Semantics | `role="note"`; estimate plus working-hour exclusions in visible text |
+| Shadow | None |
+
+Used before document submission and in My Account document transaction history. Both paragraphs come from `lib/document-processing-notice.ts`, also used by submission success and confirmation/status/manual-ready emails. No schedule or specific completion date is invented. Existing page/table styling and the Reject icon remain unchanged.
+
 ### ClinicMedicinesPage
 
 File: `components/ui/Clinic/ClinicMedicinesPage.tsx`. Last updated: 2026-10-18.

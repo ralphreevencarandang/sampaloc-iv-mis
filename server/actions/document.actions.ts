@@ -1,9 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import type { Prisma } from '@/app/generated/prisma/client'
 import { hasAdminPermission } from '@/lib/admin-authorization'
-import { sendDocumentRequestPdfEmail } from '@/lib/nodemailer'
+import { sendDocumentRequestPdfEmail, sendDocumentRequestNotificationEmail } from '@/lib/nodemailer'
+import { DOCUMENT_PROCESSING_MESSAGE } from '@/lib/document-processing-notice'
 import prismaModule from '@/lib/prisma'
 import { getDocumentDefinition } from '@/lib/document-request-catalog'
 import { documentUnitPrice, getDocumentRequestBlock, isJobSeekerDocument, isActiveDocumentRequest, wasDocumentIssued } from '@/lib/document-request-policy'
@@ -145,12 +147,18 @@ export async function createResidentDocumentRequestAction(
 
       return {
         success: true,
-        message: `${definition.label} request submitted successfully.`,
+        message: `${definition.label} request submitted successfully. ${DOCUMENT_PROCESSING_MESSAGE}`,
         request: serializeResidentDocumentRequest(createdRequest),
       }
     }, { isolationLevel: 'ReadCommitted', maxWait: 15000, timeout: 15000 })
     revalidatePath('/request-documents')
     revalidatePath('/my-account')
+    if (result.success && result.request) {
+      after(async () => {
+        await sendDocumentRequestNotificationEmail({ email: resident.email, firstName: resident.firstName,
+          documentLabel: definition.label, status: 'PENDING' })
+      })
+    }
     return result
   } catch (error) {
     console.error('create resident document request failed', error)
@@ -191,6 +199,7 @@ export async function updateAdminDocumentRequestStatusAction(input: {
   const parsed = statusUpdateSchema.safeParse(input)
   if (!parsed.success) return { success: false, message: 'Invalid document request status update.' }
 
+  let notification: Parameters<typeof sendDocumentRequestNotificationEmail>[0] | undefined
   try {
     const result = await prisma.$transaction(async (tx) => {
       const owner = await tx.documentRequest.findUnique({ where: { id: parsed.data.requestId }, select: { residentId: true } })
@@ -282,6 +291,8 @@ export async function updateAdminDocumentRequestStatusAction(input: {
         },
       })
 
+      notification = { email: updatedRequest.resident.email, firstName: updatedRequest.resident.firstName,
+        documentLabel: updatedRequest.type, status: input.status }
       return {
         success: true,
         message: `${updatedRequest.type} request ${input.status.toLowerCase()} successfully.`,
@@ -289,6 +300,10 @@ export async function updateAdminDocumentRequestStatusAction(input: {
       }
     }, { isolationLevel: 'ReadCommitted', maxWait: 15000, timeout: 15000 })
     for (const path of adminDocumentRequestRevalidationPaths) revalidatePath(path)
+    if (result.success && notification) {
+      const email = notification
+      after(async () => { await sendDocumentRequestNotificationEmail(email) })
+    }
     return result
   } catch (error) {
     console.error('update admin document request status failed', error)
@@ -349,7 +364,7 @@ export async function sendAdminDocumentRequestEmailAction(input: {
       }
     }
 
-    console.error('send admin document request email failed', error)
+    console.error('send admin document request email failed', { errorType: error instanceof Error ? error.name : 'UnknownError' })
 
     return {
       success: false,

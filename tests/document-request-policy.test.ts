@@ -10,6 +10,7 @@ import * as icons from 'lucide-react'
 import * as catalog from '../lib/document-request-catalog'
 import * as serialization from '../lib/document-request-utils'
 import * as policy from '../lib/document-request-policy'
+import { DocumentProcessingNotice } from '../components/document-requests/document-processing-notice'
 import { documentRequestSchema } from '../validations/document.validation'
 import { ACTIVE_REQUEST_MESSAGE, JOB_SEEKER_AVAILED_MESSAGE, documentUnitPrice, getDocumentRequestBlock } from '../lib/document-request-policy'
 
@@ -43,6 +44,7 @@ test('resident form blocks existing requests, links history, and locks free job 
       },
       '@/lib/document-request-utils': serialization, '@/lib/document-request-policy': policy,
       '@/lib/document-request-catalog': catalog, '@/lib/document-requests-api': {}, '@/server/actions/document.actions': {},
+      '@/components/document-requests/document-processing-notice': { DocumentProcessingNotice },
     }
     const exports: { default?: React.ComponentType<Record<string, unknown>> } = {}
     runInNewContext(compiled, { exports, require: (name: string) => { assert.ok(name in modules, name); return modules[name] } })
@@ -51,6 +53,8 @@ test('resident form blocks existing requests, links history, and locks free job 
     } }))
   }
   const job = render('first-time-job-seeker', 'GENERATED')
+  assert.match(job, /24 working hours/)
+  assert.match(job, /weekends and holidays/)
   assert.ok(job.includes(JOB_SEEKER_AVAILED_MESSAGE))
   assert.match(job, /href="#request-existing"/)
   assert.match(job, /id="request-existing"/)

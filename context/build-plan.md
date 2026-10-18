@@ -132,6 +132,8 @@ Test approved resident can access own records and cannot fetch another resident 
 
 ## Feature 6 - Document Requests and PDF Delivery
 
+2026-10-18 update: Unified shared PDF generation/persistence, immutable serial reservation and concurrent generation leases are implemented, with approval status preserved and repeated downloads available. The same processing estimate is used in UI, success and document emails. Migration `20261018010000_shared_document_pdf` requires deployment; legacy statuses/files/serials are preserved. No working-hours calendar or exact completion dates are introduced.
+
 ### Objective
 Residents request documents; admins review, approve, generate PDF, and email output.
 

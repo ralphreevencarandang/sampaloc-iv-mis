@@ -7,6 +7,7 @@ import {
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 120
 
 export async function POST(request: Request) {
   const forbidden = await forbiddenUnlessAdminCan('documents', 'write')
@@ -31,10 +32,11 @@ export async function POST(request: Request) {
     return new Response(new Uint8Array(generatedDocument.pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
+        'Cache-Control': 'private, no-store',
         'Content-Disposition': `attachment; filename="${generatedDocument.fileName}"`,
         'Content-Length': String(generatedDocument.pdfBuffer.byteLength),
         'X-Document-Serial': generatedDocument.serialNumber,
-        'X-Document-Status': 'GENERATED',
+        'X-Document-Status': generatedDocument.documentRequest.status,
       },
     })
   } catch (error) {
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: error.message }, { status: error.status })
     }
 
-    console.error('POST /api/document/generate failed', error)
+    console.error('POST /api/document/generate failed', { errorType: error instanceof Error ? error.name : 'UnknownError' })
 
     return NextResponse.json(
       { message: 'Failed to generate the requested PDF document.' },

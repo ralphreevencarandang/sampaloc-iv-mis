@@ -11,6 +11,7 @@ import {
   Mail,
   MoreVertical,
   Search,
+  XCircle,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -268,6 +269,7 @@ function RowActionMenu({
             <button type="button" disabled={!canClose || isMutating}
               onClick={onCloseRequest}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-primary-700 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50">
+              <XCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
               Reject request
             </button>
         </div>
@@ -632,7 +634,7 @@ export default function AdminDocumentRequestsPage({ documentType }: PageProps) {
                                   ) : (
                                     <FileDown className="h-4 w-4" />
                                   )}
-                                  {request.status === 'GENERATED' ? 'Download PDF' : 'Generate PDF'}
+                                  {request.generatedAt ? 'Download PDF' : 'Generate & Download PDF'}
                                 </button>
                               ) : null}
 

@@ -54,12 +54,26 @@ export type GeneratedDocumentPdfResult = {
 export async function generateDocumentRequestPdf(
   requestId: string
 ): Promise<GeneratedDocumentPdfResult> {
+  return requestDocumentPdf('/document/generate', requestId)
+}
+
+export async function downloadResidentDocumentPdf(
+  requestId: string
+): Promise<GeneratedDocumentPdfResult> {
+  return requestDocumentPdf('/document/download', requestId)
+}
+
+async function requestDocumentPdf(endpoint: string, requestId: string): Promise<GeneratedDocumentPdfResult> {
+  const fallbackMessage = endpoint === '/document/download'
+    ? 'Unable to download your document. Please try again.'
+    : 'Failed to generate the requested document PDF.'
   try {
     const response = await api.post<Blob>(
-      '/document/generate',
+      endpoint,
       { requestId },
       {
         responseType: 'blob',
+        timeout: 120000,
       }
     )
 
@@ -79,16 +93,16 @@ export async function generateDocumentRequestPdf(
       if (data instanceof Blob) {
         const messageText = await data.text()
 
+        let message = fallbackMessage
         try {
           const parsed = JSON.parse(messageText) as { message?: string }
-          throw new Error(parsed.message ?? 'Failed to generate the requested document PDF.')
-        } catch {
-          throw new Error(messageText || 'Failed to generate the requested document PDF.')
-        }
+          if (typeof parsed.message === 'string') message = parsed.message
+        } catch { /* Keep the safe fallback for non-JSON responses. */ }
+        throw new Error(message)
       }
 
       const message = (data as { message?: string } | undefined)?.message
-      throw new Error(message ?? 'Failed to generate the requested document PDF.')
+      throw new Error(message ?? fallbackMessage)
     }
 
     throw error
