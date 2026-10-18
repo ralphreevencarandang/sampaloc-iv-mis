@@ -38,6 +38,7 @@ This file records project-specific usage for installed libraries that matter to 
   - Generated client output is `app/generated/prisma`.
   - `lib/prisma.ts` uses `PrismaPg(process.env.DATABASE_URL)`.
   - Development client caching compares cached `resident.fields` with `Prisma.ResidentScalarFieldEnum` before reuse, preventing stale resident schema clients after hot reload. Run `npx prisma generate` after schema changes; restart the development server if an older generated module remains loaded.
+  - Clinic integration also checks cached inventory-item and inventory-transaction scalar fields. Its ReadCommitted transactions use explicit 15-second max-wait and execution limits; tagged raw SQL provides advisory retry locks and ordered row locks. Admin quantity edits use `updateManyAndReturn` with the expected `stockVersion`.
 - Server/client boundary: Prisma must be server-only.
 - Security: never return passwords, OTPs, or broad sensitive records.
 - Common mistake: importing generated Prisma client directly in client components.

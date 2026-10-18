@@ -90,6 +90,8 @@ export default function InventoryPage() {
   } = useQuery<InventoryRecord[]>({
     queryKey: INVENTORY_QUERY_KEY,
     queryFn: fetchInventory,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: 'always',
   })
 
   const archiveMutation = useMutation({
@@ -337,6 +339,7 @@ export default function InventoryPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-[#0f172b]">{item.name}</p>
+                            {item.isMedicine && <p className="mt-1 text-xs text-primary-700">Clinic medicine · Expiry: {item.expiresOn ?? 'Required before dispensing'}</p>}
                             <p className="text-xs text-slate-500">ID: {item.id}</p>
                           </div>
                         </div>

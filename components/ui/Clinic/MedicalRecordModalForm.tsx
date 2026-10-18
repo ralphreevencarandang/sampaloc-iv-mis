@@ -2,8 +2,8 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, FileUp, Loader2, Pill, Plus, UserCheck, X } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import { CalendarDays, FileUp, Loader2, UserCheck, X } from 'lucide-react'
+import React, { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import type { ClinicMedicalRecordListItem } from '@/lib/clinic-utils'
@@ -23,7 +23,7 @@ type MedicalRecordModalFormProps = {
   patients: PatientOption[]
   defaultPatientId?: string
   initialData?: ClinicMedicalRecordListItem | null
-  onRecordCreated?: () => void
+  onRecordCreated?: (recordId: string) => void
 }
 
 type MedicalRecordFormValues = MedicalRecordFormInput & {
@@ -41,7 +41,6 @@ export default function MedicalRecordModalForm({
   onRecordCreated,
 }: MedicalRecordModalFormProps) {
   const isEditMode = Boolean(initialData)
-  const [medicineInput, setMedicineInput] = useState('')
 
   const {
     register,
@@ -49,8 +48,6 @@ export default function MedicalRecordModalForm({
     reset,
     setError,
     clearErrors,
-    watch,
-    setValue,
     formState: { errors },
   } = useForm<MedicalRecordFormValues>({
     resolver: zodResolver(medicalRecordSchema),
@@ -64,7 +61,6 @@ export default function MedicalRecordModalForm({
     },
   })
   const queryClient = useQueryClient()
-  const medicines = watch('medicinesGiven') ?? []
 
   const submitMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -110,9 +106,8 @@ export default function MedicalRecordModalForm({
         date: today,
         attachments: undefined,
       })
-      setMedicineInput('')
       toast.success(result.message)
-      onRecordCreated?.()
+      if (result.record) onRecordCreated?.(result.record.id)
       onClose()
     },
     onError: (error) => {
@@ -144,30 +139,6 @@ export default function MedicalRecordModalForm({
     })
     clearErrors()
   }, [clearErrors, defaultPatientId, initialData, isOpen, reset])
-
-  const handleAddMedicine = () => {
-    const trimmed = medicineInput.trim()
-    if (!trimmed) return
-    if (!medicines.includes(trimmed)) {
-      setValue('medicinesGiven', [...medicines, trimmed], { shouldValidate: true })
-    }
-    setMedicineInput('')
-  }
-
-  const handleRemoveMedicine = (indexToRemove: number) => {
-    setValue(
-      'medicinesGiven',
-      medicines.filter((_, idx) => idx !== indexToRemove),
-      { shouldValidate: true }
-    )
-  }
-
-  const handleMedicineKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddMedicine()
-    }
-  }
 
   const onSubmit = handleSubmit(async (values) => {
     clearErrors()
@@ -314,60 +285,12 @@ export default function MedicalRecordModalForm({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-900">
-                Medicines Given
-                <span className="ml-2 text-xs font-normal text-slate-500">Optional / Multiple items</span>
-              </label>
-              
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={medicineInput}
-                    onChange={(e) => setMedicineInput(e.target.value)}
-                    onKeyDown={handleMedicineKeyDown}
-                    placeholder="Type medicine name & dosage (e.g. Paracetamol 500mg, Amoxicillin 500mg)"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-11 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 text-sm"
-                  />
-                  <Pill className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAddMedicine}
-                  disabled={!medicineInput.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add
-                </button>
-              </div>
-
-              {medicines.length > 0 ? (
-                <div className="mt-2.5 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-                  {medicines.map((med, index) => (
-                    <span
-                      key={`${med}-${index}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50/90 px-3 py-1.5 text-xs font-medium text-teal-800 shadow-sm"
-                    >
-                      <Pill className="h-3.5 w-3.5 text-teal-600 shrink-0" />
-                      <span>{med}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMedicine(index)}
-                        className="rounded-full p-0.5 text-teal-600 transition-colors hover:bg-teal-200 hover:text-teal-900"
-                        title={`Remove ${med}`}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-500 italic">
-                  No medicines added yet. Type a medicine above and click &quot;Add&quot; or press Enter.
-                </p>
-              )}
+            <div className="rounded-lg border border-primary-200 bg-primary-50 p-4 text-sm text-primary-700">
+              <p>Save the consultation, then open its details to select and dispense medicines from inventory.</p>
+              <p className="mt-1">Editing this record does not change previously dispensed stock.</p>
+              {initialData?.medicinesGiven.length ? (
+                <p className="mt-2">Previously recorded medicines: {initialData.medicinesGiven.join(', ')}</p>
+              ) : null}
             </div>
 
             <div className="space-y-2">

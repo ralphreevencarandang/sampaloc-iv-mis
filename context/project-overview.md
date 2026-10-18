@@ -63,6 +63,7 @@ The application is implemented as a Next.js App Router project with route groups
 - Health worker login.
 - Clinic dashboard and medical record management.
 - Admin health records page under `/admin/health`.
+- Clinic medicine dispensing from consultation details uses Admin Inventory stock, with searchable quantities, expiry/availability checks and patient/worker/date history. Only health workers dispense; Admin manages inventory. Requires migration `20261018000000_clinic_inventory_dispensing` before deployment.
 - Medical record create, update, archive, and restore actions with health-worker or admin health permissions.
 
 ## Pages and Routes
@@ -112,6 +113,7 @@ The application is implemented as a Next.js App Router project with route groups
 | `/ClinicLogin` | Health worker login. |
 | `/clinic` | Clinic dashboard. |
 | `/clinic/medical-records` | Clinic medical record list. |
+| `/clinic/medicines` | Read-only medicine availability from Admin Inventory, with search, stock filters and pagination. |
 
 ## Navigation Structure
 

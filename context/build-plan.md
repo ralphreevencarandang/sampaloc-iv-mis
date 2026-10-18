@@ -250,6 +250,8 @@ Manage barangay inventory items and stock status.
 ### Current Status
 PARTIALLY IMPLEMENTED.
 
+2026-10-18: Clinic medicine dispensing is implemented using shared InventoryItem stock and InventoryTransaction history. Admin medicine/expiry controls, stock-version conflicts, health-worker-only dispensing, searchable multi-medicine selection, history and retry/concurrency tests are complete. The additive migration and live authenticated browser verification remain deployment steps. General non-clinic inventory transaction UI is still unverified.
+
 ### UI
 `/admin/inventory`.
 

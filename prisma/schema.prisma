@@ -91,6 +91,7 @@ model Admin {
   createdAt DateTime  @default(now())
 
   medicalRecordsChecked MedicalRecord[] @relation("CheckedByHealthWorker")
+  medicinesDispensed InventoryTransaction[] @relation("DispensedBy")
 }
 
 model Resident {
@@ -223,6 +224,9 @@ model InventoryItem {
   storageLocation String
   description     String? @db.Text
   isArchived      Boolean @default(false)
+  isMedicine      Boolean @default(false)
+  expiresOn       DateTime? @db.Date
+  stockVersion    Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -245,6 +249,18 @@ model InventoryTransaction {
   distributedTo   Resident? @relation("DistributedTo", fields: [distributedToId], references: [id])
 
   date DateTime @default(now())
+
+  // Nullable for existing non-clinic inventory transactions.
+  medicalRecordId String?
+  medicalRecord MedicalRecord? @relation(fields: [medicalRecordId], references: [id], onDelete: Restrict)
+  dispensedById String?
+  dispensedBy Admin? @relation("DispensedBy", fields: [dispensedById], references: [id], onDelete: Restrict)
+  dispenseKey String?
+  itemName String?
+  itemUnit String?
+
+  @@unique([dispenseKey, itemId])
+  @@index([medicalRecordId, date])
 }
 
 model DocumentRequest {
@@ -301,6 +317,7 @@ model MedicalRecord {
 
   date DateTime @default(now())
   isArchive Boolean @default(false)
+  dispensingTransactions InventoryTransaction[]
 }
 
 model VawcRecord {

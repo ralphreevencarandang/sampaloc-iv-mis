@@ -11,6 +11,17 @@
   --color-primary-700: #025c2a;
   --color-primary-800: #014721;
   --color-primary-900: #013b1c;
+  --color-surface: var(--color-white);
+  --color-surface-muted: var(--color-slate-50);
+  --color-content: var(--color-slate-900);
+  --color-content-muted: var(--color-slate-600);
+  --color-outline: var(--color-slate-200);
+  --color-stock-low-surface: var(--color-amber-50);
+  --color-stock-low-border: var(--color-amber-200);
+  --color-stock-low-text: var(--color-amber-700);
+  --color-stock-empty-surface: var(--color-rose-50);
+  --color-stock-empty-border: var(--color-rose-200);
+  --color-stock-empty-text: var(--color-rose-800);
 }
 
 @plugin "daisyui" {

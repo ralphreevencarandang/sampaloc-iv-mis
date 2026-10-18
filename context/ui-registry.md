@@ -95,6 +95,7 @@ ID controls follow type, conditional Other specification, number, then upload. I
 | --- | --- | --- | --- | --- | --- |
 | `ClinicDashboard` | `components/ui/Clinic/ClinicDashboard.tsx` | Clinic stats and recent records UI. | `ClinicDashboardProps` | `/clinic` | Client component. |
 | `ClinicMedicalRecordsPage` | `components/ui/Clinic/ClinicMedicalRecordsPage.tsx` | Medical record table and actions. | `ClinicMedicalRecordsPageProps` | `/clinic/medical-records` | Client component. |
+| `ClinicMedicinesPage` | `components/ui/Clinic/ClinicMedicinesPage.tsx` | Read-only shared medicine inventory with search, stock filters, pagination and refresh. | None | `/clinic/medicines` | Reuses the authenticated medicine API/query; no inventory mutations or dispensing controls. |
 | `MedicalRecordModalForm` | `components/ui/Clinic/MedicalRecordModalForm.tsx` | Create/edit medical record form. | `MedicalRecordModalFormProps` | Clinic/admin health pages | Uses medical record actions. |
 | `ClinicMedicalRecordDetailsModal` | `components/ui/Clinic/ClinicMedicalRecordDetailsModal.tsx` | Medical record detail dialog. | `ClinicMedicalRecordDetailsModalProps` | Clinic/admin health pages | Read/detail view. |
 
@@ -113,6 +114,44 @@ ID controls follow type, conditional Other specification, number, then upload. I
 | `EmailTemplate` | `components/templates/email-template.tsx` | React Email template. | `EmailTemplateProps { firstName }` | Email route/helper | Verify usage before changing. |
 
 ## Registry Maintenance
+
+### ClinicMedicinesPage
+
+File: `components/ui/Clinic/ClinicMedicinesPage.tsx`. Last updated: 2026-10-18.
+
+| Property | Pattern |
+| --- | --- |
+| Table surface | `bg-surface border border-outline rounded-lg shadow-sm` |
+| Header surface | `bg-surface-muted`; uppercase `text-xs tracking-wide font-semibold` |
+| Text | `text-content` for headings/rows; `text-content-muted` for secondary copy |
+| Controls | `rounded-lg border border-outline bg-surface px-3 py-2 text-sm`; `focus:ring-2 focus:ring-primary-500 focus:outline-none` |
+| Status badges | `rounded-full border px-2.5 py-1 text-xs font-medium`; existing primary tokens for Available, semantic `stock-low-*` for Low Stock and `stock-empty-*` for Out of Stock |
+| Spacing | `space-y-6` page, `p-4` toolbar/footer, `px-6 py-4` table cells |
+| States | Spinner with status text; retry alert; stale-data warning after refresh failure; distinct no-stock and no-matches copy |
+| Interactive | `hover:bg-primary-50`; `disabled:cursor-not-allowed disabled:opacity-50` |
+
+Sidebar entry uses the existing ClinicSidebar navigation and lucide Pill icon. The page uses the same `clinicMedicinesQueryOptions` as the dispensing panel, polls every 15 seconds, refetches on focus and has a manual Refresh button. Search and status changes return to page 1; the displayed page clamps when refreshed results shrink. The table scrolls horizontally on small screens. Quantity/unit/status/expiry are display-only; the only workflow link opens Medical Records. No new raw palette classes or hex values were added.
+
+### MedicineDispensingPanel and inventory medicine controls
+
+Files: `components/ui/Clinic/MedicineDispensingPanel.tsx`, `components/ui/Clinic/ClinicMedicalRecordDetailsModal.tsx`, `components/ui/Clinic/MedicalRecordModalForm.tsx`, `components/ui/Admin/InventoryFormModal.tsx`.
+Last updated: 2026-10-18.
+
+| Property | Pattern |
+| --- | --- |
+| Container | `rounded-lg border border-primary-200 p-4`, `space-y-4`; inherits the existing modal surface |
+| Feedback | `rounded-lg border border-primary-200 bg-primary-50 p-3 text-sm text-primary-700`; `role="status"` or `role="alert"` |
+| Controls | `rounded-lg border border-primary-200 px-3 py-2 text-sm`; inventory expiry uses `px-4` |
+| Focus | `focus:outline-none focus:ring-2 focus:ring-primary-500` |
+| Action | `border-primary-600 bg-primary-50 text-primary-700 hover:bg-primary-100`, `font-semibold` |
+| Disabled | `disabled:cursor-not-allowed disabled:opacity-50` and actual disabled attributes |
+| Typography | `text-lg font-semibold` section title; `text-sm` rows, labels and history |
+| Spacing | `space-y-2` row details, `space-y-3` medicine list, `gap-2` wrapping quantity controls |
+| Shadow | None added |
+
+`MedicineDispensingPanel({ recordId })` is reused in consultation details for Clinic and Admin health views. It provides searchable name/stock/unit/status/expiry rows, multiple integer quantities, explicit dispensing, and patient/worker/date history. Permissions come from the authenticated history API; Admin viewers receive read-only controls. Selected rows stay visible during search; removed stock can be cleared. Failed refreshes block new dispensing. Uncertain submissions retain the exact request and retry UUID in the existing query cache across modal reopenings until confirmed; a full browser reload is not persisted. New consultations open details after save. Legacy medicine notes remain visible and read-only.
+
+Admin medicine controls add an explicit checkbox and expiry input, with `useWatch` for the conditional section. Existing inventory entries are edited in place. Date-less and expired medicine stock stays visible but cannot be dispensed. This addition uses existing primary tokens and no new raw palette or hex values.
 
 ### Document request eligibility feedback
 

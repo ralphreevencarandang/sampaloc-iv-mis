@@ -16,8 +16,12 @@ const residentFields = Object.keys(Prisma.ResidentScalarFieldEnum);
 const hasCurrentResidentFields = cachedPrisma?.resident?.fields
   && Object.keys(cachedPrisma.resident.fields).length === residentFields.length
   && residentFields.every((field) => field in cachedPrisma.resident.fields);
+const hasCurrentInventoryFields = cachedPrisma?.inventoryItem?.fields
+  && Object.keys(Prisma.InventoryItemScalarFieldEnum).every((field) => field in cachedPrisma.inventoryItem.fields)
+  && cachedPrisma?.inventoryTransaction?.fields
+  && Object.keys(Prisma.InventoryTransactionScalarFieldEnum).every((field) => field in cachedPrisma.inventoryTransaction.fields);
 const prisma =
-  (cachedPrisma && "document" in cachedPrisma && hasCurrentResidentFields)
+  (cachedPrisma && "document" in cachedPrisma && hasCurrentResidentFields && hasCurrentInventoryFields)
     ? cachedPrisma
     : new PrismaClient({
         adapter,

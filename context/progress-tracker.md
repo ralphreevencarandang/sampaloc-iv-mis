@@ -1,12 +1,12 @@
 # Sampaloc IV BMIS Progress Tracker
 
-Last updated: 2026-10-16
+Last updated: 2026-10-18
 
 ## Current Status
 
 - Current development phase: Existing BMIS implementation with new AI context documentation baseline.
-- Last verified completed feature: Document request eligibility and free one-time Job Seeker issuance; focused policy/UI and isolated PostgreSQL lifecycle/concurrency tests passed on 2026-10-16.
-- Current active feature: None. Document request rules are implemented and verified; application database migration remains pending deployment.
+- Last verified implementation: Dedicated Clinic Medicines page added on 2026-10-18, reusing the shared medicine API/query. The earlier stock-dispensing integration is also verified with isolated PostgreSQL tests.
+- Current active feature: Clinic/inventory integration is implemented; application migration and authenticated browser verification remain deployment steps. Earlier document migrations were also previously recorded as pending; verify current migration status before deployment.
 - Next recommended feature: Security and authorization audit of server actions and API route handlers.
 - Known blockers: No automated test suite is configured; several sensitive workflows need manual verification in a configured environment.
 
@@ -63,6 +63,9 @@ Last updated: 2026-10-16
 - [x] Medical records list.
 - [x] Medical record create/update/archive/restore.
 - [x] Admin health records view.
+- [x] Shared inventory medicine selection, transactional dispensing and history; expiry, concurrency and duplicate-submission safeguards verified in an isolated database schema.
+- [x] Dedicated read-only `/clinic/medicines` page and sidebar item, name search, stock-status filters, 10-row pagination, color-coded token badges, loading/error/empty states and shared automatic stock refresh. No additional database migration needed for this page.
+- [ ] Deploy `20261018000000_clinic_inventory_dispensing`, regenerate Prisma, restart the application, and verify the authenticated browser flow. Existing inventory must be explicitly marked as medicine and assigned an expiry date; historical medicine notes do not trigger deductions.
 
 ### Integrations
 
@@ -108,6 +111,7 @@ The configured database reports all 28 migrations applied as of 2026-10-16. Veri
 
 | Date | Decision | Rationale |
 | --- | --- | --- |
+| 2026-10-18 | Clinic Medicines route/page, sidebar, shared query options, semantic CSS tokens, focused tests and context | Added a dedicated read-only list using the existing medicine inventory API and query key. Includes search/status filters, pagination, expiry/stock display, safe stale-data warnings, retry/manual refresh, 15-second polling and focus refresh. Dispensing remains in patient medical records; existing Admin-only inventory writes are unchanged. |
 | 2026-10-11 | Treat existing source code as the source of truth for documentation. | The supplied request explicitly warned that example docs came from a different app. |
 | 2026-10-11 | Mark unsupported or insufficiently verified items as partial, proposed, unknown, or requiring confirmation. | Avoids claiming completion without evidence. |
 | 2026-10-11 | Preserve existing archive field names `isArchive` and `isArchived` in documentation. | They are both present in the Prisma schema and source code. |
@@ -116,6 +120,7 @@ The configured database reports all 28 migrations applied as of 2026-10-16. Veri
 
 | Date | Files | Summary |
 | --- | --- | --- |
+| 2026-10-18 | Prisma inventory/transaction relations and migration; medicine policy/transaction helper; dispensing action and clinic APIs; Admin inventory and Clinic UI; focused tests; context | Reused InventoryItem as stock source and InventoryTransaction OUT entries as dispensing history. Added medicine flag, expiry and stock version; authenticated health-worker dispensing with atomic stock/history writes, stable retry keys and sorted row locks; protected admin edits against stale stock. Clinical edits preserve historical medicines and cannot change the patient after dispensing. Stock refetches every 15 seconds and on focus. No new dependencies. |
 | 2026-10-16 | Document action/status type, admin document UI, Prisma schema/follow-up migration, focused tests, context | Consolidated duplicate Reject/Cancel behavior into Reject request at the user's request; removed CANCELLED from accepted mutations, filters, badges, and the final database enum. Existing cancelled requests migrate to REJECTED without deleting history. |
 | 2026-10-16 | Document actions, policy/lock helpers, validation, PDF delivery, request APIs/serializer, resident/admin document UI, Prisma schema/migration, tests, context | Enforced free single-copy Job Seeker requests and permanent issuance history; serialized eligibility checks/creation/status transitions using a resident row lock; added rejected/cancelled outcomes, exact feedback and history links. Archive visibility is not part of eligibility. |
 | 2026-10-16 | Local Next.js development cache (no application source changes) | Diagnosed `/Login` 404: stale dev manifest listed lowercase `login`, despite uppercase source folder and correct production manifest. Restart alone did not persist; stopped the project dev server, preserved `.next/dev` under `.next/dev-recovery-*`, and restarted on port 3000 with a fresh cache. |
@@ -128,6 +133,14 @@ The configured database reports all 28 migrations applied as of 2026-10-16. Veri
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-10-18 | Dedicated Medicines page: 8 focused tests, TypeScript `--noEmit`, focused ESLint, production build and whitespace check | Passed. Four new page/query tests cover read-only inventory, badges/expiry, combined search/status filtering, 10-row pagination, refresh shrinkage, loading/error/stale/empty states and the shared no-store query. Existing dispensing UI and clinic API authorization regression tests also passed. Build includes `/clinic/medicines` and 66 generated pages. Generated CSS verified to include semantic stock tokens and palette references. |
+| 2026-10-18 | Dedicated Medicines page: local production HTTP access checks | Unauthenticated `/clinic/medicines` returned 307 to `/ClinicLogin`; `/api/clinic/medicines` returned 401. Temporary server stopped after checks. No authenticated browser session or application database writes were used. |
+| 2026-10-18 | Dedicated Medicines page: `npm run lint` | Same 6 existing errors and 25 warnings in unrelated files; focused new/changed UI and query files have no diagnostics. |
+| 2026-10-18 | Clinic/inventory: policy, rendered UI, authorization and Prisma cache tests | 8 focused tests passed across `medicine-dispensing.test.ts`, `medicine-dispensing-ui.test.ts`, `medicine-dispensing-authorization.test.ts`, and `prisma-cache.test.ts`. UI checks use rendered components, not a live authenticated browser. |
+| 2026-10-18 | `RUN_MEDICINE_DB_TESTS=1 node --import tsx --test tests/medicine-dispensing-database.test.ts` | 10 PostgreSQL scenarios plus parent passed. Covers migration preservation, multiple medicines, rollback, missing/expired/archived/non-medicine stock, eight concurrent retries, competing consultations, stale admin updates, clinical edits/archive, actor/patient identity, and DB constraints. Synthetic schema removed afterward. Initial sandbox DNS failure required network-approved execution; an initial edit test exposed the default transaction timeout, corrected with explicit 15-second bounds. Application tables were not migrated or mutated. |
+| 2026-10-18 | Prisma generation, TypeScript `--noEmit`, `npm run build` | Passed; production build includes 65 generated pages and both new clinic APIs. Apply the additive migration before serving the changed app against the application database. |
+| 2026-10-18 | `npm run lint` | Same 6 baseline errors in untouched files; 25 warnings (previously 26). No new feature errors. |
+| 2026-10-18 | Focused ESLint and final `git diff --check` | Passed. The initial inventory-form `watch` warning was removed by using `useWatch`; changed feature files have no remaining lint diagnostics. UI patterns captured with imprint; review found no remaining implementation gaps, with migration deployment/live browser checks still pending. |
 | 2026-10-16 | Rejected-only consolidation: policy/UI tests, isolated PostgreSQL suite, production build, focused ESLint, diff check | All 4 policy/UI tests and 8 database subtests plus parent passed. Verified cancelled-record conversion preserves release timestamps and the final enum rejects CANCELLED; retries and concurrent issuance protections remain intact. Build and diff check passed; focused ESLint has no errors and 3 pre-existing warnings. Both migrations remain unapplied to application tables. |
 | 2026-10-16 | Document rules: `npm run build`, focused ESLint, `git diff --check` | Production build passed, including TypeScript and all 64 pages. Focused ESLint has no errors (three pre-existing unused review-control props in the admin document component). Diff whitespace check passed. UI verification used rendered-component tests, not a live authenticated browser session. |
 | 2026-10-16 | `node --import tsx --test tests/document-request-policy.test.ts` | 4 tests passed: free pricing/copy validation, rendered resident form behavior, active per-type restrictions, and permanent/legacy issuance checks. |

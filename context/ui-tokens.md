@@ -41,6 +41,8 @@ These are existing patterns, but the project rule says not to introduce new raw 
 
 ## Status Colors
 
+The Clinic Medicines page uses semantic aliases in `app/globals.css` (added 2026-10-18): `surface` / `surface-muted` map to the existing white/slate-50 surfaces; `content` / `content-muted` map to slate-900/slate-600; `outline` maps to slate-200. Stock badge tokens `stock-low-surface`, `stock-low-border`, `stock-low-text` reference the existing amber-50/200/700 palette, and `stock-empty-surface`, `stock-empty-border`, `stock-empty-text` reference rose-50/200/800. Available stock uses existing `primary-*` tokens. Use these token classes rather than introducing raw palette classes.
+
 Existing status classes are repeated in document request components:
 
 | Status | Classes |

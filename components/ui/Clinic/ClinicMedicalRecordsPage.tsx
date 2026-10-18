@@ -411,7 +411,7 @@ export default function ClinicMedicalRecordsPage({
                                 type="button"
                                 onClick={() => setViewRecordId(record.id)}
                                 className="rounded-lg p-2 text-teal-600 transition-colors hover:bg-teal-50"
-                                title="View details"
+                                title="View details and dispense medicines"
                               >
                                 <Eye className="h-4 w-4" />
                               </button>
@@ -511,6 +511,7 @@ export default function ClinicMedicalRecordsPage({
         }}
         patients={patients}
         initialData={selectedRecord}
+        onRecordCreated={(id) => setViewRecordId(id)}
       />
 
       <ClinicMedicalRecordDetailsModal

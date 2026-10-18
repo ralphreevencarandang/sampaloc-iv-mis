@@ -11,7 +11,7 @@ export const INVENTORY_CATEGORIES = [
   "Event Equipment",
 ] as const;
 
-export const INVENTORY_UNITS = ["pcs", "boxes", "sacks", "sets", "kits"] as const;
+export const INVENTORY_UNITS = ["pcs", "boxes", "sacks", "sets", "kits", "tablets", "capsules", "bottles", "sachets", "vials", "tubes"] as const;
 
 export const inventorySchema = z.object({
   name: requiredString("Product name").max(160, "Product name must be 160 characters or less."),
@@ -21,13 +21,18 @@ export const inventorySchema = z.object({
   quantity: z.coerce
     .number()
     .int("Quantity must be a whole number.")
-    .min(0, "Quantity must be 0 or greater."),
+    .min(0, "Quantity must be 0 or greater.")
+    .max(2147483647, "Quantity is too large."),
   unit: requiredString("Unit").max(40, "Unit must be 40 characters or less."),
   storageLocation: requiredString("Storage location").max(
     160,
     "Storage location must be 160 characters or less."
   ),
   description: z.string().trim().max(2000, "Description must be 2000 characters or less.").optional(),
+  isMedicine: z.boolean().default(false),
+  expiresOn: z.string().optional().default('').refine((value) => !value ||
+    (/^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value),
+    'Enter a valid expiry date.'),
 });
 
 export type InventoryFormInput = z.input<typeof inventorySchema>;

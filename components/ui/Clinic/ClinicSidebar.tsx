@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Pill,
   Stethoscope,
   UserRound,
   X,
@@ -30,6 +31,11 @@ const navItems = [
     label: 'Medical Records',
     href: '/clinic/medical-records',
     icon: ClipboardPlus,
+  },
+  {
+    label: 'Medicines',
+    href: '/clinic/medicines',
+    icon: Pill,
   },
 ]
 

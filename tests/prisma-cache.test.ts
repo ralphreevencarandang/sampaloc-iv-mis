@@ -9,12 +9,17 @@ test("Prisma hot reload replaces an outdated resident client and reuses a curren
   let created = 0;
   class Client {
     resident = { fields };
+    inventoryItem = { fields: { id: 'id', isMedicine: 'isMedicine' } };
+    inventoryTransaction = { fields: { id: 'id', dispenseKey: 'dispenseKey' } };
     document = {};
     constructor() { created++; }
   }
   const modules: Record<string, unknown> = {
     "dotenv/config": {},
-    "../app/generated/prisma/client": { PrismaClient: Client, Prisma: { ResidentScalarFieldEnum: fields } },
+    "../app/generated/prisma/client": { PrismaClient: Client, Prisma: { ResidentScalarFieldEnum: fields,
+      InventoryItemScalarFieldEnum: { id: 'id', isMedicine: 'isMedicine' },
+      InventoryTransactionScalarFieldEnum: { id: 'id', dispenseKey: 'dispenseKey' },
+    } },
     "@prisma/adapter-pg": { PrismaPg: class {} },
   };
   const compiled = ts.transpileModule(readFileSync("lib/prisma.ts", "utf8"), {
@@ -36,4 +41,7 @@ test("Prisma hot reload replaces an outdated resident client and reuses a curren
   assert.ok(fresh?.resident.fields.idType);
   assert.equal(load(), fresh);
   assert.equal(created, 1);
+  globals.prisma = { document: {}, resident: { fields }, inventoryItem: { fields: { id: 'id' } } };
+  assert.notEqual(load(), fresh);
+  assert.equal(created, 2);
 });

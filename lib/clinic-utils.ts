@@ -64,6 +64,7 @@ export function serializeClinicMedicalRecord(record: {
   prescription: string | null
   assignedNurse?: string | null
   medicinesGiven?: string[] | null
+  dispensingTransactions?: Array<{ itemName: string | null; itemUnit: string | null; quantity: number }>
   date: Date
   isArchive: boolean
   patient: {
@@ -86,7 +87,10 @@ export function serializeClinicMedicalRecord(record: {
     diagnosis: record.diagnosis,
     notes: record.treatment || record.symptoms,
     assignedNurse: record.assignedNurse ?? null,
-    medicinesGiven: Array.isArray(record.medicinesGiven) ? record.medicinesGiven : [],
+    medicinesGiven: [
+      ...(Array.isArray(record.medicinesGiven) ? record.medicinesGiven : []),
+      ...(record.dispensingTransactions ?? []).map((entry) => `${entry.itemName} — ${entry.quantity} ${entry.itemUnit}`),
+    ],
     date: record.date.toISOString(),
     createdByName: record.checkedBy.name,
     attachments: safeParseAttachments(record.prescription),
