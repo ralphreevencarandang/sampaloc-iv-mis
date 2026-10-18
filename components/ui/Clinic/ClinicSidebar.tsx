@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  CalendarDays,
   ClipboardPlus,
   LayoutDashboard,
   LogOut,
@@ -22,11 +23,13 @@ type ClinicSidebarProps = {
 }
 
 const navItems = [
+ 
   {
     label: 'Dashboard',
     href: '/clinic',
     icon: LayoutDashboard,
   },
+   { label: 'Appointments', href: '/clinic/appointments', icon: CalendarDays },
   {
     label: 'Medical Records',
     href: '/clinic/medical-records',

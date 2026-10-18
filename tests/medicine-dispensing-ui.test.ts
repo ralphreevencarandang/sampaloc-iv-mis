@@ -7,8 +7,9 @@ import * as React from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
 import { renderToStaticMarkup } from 'react-dom/server'
 import * as policy from '../lib/medicine-inventory'
+import * as selection from '../lib/medicine-selection'
 
-function render(options: { canDispense?: boolean; failed?: boolean; quantity?: string; pending?: boolean } = {}) {
+function render(options: { canDispense?: boolean; failed?: boolean; quantity?: string; pending?: boolean; selected?: Record<string, string> } = {}) {
   const medicines = [
     { id: 'available', name: 'Available medicine', quantity: 12, unit: 'tablets', expiresOn: '2099-01-01' },
     { id: 'expired', name: 'Expired medicine', quantity: 9, unit: 'capsules', expiresOn: '2000-01-01' },
@@ -22,7 +23,7 @@ function render(options: { canDispense?: boolean; failed?: boolean; quantity?: s
   const modules: Record<string, unknown> = {
     react: { ...React, useRef: (value: unknown) => ({ current: value }), useState: (initial: unknown) => {
       const index = stateIndex++
-      return [index === 1 ? { available: options.quantity ?? '' } : typeof initial === 'function' ? initial() : initial, () => {}]
+      return [index === 0 ? options.selected ?? { available: options.quantity ?? '2' } : typeof initial === 'function' ? initial() : initial, () => {}]
     } },
     'react/jsx-runtime': jsxRuntime,
     '@tanstack/react-query': {
@@ -34,6 +35,8 @@ function render(options: { canDispense?: boolean; failed?: boolean; quantity?: s
       }),
     },
     '@/lib/medicine-inventory': policy, '@/server/actions/dispensing.actions': {},
+    '@/lib/medicine-selection': selection,
+    './MedicineCombobox': (props: { disabled: boolean }) => React.createElement('input', { 'aria-label': 'Search medicines', role: 'combobox', disabled: props.disabled }),
     '@/lib/clinic-medicines-query': { clinicMedicinesQueryOptions: { queryKey: ['clinic-medicines'] } },
   }
   const exports: { default?: React.ComponentType<{ recordId: string }> } = {}
@@ -42,7 +45,7 @@ function render(options: { canDispense?: boolean; failed?: boolean; quantity?: s
 }
 
 test('clinic shows stock, units, status and disables expired, empty or unknown-expiry selections', () => {
-  const html = render()
+  const html = render({ selected: { available: '2', expired: '1', empty: '1', unknown: '1' } })
   assert.match(html, /12 tablets · Available/)
   assert.match(html, /9 capsules · Low Stock/)
   assert.match(html, /0 bottles · Out of Stock/)

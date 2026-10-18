@@ -146,3 +146,11 @@ This file records project-specific usage for installed libraries that matter to 
 ## Zustand 5.0.12 and Yup 1.7.1
 
 - Installed but usage was not verified in the scanned source. Do not introduce them into new work unless a concrete local use or developer approval exists.
+
+## Clinic appointment integration — 2026-10-18
+
+No dependencies added. Uses installed Next.js 16 server actions, route handlers and after (local guides reviewed), existing PrismaPg/Prisma ReadCommitted transactions and advisory/resident locks, Zod 4 validation, React Hook Form, TanStack Query polling/invalidation, lucide icons and Nodemailer/React Email. Calendar math and formatting use built-in Intl with Asia/Manila. AppointmentDialog uses the browser's native modal dialog focus/Escape behavior. The Prisma development-cache guard now requires appointment/schedule delegates and current MedicalRecord scalar fields.
+
+## Shadcn Base UI combobox — 2026-10-18
+
+User approved adding the required dependency after inspection confirmed no existing Shadcn primitives. Added `@base-ui/react` 1.9.0 and a small manually composed `components/ui/combobox.tsx` following the official current Shadcn Base UI structure, adapted to existing MIS tokens. References reviewed: https://ui.shadcn.com/docs/components/base/combobox and https://base-ui.com/react/components/combobox; installed README and Combobox root/list/positioner declarations were read. Root items are medicine objects with name-label and ID-equality functions; bounded List/Popup and disabled Items provide filtering, keyboard navigation and touch-friendly options. No global theme or unrelated UI dependencies added. Browser fixture uses existing esbuild (from tsx) and Puppeteer, with synthetic medicines only.

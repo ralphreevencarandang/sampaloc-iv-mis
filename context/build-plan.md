@@ -314,3 +314,11 @@ Key server actions and route handlers have repeatable tests; build and lint rema
 ## Recommended Next Development Task
 
 Run a focused security and authorization audit of all `server/actions/*.ts` and `app/api/**/*.ts`, then patch any direct-call authorization gaps before adding new features.
+
+## Clinic Appointment & Walk-In Management — 2026-10-18
+
+Approved scope: resident booking/history/cancellation; Clinic/Admin health management and schedule settings; Manila availability/capacity; safe notifications; atomic appointment consultation linkage/completion and Walk-In/Appointment classification. Existing dispensing remains intact. Implementation and focused verification are recorded in progress-tracker.md. Application migration deployment and live authenticated browser/SMTP checks remain release steps; no further roadmap feature is authorized by this work.
+
+## Medicine selection and early consultation follow-up — 2026-10-18
+
+Requested scope: searchable scrollable medicine combobox with multi-medicine selection, expired exclusion, unavailable-stock disabling and unchanged atomic deduction; CONFIRMED appointment starts at any date/time, original schedule retained, separate actual start metadata, one resumable active consultation and completion only on finalized save. Implemented with the user-approved Base UI dependency and additive migration `20261018030000_appointment_consultation_start`. Verification and rollout status are recorded in progress-tracker.md.

@@ -8,6 +8,8 @@ export type ClinicMedicalRecordListItem = {
   id: string
   patientId: string
   patientName: string
+  visitType?: 'WALK_IN' | 'APPOINTMENT'
+  appointmentId?: string | null
   diagnosis: string
   notes: string
   assignedNurse: string | null
@@ -59,6 +61,8 @@ export function serializeClinicMedicalRecord(record: {
   id: string
   patientId: string
   symptoms: string
+  visitType?: 'WALK_IN' | 'APPOINTMENT'
+  appointmentId?: string | null
   diagnosis: string
   treatment: string
   prescription: string | null
@@ -83,6 +87,8 @@ export function serializeClinicMedicalRecord(record: {
   return {
     id: record.id,
     patientId: record.patientId,
+    visitType: record.visitType ?? 'WALK_IN',
+    appointmentId: record.appointmentId ?? null,
     patientName,
     diagnosis: record.diagnosis,
     notes: record.treatment || record.symptoms,

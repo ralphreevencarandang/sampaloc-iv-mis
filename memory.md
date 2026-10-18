@@ -1,51 +1,56 @@
-# Memory — Clinic Inventory Integration and Medicines Page
+# Memory — Shared Document PDFs and Download Recovery
 
-Last updated: 2026-10-18 13:29 Asia/Singapore
+Last updated: 2026-10-18 20:21 Asia/Singapore
 
 ## What was built
 
-Completed two requested changes: Clinic medicine dispensing linked to Admin Inventory, followed by a dedicated read-only Clinic Medicines page at `/clinic/medicines` with a sidebar item. The list includes name search, stock-status filters, 10-row pagination, semantic color badges, expiry information, loading/error/empty states and automatic refresh.
+Completed shared Admin/Resident document PDF delivery, persistent approved-only Resident downloads, consistent Admin Reject icons, serial numbers in all templates and reusable 24-working-hour processing guidance across the request form, transaction history, success message and document emails.
 
 Main entry points:
-- `components/ui/Clinic/ClinicMedicinesPage.tsx` and `app/(Clinic)/clinic/medicines/page.tsx`
-- `components/ui/Clinic/MedicineDispensingPanel.tsx`, embedded in consultation details
-- `lib/clinic-medicines-query.ts`, shared by the list and dispensing panel
-- `server/actions/dispensing.actions.ts` and `lib/medicine-dispensing.ts`
-- Clinic medicine and consultation-dispensing APIs
-- Migration `prisma/migrations/20261018000000_clinic_inventory_dispensing/migration.sql`
+- `lib/pdf/document-request-delivery.ts`: shared persisted PDF generation/download service.
+- `lib/pdf/stored-document.ts`: validated PDF bytes and restricted legacy reference imports.
+- Existing Admin endpoint `app/api/document/generate/route.ts` and Resident endpoint `app/api/document/download/route.ts`.
+- `lib/document-requests-api.ts`, `app/(Resident)/my-account/page.tsx` and `components/document-requests/admin-document-requests-page.tsx`.
+- `lib/document-processing-notice.ts`, its reusable UI component, document actions and Nodemailer templates.
+- Migration `prisma/migrations/20261018010000_shared_document_pdf/migration.sql`.
 
-Admin inventory controls, clinical actions/serializers, Prisma cache checks, CSS tokens and project context files were updated. Detailed decisions and test records are already in `context/architecture.md`, `context/progress-tracker.md` and `context/ui-registry.md`; consult those rather than reconstructing the design.
+Architecture, UI patterns and detailed verification are documented in the context files. Follow AGENTS.md reading order before further implementation.
 
 ## Decisions made
 
-The user approved the integration plan before implementation. Admin manages stock; only authenticated health workers dispense through patient medical records. The dedicated Medicines page is read-only. The user explicitly requested shared inventory records and no unnecessary schema changes; the list page adds no migration beyond the earlier integration migration.
+Admin and Resident reuse one database-stored PDF and serial regardless of who generates first. Downloads leave approval status unchanged. Residents may download only their own APPROVED requests; existing Admin permissions apply. Stored bytes and assigned serials cannot be replaced. Missing legacy files fail safely rather than silently generating a different document. Existing legacy GENERATED requests are not reset to APPROVED.
+
+Working-hours guidance does not promise a completion date. Detailed locking, lease, storage and email decisions are already recorded in `context/architecture.md` and `context/progress-tracker.md`.
 
 ## Problems solved
 
-An isolated database test exposed Prisma's default transaction timeout when saving edited medical records over the remote connection. Explicit transaction bounds resolved it; the full dispensing database suite subsequently passed.
+Both roles reported generic download errors after the feature was built. A read-only database probe confirmed all three required fields were absent: `generatedPdf`, `pdfGenerationToken`, `pdfGenerationExpiresAt`. The sole pending migration was `20261018010000_shared_document_pdf`.
 
-Sandbox DNS restrictions required network-approved execution of isolated database tests. Local HTTP checks succeeded when the temporary production server and requests ran together outside the sandbox. Temporary test servers were stopped and temporary database schemas were cleaned up.
+The user explicitly confirmed the recover diagnosis and fix. Applied that migration with Prisma migrate deploy, regenerated Prisma and restarted only the verified project development processes. Verified all three fields exist in the database selected using the application's environment-file precedence, and the formerly failing field selection now succeeds. No source workaround was needed.
+
+Chromium rendering initially failed under filesystem sandbox restrictions. The approved run outside the sandbox passed; do not mistake that execution restriction for a template bug.
 
 ## Current state
 
-- Implementation is complete in the working tree, with modified and untracked files. No commit or push was performed by the agent. Preserve these changes.
-- Final production build passed, including `/clinic/medicines` and 66 generated pages. TypeScript checks and focused ESLint passed. Repository-wide lint still reports the same six unrelated errors and 25 warnings.
-- The dispensing integration passed eight focused validation/UI/authorization/cache tests and ten isolated PostgreSQL scenarios plus their parent test. The subsequent Medicines-page checks passed eight tests covering the new page/shared query and existing dispensing UI/API permissions.
-- Live unauthenticated production checks: `/clinic/medicines` redirected to `/ClinicLogin` with 307; `/api/clinic/medicines` returned 401. No authenticated browser walkthrough or real patient dispensing was performed.
-- The agent did not apply the integration migration to application tables or mutate application stock. The user asked how to apply it and received `prisma migrate status`, `prisma migrate deploy`, `prisma generate`, then restart instructions. The user has not confirmed running them. Current application migration status is therefore unknown; do not assume deployment is complete or repeat migrations blindly.
-- Existing inventory must be explicitly marked as medicine and given an expiry date before dispensing. Stock without expiry remains visible but blocked. Refresh is 15-second polling plus focus/manual refresh and shared query invalidation, not push delivery.
-- Uncertain dispensing requests retain their exact retry identifier in the query cache across modal reopenings; a full browser reload does not persist that pending client state. Server retries using the same identifier remain protected.
-- No dependencies were added. The current availability of any development server on port 3000 was not checked; temporary verification servers on other ports were stopped.
+- All 32 application migrations are applied, including the PDF migration and earlier Clinic/document migrations. The former Clinic memory's unknown deployment state is superseded.
+- Development server was restarted successfully at `http://localhost:3000`; its continuing availability should be checked next session rather than assumed.
+- All 18 focused PDF/UI/email/authorization/cache checks passed again after recovery, including actual Chromium PDFs for all six supported/legacy document types.
+- Prior feature verification also passed TypeScript, production build and all 14 isolated PostgreSQL scenarios plus parent, including both generation orders, concurrent generation, repeated downloads, serial consistency, failure recovery and legacy file handling. Synthetic schemas were cleaned up.
+- Full source lint previously reported five unrelated baseline errors and 25 warnings; no full-lint pass is claimed. Recovery changed deployment state and documentation, not implementation source.
+- Live unauthenticated checks returned 401 for Resident download and 403 for Admin generation. Authenticated browser downloads and actual SMTP delivery remain unverified. No real resident document or live email was generated during recovery.
+- Existing requests/serials were preserved by the additive migration. Download buttons remain available for APPROVED requests; downloads do not change approval status.
+- The agent created no commit or push. `git status --short` returned no changes immediately before this memory write; do not assume the earlier feature files remain uncommitted. Preserve any subsequent user changes.
 
 ## Next session starts with
 
-Restore memory and follow AGENTS.md. If continuing rollout, first establish whether the user applied the migration and restarted. Check migration status without exposing configuration values; review all pending migrations before deployment because earlier document migrations were previously recorded as pending. Do not automatically start the unrelated security roadmap.
+Run `/remember restore`, follow AGENTS.md and inspect `context/progress-tracker.md`. If continuing this feature, verify an authorized Admin and Resident browser download of an approved request, repeat the downloads and refresh the page. Confirm identical serial/PDF bytes and unchanged APPROVED status. Do not apply the migration again as a proposed fix without checking current status.
 
-Once the application database is ready, verify with the user's authorized test workflow: Admin enables a medicine with expiry/stock; Clinic Medicines displays it; a health worker dispenses through a consultation; both inventory views show the deduction; editing that consultation does not deduct again. Confirm read-only behavior on the dedicated page. Avoid using real patient data for synthetic tests.
+No additional implementation is currently requested. Do not automatically begin the security roadmap or create real resident records/emails for testing.
+
+Focused checks: `RUN_DOCUMENT_PDF_TESTS=1 node --import tsx --test tests/document-processing-notice.test.ts tests/resident-document-download.test.ts tests/document-request-policy.test.ts tests/prisma-cache.test.ts` (set the variable using PowerShell syntax on Windows). Real Chromium execution may require approved execution outside the sandbox. Isolated database scenarios are in `tests/document-request-database.test.ts` and require `RUN_DOCUMENT_DB_TESTS=1`; consult the tracker before rerunning.
 
 ## Open questions
 
-- Has the user applied the pending migrations, regenerated Prisma and restarted since receiving the instructions?
-- Does the authenticated Admin/Clinic browser flow work against the configured application database?
-
-Run focused page/regression checks with `node --import tsx --test tests/clinic-medicines-page.test.ts tests/medicine-dispensing-ui.test.ts tests/medicine-dispensing-authorization.test.ts`. Database tests require explicit `RUN_MEDICINE_DB_TESTS=1` and create only synthetic data in a temporary schema; see the progress tracker for details.
+- Has the user successfully downloaded an approved PDF in both authenticated portals since the migration/restart?
+- Does actual document notification email delivery work in the configured environment?
+- Prior Clinic authenticated dispensing/browser walkthrough remains unverified, although its migration is now applied. That is separate from the completed PDF recovery.

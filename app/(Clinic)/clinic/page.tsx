@@ -3,21 +3,19 @@ import ClinicDashboard from '@/components/ui/Clinic/ClinicDashboard'
 import { calculateAge, serializeClinicMedicalRecord } from '@/lib/clinic-utils'
 import { getCurrentHealthWorkerFromSession } from '@/lib/health-worker-session'
 import prismaModule from '@/lib/prisma'
+import { manilaDate } from '@/lib/appointment-policy'
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule
 
 function getStartOfToday() {
-  const value = new Date()
-  value.setHours(0, 0, 0, 0)
-  return value
+  return new Date(`${manilaDate()}T00:00:00+08:00`)
 }
 
 function getStartOfWeek() {
   const value = getStartOfToday()
-  const day = value.getDay()
+  const day = new Date(`${manilaDate()}T12:00:00Z`).getUTCDay()
   const diff = day === 0 ? 6 : day - 1
-  value.setDate(value.getDate() - diff)
-  return value
+  return new Date(value.getTime() - diff * 86400000)
 }
 
 export default async function ClinicDashboardPage() {
@@ -56,6 +54,8 @@ export default async function ClinicDashboardPage() {
       select: {
         id: true,
         patientId: true,
+        visitType: true,
+        appointmentId: true,
         symptoms: true,
         diagnosis: true,
         treatment: true,
@@ -134,6 +134,9 @@ export default async function ClinicDashboardPage() {
     .map(([diagnosis, count]) => `${diagnosis} (${count})`)
 
   const stats = [
+    { label: 'Total Consultations', value: String(medicalRecords.length), helper: 'Active consultation records' },
+    { label: 'Walk-In Visits', value: String(medicalRecords.filter(r => r.visitType === 'WALK_IN').length), helper: 'Visits without an appointment' },
+    { label: 'Appointment Visits', value: String(medicalRecords.filter(r => r.visitType === 'APPOINTMENT').length), helper: 'Completed appointment consultations' },
     {
       label: 'Registered Patients',
       value: String(residents.length),

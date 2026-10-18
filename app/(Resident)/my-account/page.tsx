@@ -1,4 +1,5 @@
 "use client";
+import AppointmentHistory from "@/components/ui/Clinic/AppointmentHistory";
 
 import { DocumentProcessingNotice } from '@/components/document-requests/document-processing-notice';
 
@@ -727,6 +728,7 @@ export default function MyAccountPage() {
         <ResidentSummary resident={profile} />
 
         <div className="space-y-6">
+          <AppointmentHistory mode="resident" />
           <SectionCard title="Personal Details" icon={User}>
             <ResidentProfileContent resident={profile} />
           </SectionCard>

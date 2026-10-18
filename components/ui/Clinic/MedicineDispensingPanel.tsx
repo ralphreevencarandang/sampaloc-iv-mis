@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
+import MedicineCombobox from './MedicineCombobox'
+import { selectMedicine } from '@/lib/medicine-selection'
 import type { ClinicDispensingData } from '@/lib/medicine-inventory'
 import { clinicMedicinesQueryOptions } from '@/lib/clinic-medicines-query'
 import { medicineAvailability } from '@/lib/medicine-inventory'
@@ -18,7 +20,6 @@ const controlClass = 'rounded-lg border border-primary-200 px-3 py-2 text-sm foc
 
 export default function MedicineDispensingPanel({ recordId }: { recordId: string }) {
   const queryClient = useQueryClient()
-  const [search, setSearch] = useState('')
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
   const pendingKey = ['pending-medicine-dispensing', recordId]
@@ -33,7 +34,7 @@ export default function MedicineDispensingPanel({ recordId }: { recordId: string
     refetchInterval: 15000, refetchOnWindowFocus: 'always',
   })
   const medicines = (medicinesQuery.data ?? []).map((item) => ({ ...item, ...medicineAvailability(item) }))
-  const selected = Object.entries(quantities).filter(([, value]) => value !== '' && value !== '0')
+  const selected = Object.entries(quantities)
   const invalid = selected.some(([id, value]) => {
     const item = medicines.find((medicine) => medicine.id === id)
     return !item || item.unavailableReason || !Number.isInteger(Number(value)) || Number(value) <= 0 || Number(value) > item.quantity
@@ -78,7 +79,10 @@ export default function MedicineDispensingPanel({ recordId }: { recordId: string
   const failed = medicinesQuery.isError || historyQuery.isError
   const canDispense = historyQuery.data?.canDispense ?? false
   const locked = mutation.isPending || needsRetry
-  const visible = medicines.filter((item) => item.name.toLowerCase().includes(search.trim().toLowerCase()) || Boolean(quantities[item.id]))
+  const visible = medicines.filter(item => item.id in quantities)
+  function removeMedicine(id: string) {
+    setQuantities(current => { const next = { ...current }; delete next[id]; return next })
+  }
 
   return (
     <section className="space-y-4 rounded-lg border border-primary-200 p-4" aria-label="Medicine inventory and dispensing">
@@ -90,35 +94,35 @@ export default function MedicineDispensingPanel({ recordId }: { recordId: string
         <button type="button" className={controlClass} onClick={() => { void medicinesQuery.refetch(); void historyQuery.refetch() }}>Retry loading</button>
       </div>}
       {!loading && <>
-        <label htmlFor={`medicine-search-${recordId}`} className="block text-sm font-medium">Search medicines</label>
-        <input id={`medicine-search-${recordId}`} type="search" value={search} onChange={(event) => setSearch(event.target.value)} className={`${controlClass} w-full`} placeholder="Search by medicine name" />
+        {canDispense && <MedicineCombobox id={`medicine-search-${recordId}`} medicines={medicines} selectedIds={Object.keys(quantities)} disabled={locked || failed} onSelect={item => setQuantities(current => selectMedicine(current, item))} />}
+        {canDispense && <h4 className="text-sm font-semibold">Selected medicines ({selected.length})</h4>}
         <div className="max-h-80 space-y-3 overflow-y-auto">
           {selected.filter(([id]) => !medicines.some((item) => item.id === id)).map(([id]) => (
             <div key={id} className="space-y-2 text-sm">
               <p>A selected medicine was removed or archived.</p>
-              <button type="button" disabled={locked} className={controlClass} onClick={() => setQuantities((current) => ({ ...current, [id]: '' }))}>Clear unavailable selection</button>
+              <button type="button" disabled={locked} className={controlClass} onClick={() => removeMedicine(id)}>Clear unavailable selection</button>
             </div>
           ))}
           {visible.map((item) => {
             const value = quantities[item.id] ?? ''
-            const invalidQuantity = value !== '' && (!Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > item.quantity)
+            const invalidQuantity = value !== '' && (!Number.isInteger(Number(value)) || Number(value) < 1 || Number(value) > item.quantity)
             return <div key={item.id} className="space-y-2 border-b border-primary-200 pb-3">
               <p className="text-sm font-semibold">{item.name}</p>
               <p className="text-sm">{item.quantity} {item.unit} · {item.status} · Expiry: {item.expiresOn ?? 'Not set'}</p>
               {item.unavailableReason && <p className="text-sm font-medium text-primary-700">Cannot dispense: {item.unavailableReason}</p>}
               {canDispense && <div className="flex flex-wrap items-center gap-2">
                 <label className="text-sm" htmlFor={`quantity-${item.id}`}>Quantity to dispense</label>
-                <input id={`quantity-${item.id}`} type="number" min={0} max={item.quantity} step={1} value={value}
+                <input id={`quantity-${item.id}`} type="number" min={1} max={item.quantity} step={1} value={value}
                   disabled={locked || failed || Boolean(item.unavailableReason)}
                   aria-invalid={invalidQuantity} aria-describedby={invalidQuantity ? `quantity-error-${item.id}` : undefined}
                   onChange={(event) => setQuantities((current) => ({ ...current, [item.id]: event.target.value }))}
                   className={`${controlClass} w-24`} />
-                {value && !locked && <button type="button" className={controlClass} onClick={() => setQuantities((current) => ({ ...current, [item.id]: '' }))}>Clear</button>}
-                {invalidQuantity && <p id={`quantity-error-${item.id}`} role="alert" className="text-sm">Enter a whole number from 0 to {item.quantity}.</p>}
+                {!locked && <button type="button" className={controlClass} onClick={() => removeMedicine(item.id)}>Remove</button>}
+                {invalidQuantity && <p id={`quantity-error-${item.id}`} role="alert" className="text-sm">Enter a whole number from 1 to {item.quantity}.</p>}
               </div>}
             </div>
           })}
-          {!visible.length && <p className="text-sm">No medicines found. Admin must mark inventory items as medicines to make them available here.</p>}
+          {!visible.length && <p className="text-sm">No medicines selected. Search above to add medicines for dispensing.</p>}
         </div>
         {(canDispense || needsRetry) && <button type="button" onClick={submit}
           disabled={mutation.isPending || (!needsRetry && (failed || invalid || selected.length === 0 || !canDispense))}

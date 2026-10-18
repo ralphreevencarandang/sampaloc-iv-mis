@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import {  FileText, 
-  FileSignature, CheckCircle2, Dog, AlertTriangle 
+  FileSignature, CheckCircle2, Dog, AlertTriangle, CalendarDays
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -30,6 +30,12 @@ const ResidentServices = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex flex-col rounded-3xl border border-outline bg-surface-muted p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 text-primary-600"><CalendarDays className="h-8 w-8" /></div>
+            <h4 className="mb-4 text-2xl font-bold text-content">Clinic Appointment</h4>
+            <p className="mb-8 flex-1 leading-relaxed text-content-muted">Choose an available clinic date and time, request a consultation, and track your appointment in My Account.</p>
+            <Link href="/clinic-appointment" className="w-full rounded-xl border-2 border-primary-600 bg-surface py-3.5 text-center font-bold text-primary-600 transition-colors hover:bg-primary-600 hover:text-surface">Book Appointment</Link>
+          </div>
           
           {/* Service Card 1: Request Documents */}
           <div className="bg-slate-50 rounded-3xl p-8 border border-gray-100 flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300">

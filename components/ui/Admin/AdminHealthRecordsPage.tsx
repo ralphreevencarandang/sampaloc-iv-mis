@@ -12,6 +12,8 @@ import {
   Search,
   UserCheck,
 } from 'lucide-react'
+import Link from 'next/link'
+import { ConsultationSummary, appointmentControl } from '@/components/ui/Clinic/AppointmentHistory'
 import React, { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import ClinicMedicalRecordDetailsModal from '@/components/ui/Clinic/ClinicMedicalRecordDetailsModal'
@@ -40,6 +42,7 @@ function MedicalRecordsSkeleton() {
         <thead>
           <tr className="border-b border-gray-100 bg-slate-50">
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Patient Name</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase text-content-muted">Visit Type</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Diagnosis</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Notes</th>
             <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-700">Assigned Nurse</th>
@@ -75,6 +78,7 @@ export default function AdminHealthRecordsPage({
   const [selectedRecord, setSelectedRecord] = useState<ClinicMedicalRecordListItem | null>(null)
   const [viewRecordId, setViewRecordId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [visitType, setVisitType] = useState('ALL')
   const [currentPage, setCurrentPage] = useState(1)
 
   const medicalRecordsQuery = useQuery<ClinicMedicalRecordListItem[]>({
@@ -103,11 +107,10 @@ export default function AdminHealthRecordsPage({
   const filteredRecords = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
 
-    if (!search) {
-      return medicalRecordsQuery.data ?? []
-    }
+    const visitRecords = (medicalRecordsQuery.data ?? []).filter(record => visitType === 'ALL' || (record.visitType ?? 'WALK_IN') === visitType)
+    if (!search) return visitRecords
 
-    return (medicalRecordsQuery.data ?? []).filter((record) => {
+    return visitRecords.filter((record) => {
       return (
         record.patientName.toLowerCase().includes(search) ||
         record.diagnosis.toLowerCase().includes(search) ||
@@ -117,7 +120,7 @@ export default function AdminHealthRecordsPage({
         (record.medicinesGiven && record.medicinesGiven.some((m) => m.toLowerCase().includes(search)))
       )
     })
-  }, [medicalRecordsQuery.data, searchTerm])
+  }, [medicalRecordsQuery.data, searchTerm, visitType])
 
   const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -139,6 +142,8 @@ export default function AdminHealthRecordsPage({
   return (
     <>
       <div className="space-y-6">
+        <ConsultationSummary records={medicalRecordsQuery.data ?? []} />
+        <div className="flex flex-wrap items-end gap-3"><label className="flex flex-col gap-1 text-sm text-content">Visit Type<select className={appointmentControl} value={visitType} onChange={e => { setVisitType(e.target.value); setCurrentPage(1) }}><option value="ALL">All</option><option value="WALK_IN">Walk-In</option><option value="APPOINTMENT">Appointment</option></select></label><Link className={appointmentControl} href="/admin/health/appointments">Manage Appointments</Link></div>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Health Records</h1>
@@ -192,6 +197,7 @@ export default function AdminHealthRecordsPage({
                   <thead>
                     <tr className="border-b border-gray-100 bg-slate-50">
                       <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Patient Name</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase text-content-muted">Visit Type</th>
                       <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Diagnosis</th>
                       <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Notes</th>
                       <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-700">Assigned Nurse</th>
@@ -205,6 +211,7 @@ export default function AdminHealthRecordsPage({
                     {paginatedRecords.map((record) => (
                       <tr key={record.id} className="transition-colors hover:bg-slate-50">
                         <td className="px-6 py-4 text-sm font-medium text-slate-900 whitespace-nowrap">{record.patientName}</td>
+                        <td className="whitespace-nowrap px-6 py-4 text-sm text-content">{record.visitType === 'APPOINTMENT' ? 'Appointment' : 'Walk-In'}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">{record.diagnosis}</td>
                         <td className="max-w-xs px-6 py-4 text-sm text-slate-600">
                           <p className="line-clamp-2">{record.notes}</p>

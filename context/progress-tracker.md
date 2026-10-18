@@ -5,8 +5,8 @@ Last updated: 2026-10-18
 ## Current Status
 
 - Current development phase: Existing BMIS implementation with new AI context documentation baseline.
-- Last verified implementation: Unified Admin/Resident PDF persistence, immutable serial reservation, status-preserving repeated downloads and shared 24-working-hour notices verified on 2026-10-18. Production build, 18 UI/email/authorization/real-PDF checks and all 14 isolated PostgreSQL scenarios plus parent passed.
-- Current active feature: Shared PDF download recovery deployed on 2026-10-18 after user confirmation. Migration `20261018010000_shared_document_pdf` is applied, Prisma regenerated and development server restarted. All 32 migrations are applied; the application's database has all three PDF storage/lease columns. Authenticated browser and actual SMTP delivery verification remain manual checks.
+- Last verified implementation: Medicine combobox and early appointment consultation update on 2026-10-18. Production build, 20 focused tests, real Chromium desktop/mobile combobox test, 12 appointment PostgreSQL scenarios plus parent and 11 dispensing PostgreSQL scenarios plus parent passed.
+- Current active feature: Searchable medicine selection and early consultation starts implemented. User approved the minimal Shadcn Base UI dependency. Deploy additive migration `20261018030000_appointment_consultation_start` after the base appointments migration, regenerate Prisma and restart before using the changed appointment queries. Application tables were not changed by this implementation. Authenticated browser and actual SMTP delivery remain rollout checks.
 - Next recommended feature: Security and authorization audit of server actions and API route handlers.
 - Known blockers: No automated test suite is configured; several sensitive workflows need manual verification in a configured environment.
 
@@ -60,6 +60,10 @@ Last updated: 2026-10-18
 
 ### Clinic Workflows
 
+- [x] Clinic appointment implementation: Resident Services card, protected booking, My Account history, Clinic/Admin health management, schedule settings, status history and notifications without medical details.
+- [x] Walk-In/Appointment medical records, classification filters/summaries, atomic one-consultation-per-appointment completion, same medicine dispensing workflow.
+- [ ] Deploy `20261018020000_clinic_appointments`, regenerate Prisma, restart and configure the clinic operating schedule; verify authenticated resident/clinic browser flows and SMTP delivery.
+
 - [x] Health worker login.
 - [x] Clinic dashboard.
 - [x] Medical records list.
@@ -92,6 +96,9 @@ Last updated: 2026-10-18
 - Created/updated `context/progress-tracker.md`.
 
 ## In-Progress Features
+
+Clinic appointments are implemented and verified in source and synthetic database schemas. The new migration is not applied to application tables. Existing medical records retain data and default to WALK_IN because there was no prior appointment model/link. Clinic settings start unconfigured and booking stays closed until staff save an enabled operating schedule. Pending/Confirmed consume capacity and count as the resident’s one active booking. Status changes, actor identity and cancellation/rejection reasons are retained; appointment consultation save completes the appointment and creates a unique linked record atomically. Authentication, ownership and existing health RBAC protect every new entry point. The application rollout must apply both appointment migrations, including `20261018030000_appointment_consultation_start`, before serving the changed queries.
+
 
 Unified PDF persistence is activated: after user confirmation, applied `20261018010000_shared_document_pdf`, regenerated Prisma and restarted the development server on 2026-10-18. Both download failures were caused by absent PDF storage/lease columns; all three columns now exist and the previously failing column selection succeeds. All 32 migrations are applied. The additive migration preserves existing rows and adds private PDF bytes/lease metadata plus immutable serial/PDF guards. All 18 focused checks passed again, including real Chromium rendering of six document types. Unauthenticated resident/admin PDF requests return 401/403. Prior production build, TypeScript and all 14 isolated PostgreSQL scenarios plus parent passed. Authenticated browser downloads and actual SMTP delivery remain manual checks; no real document was generated or email sent during recovery. Older pending-migration notes below are historical.
 
@@ -184,3 +191,27 @@ The configured database reports all 28 migrations applied as of 2026-10-16. Veri
 ## Next Steps
 
 Recommended next task: audit every server action and route handler for direct-call authorization gaps, then patch missing checks and run `npm run lint` plus `npm run build`.
+
+## Clinic Appointment Verification — 2026-10-18
+
+- Prisma generation, schema validation, standalone TypeScript check and final production build passed. Build includes all 71 generated pages and the new Resident/Clinic/Admin routes and APIs. Final whitespace check passed.
+- Nine policy/UI/API/action/email tests passed: Manila boundary and unavailable-slot generation; transition/cancellation/finalization restrictions; schema validation; owner-only private/no-store APIs; staff write checks; notification-after-commit hooks; email queries excluding medical details; rendered summaries, today queue, pagination and read-only/loading/stale/error/empty states.
+- Appointment database suite: all 11 scenarios plus parent passed using a random temporary PostgreSQL schema, removed afterward. Verified migration/legacy medicines, no seeded schedule, capacity two under eight competing residents, one-active across concurrent retries/different slots, ownership and cancellation/rejection history, schedule-version/overlap rules, inactive/archived/past/invalid bookings, walk-in creation, pending/future consultation rejection, exactly one linked consultation and one completion history under eight simultaneous saves, rollback on failure, identity/visit immutability, archive persistence and elapsed-time no-show constraints.
+- Final combined focused run: all 17 tests passed (nine appointment policy/UI/API/action/email checks, seven existing medicine policy/UI/authorization regressions and Prisma cache regression). Final medicine database suite: all 11 scenarios plus parent passed after applying the appointment migration in its synthetic schema, including appointment-linked dispensing, archive/restore and stock/history preservation. Both database suites cleaned up their synthetic schemas.
+- Source-wide lint excluding generated Prisma files reports the same five baseline errors and 25 warnings in unrelated/pre-existing code. Focused changed-source lint has no errors and the two existing unused React-hook imports in ResidentServices. No full lint pass is claimed.
+- Initial database execution could not resolve the database host in the sandbox; network-approved isolated execution succeeded. The first appointment database run exposed only a synthetic fixture selecting absent Resident columns; explicit fixture selects corrected it and the full rerun passed. Initial UI test Link mock required the correct CommonJS shape; corrected rendered tests passed. No application tables, resident accounts or actual emails were changed.
+
+- Local production HTTP access checks passed: `/clinic-appointment`, `/clinic/appointments`, and `/admin/health/appointments` return 307 to their respective login pages; both appointment list modes and availability return 401 unauthenticated. Sandbox-local networking initially blocked access; approved execution starting/checking/stopping the temporary server together succeeded. Temporary servers were stopped. No authenticated browser flow or live SMTP was exercised.
+- Imprint captured all new component patterns in ui-registry.md. Final review: plan alignment and system integrity pass; production activation requires migration deployment, Prisma regeneration/restart, an explicitly configured schedule, and authenticated browser/SMTP verification. Existing unrelated lint errors remain. See clinic-appointments-review.md.
+
+## Medicine Combobox & Early Consultation Verification — 2026-10-18
+
+- Replaced the expanding inventory chooser with a name-searchable, bounded Shadcn Base UI combobox; option labels show medicine name, available quantity and unit. Expired and selected medicines are excluded. Empty stock and missing expiry are disabled. Multi-medicine selection is keyed by inventory ID, with separate quantity/removal controls. Invalidated selections remain visible to clear; stable retry keys and existing server stock transactions are unchanged.
+- CONFIRMED appointments now start regardless of scheduled date/time through an authenticated, Zod-validated server action. One canonical actual start/time/actor and audit entry are stored; simultaneous starts resume that same resource. The schedule is preserved and shown beside actual start. Appointment status stays CONFIRMED until the existing clinical save finalizes one linked MedicalRecord in the same transaction as COMPLETED. Closing allows resume. Pending/terminal appointments cannot start, direct saves without starting fail, and no-show after a start is blocked.
+- Added only two nullable ClinicAppointment start fields and a metadata pair/immutability guard in follow-up migration `20261018030000_appointment_consultation_start`. Legacy completion records keep unknown start metadata null. MedicalRecord.date uses actual start for newly finalized appointment consultations. Prisma hot-reload checks now cover the appointment scalar fields. No application migration was applied.
+- User approved adding Shadcn primitives after repository inspection found none installed. Added `@base-ui/react` 1.9.0 with its lockfile entries and small MIS-token wrappers; no global theme replacement or unrelated UI dependencies.
+- Passed: Prisma generation/validation; standalone TypeScript and final production build (71 pages); focused changed-source ESLint without diagnostics; all 20 focused policy/UI/action/API/privacy/medicine/cache tests; real Chromium keyboard search/selection, disabled-stock, no-expired-option, multi-medicine, duplicate prevention, scroll and 390px mobile/touch checks using synthetic medicines.
+- Appointment PostgreSQL suite: all 12 scenarios plus parent passed, including original booking constraints, tomorrow's early consultation, one canonical timestamp under eight simultaneous starts, exactly one finalized consultation under eight simultaneous saves, preserved schedule/actual time, pending/terminal rejection, immutable metadata and completion rollback. The first stress run exceeded the old 15-second transaction limit; bounded 30-second wait/execution limits corrected the rerun. The full suite took roughly four minutes against the remote synthetic schema.
+- Medicine PostgreSQL suite: all 11 scenarios plus parent passed with the new migration, preserving atomic deductions, capacity/stock checks, stable retries, history, identity, edits/archive and appointment-linked dispensing. Both synthetic schemas were removed. Application records and actual emails were untouched.
+- Source-wide lint excluding generated Prisma retains the same five pre-existing errors and 25 warnings. No project-wide lint pass is claimed. Initial npm registry attempts stalled; approved installation with bounded registry timeouts completed. Browser fixture iterations corrected Puppeteer keyboard shortcut syntax, document reloading during mobile emulation and an open/close gesture race; final Chromium checks passed without browser errors.
+- Imprint updated ui-registry.md. Final review: approved scope and system integrity pass; rollout still requires migrations/regeneration/restart and live authenticated application verification. Existing memory.md working changes were untouched.
