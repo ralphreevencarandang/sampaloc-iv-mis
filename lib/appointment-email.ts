@@ -21,7 +21,7 @@ export async function sendAppointmentNotification(id: string, status: Appointmen
       intro: `Your clinic appointment status is ${status.replaceAll('_', ' ')}.`,
       paragraphs: [`Appointment: ${appointmentLabel(row.startsAt)} – ${appointmentTime(row.endsAt)} (Philippine time).`, instructions],
       ctaLabel: 'Open My Account',
-      ctaUrl: new URL('/my-account', process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? 'https://sampaloc-iv-mis.vercel.app').toString(),
+      ctaUrl: new URL('/my-account', process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000').toString(),
       footer: 'Sampaloc IV Barangay Clinic',
     }))
     await transporter.sendMail({ from: process.env.SMTP_FROM || '"Sampaloc IV MIS" <no-reply@sampalocivmis.com>', to: row.resident.email, subject: `Clinic Appointment — ${status.replaceAll('_', ' ')}`, html })

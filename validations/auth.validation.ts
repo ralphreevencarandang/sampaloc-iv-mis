@@ -1,18 +1,24 @@
 import { z } from "zod";
 import { calculateAge, PWD_CONDITIONS } from "@/lib/resident-demographics";
 import { getRegistrationAge, VALID_ID_TYPES } from "@/lib/resident-registration";
+import { normalizePhilippineMobile } from "@/lib/resident-contact";
 
 const requiredString = (label: string) =>
   z.string().trim().min(1, `${label} is required.`);
+
+const nameSchema = z.string()
+  .transform(value => value.normalize("NFC").trim().replace(/\s+/g, " "))
+  .refine(value => value === "" || /^(?:\p{L}\p{M}*)+(?:[ '\u2019-](?:\p{L}\p{M}*)+)*$/u.test(value), "Name must contain letters only.");
+const requiredName = (label: string) => nameSchema.refine(value => value.length > 0, `${label} is required.`);
 
 const yesNoSchema = z.enum(["Yes", "No"], {
   message: "Please select Yes or No.",
 }).or(z.literal("").refine(() => false, { message: "Please select Yes or No." }));
 
 const baseResidentFields = {
-  firstName: requiredString("First name"),
-  lastName: requiredString("Last name"),
-  middleName: z.string().trim().optional().default(""),
+  firstName: requiredName("First name"),
+  lastName: requiredName("Last name"),
+  middleName: nameSchema.optional().default(""),
   birthDate: z
     .string()
     .min(1, "Birth date is required.")
@@ -28,7 +34,8 @@ const baseResidentFields = {
   houseNumber: requiredString("House number"),
   subdivision: z.string().trim().optional().default(""),
   phase: z.string().trim().optional().default(""),
-  contactNumber: requiredString("Contact number"),
+  contactNumber: z.string().transform(normalizePhilippineMobile)
+    .refine(value => /^\+639\d{9}$/.test(value), "Enter a valid Philippine mobile number."),
   occupation: z.string().trim().optional().default(""),
   citizenship: requiredString("Citizenship"),
   isVoter: yesNoSchema,

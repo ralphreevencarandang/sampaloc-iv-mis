@@ -5,6 +5,7 @@ import { generateDocumentRequestPdfBuffer } from '@/lib/pdf/document-request-pdf
 import { readReferencedDocumentPdf, validateStoredPdf } from '@/lib/pdf/stored-document'
 import { lockDocumentRequestResident } from '@/lib/document-request-lock'
 import { documentUnitPrice, isJobSeekerDocument, JOB_SEEKER_AVAILED_MESSAGE, wasDocumentIssued } from '@/lib/document-request-policy'
+import { PdfRuntimeError, logPdfFailure } from '@/lib/pdf/pdf-diagnostics'
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule
 const LEASE_MS = 180000
@@ -15,6 +16,13 @@ export class DocumentRequestPdfGenerationError extends Error {
   constructor(message: string, public status: number) {
     super(message)
     this.name = 'DocumentRequestPdfGenerationError'
+  }
+}
+
+async function atGenerationStage<T>(stage: string, work: () => Promise<T>): Promise<T> {
+  try { return await work() } catch (cause) {
+    if (cause instanceof DocumentRequestPdfGenerationError || cause instanceof PdfRuntimeError) throw cause
+    throw new PdfRuntimeError(stage, cause)
   }
 }
 
@@ -115,7 +123,7 @@ export async function generateStoredDocumentRequestPdf(requestId: string, option
   const residentId = options?.residentId
   const deadline = Date.now() + WAIT_MS
   for (;;) {
-    const claimed = await claim(requestId, residentId)
+    const claimed = await atGenerationStage('document.claim', () => claim(requestId, residentId))
     if (claimed.kind === 'ready') return resultFor(claimed.record)
     if (claimed.kind === 'busy') {
       if (Date.now() >= deadline) throw new DocumentRequestPdfGenerationError('Your document is being prepared. Please try again shortly.', 409)
@@ -125,7 +133,8 @@ export async function generateStoredDocumentRequestPdf(requestId: string, option
     try {
       let pdfBuffer: Buffer
       if (claimed.record.generatedFileUrl) {
-        try { pdfBuffer = await readReferencedDocumentPdf(claimed.record.generatedFileUrl) } catch {
+        try { pdfBuffer = await readReferencedDocumentPdf(claimed.record.generatedFileUrl) } catch (cause) {
+          logPdfFailure('legacy.import', new PdfRuntimeError('document.legacy.read', cause))
           throw new DocumentRequestPdfGenerationError('The saved document could not be retrieved. Please contact the barangay.', 503)
         }
       } else {
@@ -134,7 +143,7 @@ export async function generateStoredDocumentRequestPdf(requestId: string, option
           serialNumber: claimed.serialNumber, generatedAt: claimed.generatedAt,
         }))
       }
-      const saved = await prisma.$transaction(async (tx) => {
+      const saved = await atGenerationStage('document.persist', () => prisma.$transaction(async (tx) => {
         await lockDocumentRequestResident(tx, claimed.record.residentId)
         const current = await readRequest(tx, requestId, residentId)
         assertEligible(current, residentId)
@@ -148,7 +157,7 @@ export async function generateStoredDocumentRequestPdf(requestId: string, option
           releasedAt: current.releasedAt ?? claimed.generatedAt, pdfGenerationToken: null, pdfGenerationExpiresAt: null,
         } })
         return (await readRequest(tx, requestId, residentId))!
-      }, transactionOptions)
+      }, transactionOptions))
       return resultFor(saved)
     } catch (error) {
       await prisma.documentRequest.updateMany({ where: { id: requestId, pdfGenerationToken: claimed.token },

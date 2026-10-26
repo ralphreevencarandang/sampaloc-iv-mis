@@ -257,3 +257,21 @@ Files: `components/ui/combobox.tsx`, `components/ui/Clinic/MedicineCombobox.tsx`
 `MedicineCombobox({ id, medicines, selectedIds, disabled, onSelect })` uses Shadcn's Base UI composition with accessible keyboard navigation, name search, live stock/unit labels and a bounded dropdown. Selecting adds one medicine to the existing ID-keyed quantity map; already selected IDs and expired entries are excluded. Empty stock or missing expiry disables an option. Multiple selections, removed stock cleanup, server-authoritative validation and stable dispensing retry UUIDs are preserved. Read-only viewers get no selection controls.
 
 Confirmed appointments show Start Consultation regardless of scheduled date/time, switching to Resume Consultation once a canonical server start is stored. The form shows Scheduled appointment and Actual consultation started as separate Manila timestamps. The original date/time stays visible in the table/details, and save remains the finalization command.
+
+### Resident registration inputs
+
+File: `components/ui/resident-inputs.tsx`. Updated: 2026-10-26.
+
+`PasswordInput` and `PhilippineMobileInput` accept native input props and React 19 input refs. Both create forms reuse them; resident editing reuses the phone control through React Hook Form Controller. Existing page-local input borders, surfaces, text and padding are passed as className.
+
+| Property | Pattern |
+| --- | --- |
+| Toggle / prefix text | `text-content-muted`; toggle `hover:text-primary-700` |
+| Toggle radius / focus | `rounded-lg`, `focus-visible:ring-2 focus-visible:ring-primary-500` |
+| Input spacing | `pr-12` for password actions, `pl-12` for the fixed phone prefix |
+| Toggle target | At least 44px; keyboard button with Show/Hide label, aria-pressed and aria-controls |
+| Shadow | None added |
+
+Passwords start hidden with independent Eye/EyeOff toggles and preserve the existing strength/confirmation policy. Phone inputs display a fixed +63, numeric keyboard and at most ten numeric national digits; valid local/international pasted numbers can populate the national input. Server/shared Zod validation requires 9 followed by nine digits and persists +639XXXXXXXXX. Edit prefills recognize existing 09, 639 and +639 formats, including common spacing/separators. Invalid legacy values require correction when saved; no bulk data rewrite occurs.
+
+Both create forms use the existing Zod resolver through React Hook Form with reactive values from their controlled form state. Name validation covers first/middle/last names, Unicode letters/combining marks, spaces, hyphens and straight/curly apostrophes, with NFC normalization and collapsed whitespace. Optional middle names may remain empty; all three fields display validation feedback. No schema or dependency changes.

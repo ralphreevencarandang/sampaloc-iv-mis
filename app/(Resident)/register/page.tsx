@@ -1,6 +1,9 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { PasswordInput, PhilippineMobileInput } from "@/components/ui/resident-inputs";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,7 +14,6 @@ import {
   validateValidIdImageFile,
 } from "@/lib/valid-id-image";
 import {
-  getZodFieldErrors,
   residentRegistrationSchema,
   type ResidentRegistrationInput,
 } from "@/validations/resident.validation";
@@ -83,6 +85,11 @@ export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<RegisterFormState>(initialFormState);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { handleSubmit: validateAndSubmit, register } = useForm({
+    resolver: zodResolver(residentRegistrationSchema),
+    values: formData,
+    resetOptions: { keepIsSubmitted: true },
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const age = getRegistrationAge(formData.birthDate);
   const canSelectVoting = age !== null && age >= 15;
@@ -210,51 +217,7 @@ export default function RegisterPage() {
     });
   };
 
-  const validateForm = () => {
-    const parsed = residentRegistrationSchema.safeParse({
-      email: formData.email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      middleName: formData.middleName,
-      birthDate: formData.birthDate,
-      gender: formData.gender,
-      civilStatus: formData.civilStatus,
-      street: formData.street,
-      houseNumber: formData.houseNumber,
-      subdivision: formData.subdivision,
-      phase: formData.phase,
-      contactNumber: formData.contactNumber,
-      occupation: formData.occupation,
-      citizenship: formData.citizenship,
-      isVoter: formData.isVoter,
-      precinctNumber: formData.precinctNumber,
-      is4Ps: formData.is4Ps,
-      isPwd: formData.isPwd,
-      pwdCondition: formData.pwdCondition,
-      validIDImageName: formData.validIDImageName,
-      idType: formData.idType,
-      idNumber: formData.idNumber,
-      otherIdType: formData.otherIdType,
-    });
-
-    if (parsed.success) {
-      setErrors({});
-      return true;
-    }
-
-    setErrors(getZodFieldErrors(parsed.error));
-    return false;
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+  const handleSubmit = async (data: ResidentRegistrationInput) => {
     if (!formData.validIDImage) {
       setErrors((current) => ({
         ...current,
@@ -265,31 +228,31 @@ export default function RegisterPage() {
 
     const submission = new FormData();
 
-    submission.set("email", formData.email);
-    submission.set("password", formData.password);
-    submission.set("confirmPassword", formData.confirmPassword);
-    submission.set("firstName", formData.firstName);
-    submission.set("lastName", formData.lastName);
-    submission.set("middleName", formData.middleName);
-    submission.set("birthDate", formData.birthDate);
-    submission.set("gender", formData.gender);
-    submission.set("civilStatus", formData.civilStatus);
-    submission.set("street", formData.street);
-    submission.set("houseNumber", formData.houseNumber);
-    submission.set("subdivision", formData.subdivision);
-    submission.set("phase", formData.phase);
-    submission.set("contactNumber", formData.contactNumber);
-    submission.set("occupation", formData.occupation);
-    submission.set("citizenship", formData.citizenship);
-    submission.set("isVoter", formData.isVoter);
-    submission.set("precinctNumber", formData.precinctNumber);
-    submission.set("is4Ps", formData.is4Ps);
-    submission.set("isPwd", formData.isPwd);
-    submission.set("pwdCondition", formData.pwdCondition);
+    submission.set("email", data.email);
+    submission.set("password", data.password);
+    submission.set("confirmPassword", data.confirmPassword);
+    submission.set("firstName", data.firstName);
+    submission.set("lastName", data.lastName);
+    submission.set("middleName", data.middleName);
+    submission.set("birthDate", data.birthDate);
+    submission.set("gender", data.gender);
+    submission.set("civilStatus", data.civilStatus);
+    submission.set("street", data.street);
+    submission.set("houseNumber", data.houseNumber);
+    submission.set("subdivision", data.subdivision);
+    submission.set("phase", data.phase);
+    submission.set("contactNumber", data.contactNumber);
+    submission.set("occupation", data.occupation);
+    submission.set("citizenship", data.citizenship);
+    submission.set("isVoter", data.isVoter);
+    submission.set("precinctNumber", data.precinctNumber);
+    submission.set("is4Ps", data.is4Ps);
+    submission.set("isPwd", data.isPwd);
+    submission.set("pwdCondition", data.pwdCondition);
     submission.set("validIDImage", formData.validIDImage);
-    submission.set("idType", formData.idType);
-    submission.set("idNumber", formData.idNumber);
-    submission.set("otherIdType", formData.otherIdType);
+    submission.set("idType", data.idType);
+    submission.set("idNumber", data.idNumber);
+    submission.set("otherIdType", data.otherIdType);
 
     await registerMutation.mutateAsync(submission);
   };
@@ -315,18 +278,22 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form noValidate onSubmit={validateAndSubmit(handleSubmit, fieldErrors => {
+          setErrors(Object.fromEntries(Object.entries(fieldErrors).map(([name, error]) => [name, error?.message ?? "Invalid value."])));
+        })} className="space-y-8">
           <section>
             <h2 className="mb-4 border-b-2 border-primary-600 pb-2 text-lg font-semibold text-gray-900">
               Account Details
             </h2>
             <div className="grid grid-cols-1 gap-6 ">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label htmlFor="register-email" className="mb-2 block text-sm font-medium text-gray-700">
                   Email Address<RequiredMark />
                 </label>
                 <input
                   type="email"
+                  id="register-email"
+                  {...register("email")}
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
@@ -339,11 +306,13 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label htmlFor="register-password" className="mb-2 block text-sm font-medium text-gray-700">
                   Password<RequiredMark />
                 </label>
-                <input
-                  type="password"
+                <PasswordInput
+                  autoComplete="new-password"
+                  id="register-password"
+                  {...register("password")}
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
@@ -361,11 +330,13 @@ export default function RegisterPage() {
               </div>
 
               <div className="">
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label htmlFor="register-confirmPassword" className="mb-2 block text-sm font-medium text-gray-700">
                   Confirm Password<RequiredMark />
                 </label>
-                <input
+                <PasswordInput
                   type="password"
+                  id="register-confirmPassword"
+                  {...register("confirmPassword")}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
@@ -387,11 +358,13 @@ export default function RegisterPage() {
             </h2>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label htmlFor="register-firstName" className="mb-2 block text-sm font-medium text-gray-700">
                   First Name<RequiredMark />
                 </label>
                 <input
                   type="text"
+                  id="register-firstName"
+                  {...register("firstName")}
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
@@ -403,22 +376,27 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">Middle Name</label>
+                <label htmlFor="register-middleName" className="mb-2 block text-sm font-medium text-gray-700">Middle Name</label>
                 <input
                   type="text"
+                  id="register-middleName"
+                  {...register("middleName")}
                   name="middleName"
                   value={formData.middleName}
                   onChange={handleInputChange}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
+                {errors.middleName && <p role="alert" className="mt-1 text-sm text-stock-empty-text">{errors.middleName}</p>}
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label htmlFor="register-lastName" className="mb-2 block text-sm font-medium text-gray-700">
                   Last Name<RequiredMark />
                 </label>
                 <input
                   type="text"
+                  id="register-lastName"
+                  {...register("lastName")}
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
@@ -562,18 +540,19 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label htmlFor="register-contactNumber" className="mb-2 block text-sm font-medium text-gray-700">
                   Contact Number<RequiredMark />
                 </label>
-                <input
+                <PhilippineMobileInput
                   type="tel"
+                  id="register-contactNumber"
+                  {...register("contactNumber")}
                   name="contactNumber"
                   value={formData.contactNumber}
                   onChange={handleInputChange}
                   className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     errors.contactNumber ? "border-red-500" : "border-gray-300"
                   }`}
-                  placeholder="+63 9XX XXX XXXX"
                 />
                 {errors.contactNumber && (
                   <p className="mt-1 text-sm text-red-500">{errors.contactNumber}</p>

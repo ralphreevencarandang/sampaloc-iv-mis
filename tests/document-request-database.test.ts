@@ -14,6 +14,7 @@ import * as serialization from '../lib/document-request-utils'
 import * as validation from '../validations/document.validation'
 import { z } from 'zod'
 import * as notice from '../lib/document-processing-notice'
+import * as diagnostics from '../lib/pdf/pdf-diagnostics'
 import * as storedPdf from '../lib/pdf/stored-document'
 import { randomUUID as makeToken } from 'node:crypto'
 import 'dotenv/config'
@@ -83,7 +84,7 @@ test('PostgreSQL document request lifecycle, migration and concurrent submission
     const notifications: Array<() => Promise<void>> = []
     const sentNotifications: unknown[] = []
     const modules: Record<string, unknown> = {
-      '@/lib/prisma': prisma, '@/lib/document-request-catalog': catalog,
+      '@/lib/pdf/pdf-diagnostics': diagnostics, '@/lib/prisma': prisma, '@/lib/document-request-catalog': catalog,
       '@/lib/document-request-policy': policy, '@/lib/document-request-lock': locking,
       '@/lib/document-request-utils': serialization, '@/validations/document.validation': validation,
       '@/lib/resident-session': { getCurrentResidentFromSession: async () => residentId ? { id: residentId } : null },

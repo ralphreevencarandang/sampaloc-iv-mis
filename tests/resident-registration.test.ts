@@ -7,6 +7,7 @@ import * as validation from "../validations/resident.validation";
 import * as images from "../lib/valid-id-image";
 import { getRegistrationAge, getRegistrationVotingFields, VALID_ID_TYPES } from "../lib/resident-registration";
 import * as registration from "../lib/resident-registration";
+import * as inputs from "../components/ui/resident-inputs";
 import * as demographics from "../lib/resident-demographics";
 
 const today = new Date("2026-10-15T04:00:00Z");
@@ -67,6 +68,9 @@ test("registration UI redirects only on success and updates disabled voting and 
   };
   const modules: Record<string, unknown> = {
     react,
+    "react-hook-form": { useForm: () => ({ register: () => ({ ref: () => {} }), handleSubmit: (fn: unknown) => fn }) },
+    "@hookform/resolvers/zod": { zodResolver: () => {} },
+    "@/components/ui/resident-inputs": inputs,
     "@tanstack/react-query": { useMutation: (options: typeof mutation) => { mutation = options; return { isPending: false }; } },
     "next/navigation": { useRouter: () => ({ replace: (url: string) => navigation.push(url) }) },
     "next/image": {}, "next/link": {}, "@/public/images/sampaloc-logo.png": {},
@@ -116,7 +120,8 @@ test("registration action saves ID strings and file reference; rejects bypasses 
   const writes: Record<string, unknown>[] = [];
   let uploads = 0;
   const prisma = {
-    resident: { findUnique: async () => null },
+    resident: { findUnique: async () => null, findFirst: async () => null },
+    admin: { findUnique: async () => null },
     $transaction: async (callback: (tx: unknown) => Promise<void>) => callback({ resident: { create: async ({ data }: { data: Record<string, unknown> }) => { writes.push(data); } } }),
   };
   const modules: Record<string, unknown> = {
@@ -125,6 +130,7 @@ test("registration action saves ID strings and file reference; rejects bypasses 
     "@/lib/cloudinary": { CloudinaryUploadError: class extends Error {}, uploadImageToCloudinary: async () => { uploads++; return { secure_url: "https://example.invalid/id.png" }; } },
     "@/lib/valid-id-image": images,
     "@/validations/resident.validation": validation,
+    "@/lib/admin-session": {}, "@/app/generated/prisma/enums": {},
     "next/cache": {}, "@/lib/nodemailer": {}, "@/lib/admin-authorization": {},
   };
   const source = readFileSync("server/actions/resident.actions.ts", "utf8");
@@ -145,6 +151,7 @@ test("registration action saves ID strings and file reference; rejects bypasses 
   assert.equal(writes[0].otherIdType, "Passport");
   assert.equal(writes[0].idNumber, "0012-AB");
   assert.equal(writes[0].validIDImage, "https://example.invalid/id.png");
+  assert.equal(writes[0].contactNumber, "+639123456789");
   assert.equal(writes[0].isVoter, false);
   assert.equal(writes[0].precinctNumber, null);
   assert.ok((await submit({ otherIdType: "stale" })).success);
@@ -155,6 +162,10 @@ test("registration action saves ID strings and file reference; rejects bypasses 
   assert.equal((await submit({}, null)).success, false);
   assert.equal((await submit({}, new File(["bad"], "id.pdf", { type: "application/pdf" }))).success, false);
   assert.equal((await submit({}, new File([new Uint8Array(images.MAX_VALID_ID_IMAGE_SIZE_BYTES + 1)], "id.png", { type: "image/png" }))).success, false);
+  const invalidInputs: Record<string, string>[] = [{firstName:'Juan2'}, {middleName:'Reyes!'}, {lastName:'123'}, {contactNumber:'+638123456789'}, {contactNumber:'91234567890'}, {contactNumber:'abc9123456789'}];
+  for (const patch of invalidInputs) {
+    assert.equal((await submit(patch)).success, false);
+  }
   assert.equal(writes.length, 2);
   assert.equal(uploads, 2);
 });

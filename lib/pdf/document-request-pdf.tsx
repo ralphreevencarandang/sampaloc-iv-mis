@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import puppeteer from 'puppeteer'
+import { launchPdfBrowser } from './pdf-browser'
+import { PdfRuntimeError, logPdfFailure } from './pdf-diagnostics'
 
 type PdfResident = {
   firstName: string
@@ -253,21 +254,24 @@ function createDocumentRequestHtml(request: PdfDocumentRequest) {
 }
 
 export async function generateDocumentRequestPdfBuffer(request: PdfDocumentRequest) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    timeout: 15000,
-    protocolTimeout: 30000,
-  })
+  let html: string
+  try { html = createDocumentRequestHtml(request) } catch (cause) {
+    throw new PdfRuntimeError('template.render', cause)
+  }
+  const browser = await launchPdfBrowser()
+  let stage = 'page.create'
 
   try {
     const page = await browser.newPage()
 
-    await page.setContent(createDocumentRequestHtml(request), {
+    stage = 'page.content'
+    await page.setContent(html, {
       waitUntil: 'networkidle0',
       timeout: 15000,
     })
     await page.emulateMediaType('screen')
 
+    stage = 'pdf.render'
     const pdf = await page.pdf({
       timeout: 30000,
       format: 'A4',
@@ -281,7 +285,9 @@ export async function generateDocumentRequestPdfBuffer(request: PdfDocumentReque
     })
 
     return Buffer.from(pdf)
+  } catch (cause) {
+    throw new PdfRuntimeError(stage, cause)
   } finally {
-    await browser.close()
+    await browser.close().catch(cause => logPdfFailure('browser.close', new PdfRuntimeError('browser.close', cause)))
   }
 }

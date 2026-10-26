@@ -12,6 +12,8 @@ import * as icons from 'lucide-react'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { randomUUID } from 'node:crypto'
+import * as diagnostics from '../lib/pdf/pdf-diagnostics'
+import { launchPdfBrowser } from '../lib/pdf/pdf-browser'
 import * as storedPdf from '../lib/pdf/stored-document'
 import { DocumentProcessingNotice } from '../components/document-requests/document-processing-notice'
 
@@ -21,6 +23,7 @@ function load<T>(file: string, modules: Record<string, unknown>): T {
   }).outputText
   const exports = {}
   runInNewContext(compiled, { exports, Buffer, Blob, Response, Uint8Array, setTimeout, process: { cwd: () => process.cwd() }, console: { error: () => {} }, require: (name: string) => {
+    if (name === '@/lib/pdf/pdf-diagnostics' || name === './pdf-diagnostics') return diagnostics
     assert.ok(name in modules, name)
     return modules[name]
   } })
@@ -150,6 +153,7 @@ test('account history renders a responsive download column only for APPROVED req
     'react-hot-toast': { toast: { error: () => {} } }, '@/lib/axios': {}, '@/lib/document-requests-api': {},
     '@/components/providers/resident-auth-provider': { useResidentAuth: () => ({ resident: profile }) },
     '@/components/document-requests/document-processing-notice': { DocumentProcessingNotice },
+    '@/components/ui/Clinic/AppointmentHistory': { __esModule: true, default: () => null },
     '@tanstack/react-query': {
       useQueryClient: () => ({}), useMutation: () => ({ isPending: false }),
       useQuery: ({ queryKey }: { queryKey: string[] }) => ({ data: queryKey[0] === 'resident-profile' ? profile : queryKey[0] === 'resident-document-requests' ? history : [] }),
@@ -170,7 +174,7 @@ test('existing PDF templates receive the resident and request details for active
   let closed = 0
   const renderer = load<typeof import('../lib/pdf/document-request-pdf')>('lib/pdf/document-request-pdf.tsx', {
     'node:fs': fs, 'node:path': path,
-    puppeteer: { launch: async () => ({
+    './pdf-browser': { launchPdfBrowser: async () => ({
       newPage: async () => ({
         setContent: async (content: string) => { html = content }, emulateMediaType: async () => {},
         pdf: async () => Buffer.from('%PDF-test'),
@@ -220,9 +224,8 @@ test('PDF client sends the request ID to the existing endpoint and reports JSON/
 test('real Chromium produces valid PDF bytes and expected page counts for all serial-bearing templates', {
   skip: process.env.RUN_DOCUMENT_PDF_TESTS !== '1', timeout: 300000,
 }, async (t) => {
-  const puppeteer = await import('puppeteer')
   const renderer = load<typeof import('../lib/pdf/document-request-pdf')>('lib/pdf/document-request-pdf.tsx', {
-    'node:fs': fs, 'node:path': path, puppeteer: puppeteer.default,
+    'node:fs': fs, 'node:path': path, './pdf-browser': { launchPdfBrowser },
   })
   for (const documentTypeId of ['clearance', 'indigency', 'residency', 'cedula', 'first-time-job-seeker', 'barangay-id']) {
     await t.test(documentTypeId, async () => {

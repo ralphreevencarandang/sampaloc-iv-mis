@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { forbiddenUnlessAdminCan } from '@/lib/api-authorization'
+import { logPdfFailure } from '@/lib/pdf/pdf-diagnostics'
 import {
   DocumentRequestPdfGenerationError,
   generateStoredDocumentRequestPdf,
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: error.message }, { status: error.status })
     }
 
-    console.error('POST /api/document/generate failed', { errorType: error instanceof Error ? error.name : 'UnknownError' })
+    logPdfFailure('admin.generate', error)
 
     return NextResponse.json(
       { message: 'Failed to generate the requested PDF document.' },

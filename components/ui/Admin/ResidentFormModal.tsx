@@ -1,12 +1,14 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { updateResidentAction } from '@/server/actions/resident.actions'
 import { adminResidentUpdateSchema, type AdminResidentUpdateInput } from '@/validations/auth.validation'
+import { PhilippineMobileInput } from '@/components/ui/resident-inputs'
+import { mobileNationalNumber } from '@/lib/resident-contact'
 import { calculateAge, PWD_CONDITIONS } from '@/lib/resident-demographics'
 
 export interface ResidentRecord {
@@ -54,6 +56,7 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
     control,
     getValues,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<AdminResidentUpdateInput>({
     resolver: zodResolver(adminResidentUpdateSchema),
@@ -102,7 +105,7 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
           houseNumber: initialData.houseNumber,
           subdivision: initialData.subdivision || '',
           phase: initialData.phase || '',
-          contactNumber: initialData.contactNumber || '',
+          contactNumber: mobileNationalNumber(initialData.contactNumber || ''),
           occupation: initialData.occupation || '',
           citizenship: initialData.citizenship,
           isVoter: initialData.isVoter ? 'Yes' : 'No',
@@ -158,8 +161,10 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
     onSuccess: (result) => {
       if (!result.success) {
         if (result.fieldErrors) {
-           // We could bind back to react-hook-form, but global error is fine for now
-           setGlobalError("Please check your inputs: " + JSON.stringify(result.fieldErrors))
+           for (const [name, message] of Object.entries(result.fieldErrors)) {
+             setError(name as keyof AdminResidentUpdateInput, { type: 'server', message })
+           }
+           setGlobalError(result.message)
         } else {
            setGlobalError(result.message)
         }
@@ -194,7 +199,7 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 p-6">
+        <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex-1 p-6">
           {globalError && (
             <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">
               {globalError}
@@ -213,6 +218,7 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             <div className="flex flex-col gap-1">
               <label htmlFor="middleName" className="text-sm font-medium text-slate-700">Middle Name</label>
               <input {...register('middleName')} id="middleName" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
+              {errors.middleName && <span role="alert" className="text-xs text-stock-empty-text">{errors.middleName.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1">
@@ -257,7 +263,9 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
               <label htmlFor="contactNumber" className="text-sm font-medium text-slate-700">
                 Contact Number<RequiredMark />
               </label>
-              <input {...register('contactNumber')} id="contactNumber" type="text" className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-primary-500" />
+              <Controller name="contactNumber" control={control} render={({ field }) => (
+                <PhilippineMobileInput {...field} id="contactNumber" className="w-full px-4 py-2 border border-outline rounded-lg focus:outline-none focus:border-primary-500" />
+              )} />
               {errors.contactNumber && <span className="text-xs text-red-500">{errors.contactNumber.message}</span>}
             </div>
 

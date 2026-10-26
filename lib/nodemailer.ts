@@ -22,7 +22,7 @@ function getPortalUrl(path: string) {
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.APP_URL ??
     process.env.NEXTAUTH_URL ??
-    'https://sampaloc-iv-mis.vercel.app'
+    'http://localhost:3000'
 
   return new URL(path, baseUrl).toString()
 }

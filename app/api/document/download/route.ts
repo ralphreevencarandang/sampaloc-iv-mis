@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCurrentResidentFromSession } from '@/lib/resident-session'
 import { DocumentRequestPdfGenerationError, downloadApprovedResidentDocumentPdf } from '@/lib/pdf/document-request-delivery'
+import { logPdfFailure } from '@/lib/pdf/pdf-diagnostics'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     if (error instanceof DocumentRequestPdfGenerationError) {
       return NextResponse.json({ message: error.message }, { status: error.status, headers: privateHeaders })
     }
-    console.error('POST /api/document/download failed')
+    logPdfFailure('resident.download', error)
     return NextResponse.json({ message: 'Unable to download your document. Please try again.' }, { status: 500, headers: privateHeaders })
   }
 }
