@@ -27,8 +27,10 @@ const hasCurrentClinicFields = cachedPrisma?.clinicAppointment && cachedPrisma?.
   && Object.keys(Prisma.ClinicAppointmentScalarFieldEnum).every(field => field in cachedPrisma.clinicAppointment.fields)
   && cachedPrisma?.medicalRecord?.fields
   && Object.keys(Prisma.MedicalRecordScalarFieldEnum).every(field => field in cachedPrisma.medicalRecord.fields);
+const hasCurrentResetFields = cachedPrisma?.passwordResetChallenge && cachedPrisma?.passwordResetRateLimit
+  && cachedPrisma?.admin?.fields && "sessionVersion" in cachedPrisma.admin.fields;
 const prisma =
-  (cachedPrisma && "document" in cachedPrisma && hasCurrentResidentFields && hasCurrentInventoryFields && hasCurrentDocumentFields && hasCurrentClinicFields)
+  (cachedPrisma && "document" in cachedPrisma && hasCurrentResidentFields && hasCurrentInventoryFields && hasCurrentDocumentFields && hasCurrentClinicFields && hasCurrentResetFields)
     ? cachedPrisma
     : new PrismaClient({
         adapter,

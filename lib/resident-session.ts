@@ -14,6 +14,7 @@ const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? pr
 type SessionPayload = {
   residentId: string;
   exp: number;
+  version?: number;
 };
 
 function getSessionSecret() {
@@ -84,11 +85,11 @@ function decodeSession(token: string): SessionPayload | null {
   }
 }
 
-export async function createResidentSession(residentId: string) {
+export async function createResidentSession(residentId: string, version: number) {
   const cookieStore = await cookies();
   const expiresAt = Date.now() + SESSION_MAX_AGE_SECONDS * 1000;
 
-  cookieStore.set(SESSION_COOKIE_NAME, encodeSession({ residentId, exp: expiresAt }), {
+  cookieStore.set(SESSION_COOKIE_NAME, encodeSession({ residentId, exp: expiresAt, version }), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -121,14 +122,16 @@ export async function getCurrentResidentFromSession(): Promise<AuthenticatedResi
     select: {
       id: true,
       email: true,
+      sessionVersion: true,
       firstName: true,
       lastName: true,
       status: true,
+      isArchived: true,
       image: true,
     },
   });
 
-  if (!resident || resident.status !== "APPROVED") {
+  if (!resident || resident.isArchived || resident.status !== "APPROVED" || (payload.version ?? 0) !== resident.sessionVersion) {
     return null;
   }
 

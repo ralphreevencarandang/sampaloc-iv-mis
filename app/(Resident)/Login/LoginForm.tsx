@@ -133,6 +133,7 @@ export default function LoginForm({ registered = false }: { registered?: boolean
                   }}
                 />
                 {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
+                <Link href="/forgot-password?portal=resident" className="mt-2 block text-right text-sm font-semibold text-primary-700 underline focus-visible:ring-2 focus-visible:ring-primary-500">Forgot Password?</Link>
               </div>
             </div>
 

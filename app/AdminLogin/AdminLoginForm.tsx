@@ -1,4 +1,6 @@
-'use client'
+'use client';
+import Link from 'next/link'
+
 
 import React, { useState } from 'react'
 import { Eye, EyeOff, LogIn } from 'lucide-react'
@@ -129,6 +131,8 @@ export function AdminLoginForm() {
                   </button>
                 </div>
               </div>
+
+{/* <Link href="/forgot-password?portal=admin" className="mt-2 block text-right text-sm font-semibold text-primary-700 underline focus-visible:ring-2 focus-visible:ring-primary-500">Forgot Password?</Link> */}
 
               {/* Remember Me */}
               <div className="flex items-center">

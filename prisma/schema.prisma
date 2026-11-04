@@ -87,6 +87,7 @@ model Admin {
   name      String
   email     String    @unique
   password  String
+  sessionVersion Int @default(0)
   role      AdminRole
   createdAt DateTime  @default(now())
 
@@ -98,6 +99,7 @@ model Resident {
   id                String    @id @default(cuid())
   email             String    @unique
   password          String
+  sessionVersion    Int @default(0)
   verifyOtp         String?
   verifyOtpExpireAt DateTime?
   resetOtp          String?
@@ -142,6 +144,28 @@ model Resident {
   documentRequests DocumentRequest[]      @relation("RequestedByResident")
   medicalRecords   MedicalRecord[]        @relation("Patient")
   clinicAppointments ClinicAppointment[]
+}
+
+// Reset subjects and rate-limit keys are HMACs; no email or plaintext code is stored.
+model PasswordResetChallenge {
+  subject String @id
+  scope String
+  accountId String?
+  credentialHash String @unique
+  otpHash String?
+  expiresAt DateTime
+  attempts Int @default(0)
+  sentAt DateTime
+  resetHash String? @unique
+  resetExpiresAt DateTime?
+  sessionVersion Int?
+}
+
+model PasswordResetRateLimit {
+  key String @id
+  count Int
+  expiresAt DateTime
+  @@index([expiresAt])
 }
 
 model Official {

@@ -1,0 +1,9 @@
+# Password recovery review — 2026-11-04
+
+Plan alignment: PASS. Resident, Admin/Secretary/other barangay staff and Clinic flows use their existing account models and eligibility rules. Generic requests, secure six-digit OTPs, expiry/attempt/cooldown/rate limits, resend invalidation, single-use short-lived reset grants, shared password rules/toggles, bcrypt, safe notifications and portal-specific login redirection are implemented. Session version revocation is enforced server-side.
+
+System integrity: PASS. Public pages compose reusable token-styled client forms; server actions own untrusted-input validation/cookie handling; server-only helpers own crypto, transactions and mail. Existing RBAC and account models are retained. Migration is additive and preserves existing credentials. No new dependency or raw color class is added. Shared password-policy extraction preserves registration behavior. Context and UI registry were updated.
+
+Verification: PASS for executed local/synthetic checks. Production build, standalone TypeScript, Prisma validation/generation, focused ESLint, whitespace checks, unit/action/session/email/login tests, all ten isolated PostgreSQL scenarios and real Chromium desktop/mobile UI checks passed. All recovery/login/registration HTTP smoke checks returned 200. Full source lint retains five preexisting errors and 25 warnings. Synthetic schemas and temporary servers were cleaned up; no live account or email changes occurred.
+
+Release requirements: deploy `20261104000000_password_reset`, regenerate Prisma, restart and verify actual OTP delivery/reset/success notification using controlled test mailboxes. Existing staff models have no disabled/archive flag to evaluate. Non-Vercel hosts intentionally share a conservative client rate bucket until a trusted proxy is integrated. No implementation issue remains identified; deployment/mailbox verification is outstanding, so this is not a claim of verified production delivery.

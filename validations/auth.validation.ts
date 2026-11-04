@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { passwordSchema } from '@/lib/password-policy';
 import { calculateAge, PWD_CONDITIONS } from "@/lib/resident-demographics";
 import { getRegistrationAge, VALID_ID_TYPES } from "@/lib/resident-registration";
 import { normalizePhilippineMobile } from "@/lib/resident-contact";
@@ -103,12 +104,7 @@ export type AdminResidentUpdateInput = z.input<typeof adminResidentUpdateSchema>
 export const residentRegistrationSchema = z
   .object({
     email: z.email("Enter a valid email address.").trim().toLowerCase(),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters.")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter.")
-      .regex(/[0-9]/, "Password must contain at least one number.")
-      .regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character."),
+    password: passwordSchema,
     confirmPassword: z.string().min(1, "Please confirm your password."),
     validIDImageName: requiredString("Valid ID image"),
     idType: z.enum(["", ...VALID_ID_TYPES]).refine((value) => value !== "", "ID type is required."),

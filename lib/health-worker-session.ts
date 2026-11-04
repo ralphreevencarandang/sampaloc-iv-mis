@@ -13,6 +13,7 @@ const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? pr
 type SessionPayload = {
   adminId: string;
   exp: number;
+  version?: number;
 };
 
 export type AuthenticatedHealthWorker = {
@@ -85,11 +86,11 @@ function decodeSession(token: string): SessionPayload | null {
   }
 }
 
-export async function createHealthWorkerSession(adminId: string) {
+export async function createHealthWorkerSession(adminId: string, version: number) {
   const cookieStore = await cookies();
   const expiresAt = Date.now() + SESSION_MAX_AGE_SECONDS * 1000;
 
-  cookieStore.set(SESSION_COOKIE_NAME, encodeSession({ adminId, exp: expiresAt }), {
+  cookieStore.set(SESSION_COOKIE_NAME, encodeSession({ adminId, exp: expiresAt, version }), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -122,12 +123,13 @@ export async function getCurrentHealthWorkerFromSession(): Promise<Authenticated
     select: {
       id: true,
       email: true,
+      sessionVersion: true,
       name: true,
       role: true,
     },
   });
 
-  if (!admin || admin.role !== AdminRole.HEALTH_WORKER) {
+  if (!admin || admin.role !== AdminRole.HEALTH_WORKER || (payload.version ?? 0) !== admin.sessionVersion) {
     return null;
   }
 

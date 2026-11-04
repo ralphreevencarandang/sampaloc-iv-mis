@@ -41,6 +41,8 @@ The application is implemented as a Next.js App Router project with route groups
 
 ### Resident Portal
 
+- Email OTP password recovery for eligible residents, with equivalent Admin/Staff and Health Worker recovery from their login pages. Requires deploying `20261104000000_password_reset`; actual SMTP delivery remains an environment verification step.
+
 - Public landing page with hero, announcements, officials, services, about, and contact sections.
 - Resident registration with valid ID image upload through Cloudinary.
 - Resident login gated by approval status.

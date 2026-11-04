@@ -25,6 +25,8 @@ Confirm all required Markdown files exist and reference verified code paths.
 
 ## Feature 2 - Authentication and Sessions
 
+2026-11-04: Portal-aware email OTP recovery and session version revocation implemented for Resident and Admin/Staff/Clinic accounts. Requires additive migration `20261104000000_password_reset`, Prisma regeneration/restart, and actual mailbox/deployment verification. See progress-tracker.md for executed checks.
+
 ### Objective
 Maintain resident, admin, and health-worker session flows.
 
