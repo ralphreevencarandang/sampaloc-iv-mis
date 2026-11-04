@@ -134,7 +134,7 @@ export function ClinicLoginForm() {
                   </button>
                 </div>
                 {errors.password && <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>}
-                <Link href="/forgot-password?portal=clinic" className="mt-2 block text-right text-sm font-semibold text-primary-700 underline focus-visible:ring-2 focus-visible:ring-primary-500">Forgot Password?</Link>
+                {/* <Link href="/forgot-password?portal=clinic" className="mt-2 block text-right text-sm font-semibold text-primary-700 underline focus-visible:ring-2 focus-visible:ring-primary-500">Forgot Password?</Link> */}
               </div>
 
               <button
