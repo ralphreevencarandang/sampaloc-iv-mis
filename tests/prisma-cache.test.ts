@@ -12,6 +12,9 @@ test("Prisma hot reload replaces an outdated resident client and reuses a curren
     inventoryItem = { fields: { id: 'id', isMedicine: 'isMedicine' } };
     inventoryTransaction = { fields: { id: 'id', dispenseKey: 'dispenseKey' } };
     document = {};
+    admin = { fields: { sessionVersion: 'sessionVersion' } };
+    passwordResetChallenge = {};
+    passwordResetRateLimit = {};
     documentRequest = { fields: { id: 'id', generatedPdf: 'generatedPdf' } };
     clinicAppointment = { fields: { id: 'id', consultationStartedAt: 'consultationStartedAt', consultationStartedById: 'consultationStartedById' } };
     clinicSchedule = {};

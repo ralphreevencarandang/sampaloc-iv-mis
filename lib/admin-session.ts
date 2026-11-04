@@ -15,6 +15,7 @@ const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? pr
 type SessionPayload = {
   adminId: string;
   exp: number;
+  version?: number;
   role?: AdminRole;
 };
 
@@ -82,11 +83,11 @@ function decodeSession(token: string): SessionPayload | null {
   }
 }
 
-export async function createAdminSession(adminId: string, role: AdminRole) {
+export async function createAdminSession(adminId: string, role: AdminRole, version: number) {
   const cookieStore = await cookies();
   const expiresAt = Date.now() + SESSION_MAX_AGE_SECONDS * 1000;
 
-  cookieStore.set(SESSION_COOKIE_NAME, encodeSession({ adminId, exp: expiresAt, role }), {
+  cookieStore.set(SESSION_COOKIE_NAME, encodeSession({ adminId, exp: expiresAt, role, version }), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -119,12 +120,13 @@ export async function getCurrentAdminFromSession(): Promise<AuthenticatedAdmin |
     select: {
       id: true,
       email: true,
+      sessionVersion: true,
       name: true,
       role: true,
     },
   });
 
-  if (!admin || !isBarangayAdminRole(admin.role)) {
+  if (!admin || !isBarangayAdminRole(admin.role) || (payload.version ?? 0) !== admin.sessionVersion) {
     return null;
   }
 

@@ -1,5 +1,24 @@
 # Sampaloc IV BMIS UI Registry
 
+### Password recovery forms
+
+File: `components/auth/password-reset-forms.tsx`. Updated: 2026-11-04.
+
+Shared `ResetFrame({ title, scope, children })`, `ForgotPasswordForm({ scope })`, `VerifyResetOtpForm({ scope })` and `ResetPasswordForm({ scope })` serve the public recovery routes for resident/admin/clinic portals. Existing login forms add a token-styled Forgot Password link below their password controls. Existing `PasswordInput` provides independent accessible Eye/EyeOff controls on the reset form.
+
+| Property | Pattern |
+| --- | --- |
+| Surface | `bg-surface-muted` page; `bg-surface` form |
+| Border/radius/shadow | `border border-outline rounded-lg shadow-sm` |
+| Text | `text-content`, `text-content-muted`; heading `text-2xl font-bold`; labels `text-sm font-medium` |
+| Spacing | Frame `p-6 space-y-6`; forms `space-y-4`; input/button `px-3 py-3` / `px-4 py-3` |
+| Controls | `rounded-lg border border-outline bg-surface`; `focus:ring-2 focus:ring-primary-500` |
+| Primary button | `bg-primary-600 text-surface hover:bg-primary-700`; disabled cursor/opacity; Loader2 during submission |
+| Links | `text-sm text-primary-700 underline`; visible primary focus ring |
+| Feedback | Primary semantic tokens for status; stock-empty semantic tokens for errors; role=status/alert |
+
+The OTP is a six-character text input with numeric keyboard and one-time-code autocomplete. Resend shows a seconds countdown, restores its display deadline on refresh using tab sessionStorage, and disables during cooldown/submission. Server-side cooldown/expiry/attempt limits remain authoritative. Email can be reentered for resend when browser storage is unavailable. Password and confirmation reuse RHF/Zod and show matching-policy errors. Success toast precedes the server-selected login redirect. No new raw palette colors, hex values or dependencies. Real Chromium desktop/390px mobile fixture verified validation, keyboard/touch toggles, independent visibility, resend/reload states, navigation and absence of horizontal overflow or browser errors; actions were synthetic to avoid real email/account changes.
+
 Last verified: 2026-10-11
 
 Before creating a new component, inspect this registry and the existing components directory. Reuse or extend an existing component when appropriate.

@@ -81,6 +81,7 @@ export async function loginResidentAction(
         id: true,
         email: true,
         password: true,
+        sessionVersion: true,
         firstName: true,
         lastName: true,
         status: true,
@@ -126,7 +127,7 @@ export async function loginResidentAction(
       };
     }
 
-    await createResidentSession(resident.id);
+    await createResidentSession(resident.id, resident.sessionVersion);
 
     return {
       success: true,
@@ -188,6 +189,7 @@ export async function loginAdminAction(
         id: true,
         email: true,
         password: true,
+        sessionVersion: true,
         name: true,
         role: true,
       },
@@ -210,7 +212,7 @@ export async function loginAdminAction(
       };
     }
 
-    await createAdminSession(admin.id, admin.role);
+    await createAdminSession(admin.id, admin.role, admin.sessionVersion);
 
     return {
       success: true,
@@ -273,6 +275,7 @@ export async function loginHealthWorkerAction(
         id: true,
         email: true,
         password: true,
+        sessionVersion: true,
         name: true,
         role: true,
       },
@@ -293,7 +296,7 @@ export async function loginHealthWorkerAction(
       };
     }
 
-    await createHealthWorkerSession(admin.id);
+    await createHealthWorkerSession(admin.id, admin.sessionVersion);
 
     return {
       success: true,

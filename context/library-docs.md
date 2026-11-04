@@ -142,6 +142,11 @@ This file records project-specific usage for installed libraries that matter to 
   - Hash with cost 10.
   - Compare with `bcrypt.compare`.
 - Security: never log password input or hashes.
+- Password recovery reuses bcrypt cost 10 and shares `lib/password-policy.ts` with existing registration. Reset inputs reject passwords exceeding 72 UTF-8 bytes to avoid bcrypt truncation; existing registration behavior is preserved.
+
+## Password recovery integration — 2026-11-04
+
+Uses existing Node crypto (`randomInt`, 32-byte random tokens, purpose-separated HMAC-SHA256 and timing-safe comparison), Prisma ReadCommitted transactions/advisory locks, Zod, RHF/resolvers, Next.js server actions/async cookies/after, and existing Nodemailer/React Email template. No dependency added. Installed Next server-action/cookie/after/component guides and library README/type declarations were consulted. `lib/password-reset-email.ts` catches SMTP failures without logging error objects, code values, email addresses or message bodies. Delivery is best effort after commit and does not affect public request responses or revert a completed password change. Deployment requires the additive reset migration and client regeneration/restart. Vercel request-header reference: https://vercel.com/docs/headers/request-headers#x-vercel-forwarded-for.
 
 ## Zustand 5.0.12 and Yup 1.7.1
 
