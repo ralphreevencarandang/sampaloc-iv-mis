@@ -6,7 +6,6 @@ const requiredString = (label: string) =>
 export const announcementSchema = z.object({
   title: requiredString("Title").max(150, "Title must be 150 characters or less."),
   content: requiredString("Content").max(5000, "Content must be 5000 characters or less."),
-  createdById: requiredString("Official"),
   imageName: z.string().trim().max(255, "Image name must be 255 characters or less.").optional(),
 });
 

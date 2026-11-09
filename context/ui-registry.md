@@ -294,3 +294,18 @@ File: `components/ui/resident-inputs.tsx`. Updated: 2026-10-26.
 Passwords start hidden with independent Eye/EyeOff toggles and preserve the existing strength/confirmation policy. Phone inputs display a fixed +63, numeric keyboard and at most ten numeric national digits; valid local/international pasted numbers can populate the national input. Server/shared Zod validation requires 9 followed by nine digits and persists +639XXXXXXXXX. Edit prefills recognize existing 09, 639 and +639 formats, including common spacing/separators. Invalid legacy values require correction when saved; no bulk data rewrite occurs.
 
 Both create forms use the existing Zod resolver through React Hook Form with reactive values from their controlled form state. Name validation covers first/middle/last names, Unicode letters/combining marks, spaces, hyphens and straight/curly apostrophes, with NFC normalization and collapsed whitespace. Optional middle names may remain empty; all three fields display validation feedback. No schema or dependency changes.
+
+### Announcement creator control
+
+File: components/ui/Admin/AnnouncementModalForm.tsx. Updated: 2026-11-09.
+
+Created By uses a read-only text input instead of an Official selector. Creation displays the shared role mapping through AdminRbacProvider; editing displays the existing creator. No creator ID is accepted from the form. The server derives the Official relationship independently and leaves it unchanged on updates.
+
+| Property | Pattern |
+| --- | --- |
+| Background / text | bg-surface-muted, text-content |
+| Border / radius | border border-outline, rounded-lg |
+| Spacing / focus | px-4 py-2, focus:border-primary-500 focus:outline-none |
+| Semantics | Visible associated label; native readOnly text input |
+
+The surrounding modal retains its established layout. Recognized creators use the requested canonical names, including supplied initials; other historical names remain available. No new dependency or theme replacement.

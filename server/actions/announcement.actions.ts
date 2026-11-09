@@ -12,6 +12,9 @@ import {
   getAnnouncementFieldErrors,
   type AnnouncementFormInput,
 } from "@/validations/announcement.validation";
+import { getCurrentAdminFromSession } from "@/lib/admin-session";
+import { canAccessResource } from "@/lib/rbac";
+import { getAnnouncementCreator } from "@/lib/announcement-creator";
 import { hasAdminPermission } from "@/lib/admin-authorization";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
@@ -26,7 +29,6 @@ export type AnnouncementMutationResult = {
 type SanitizedAnnouncementInput = {
   title: string;
   content: string;
-  createdById: string;
   imageFile: File | null;
   removeImage: boolean;
 };
@@ -48,7 +50,6 @@ function validateAnnouncementForm(formData: FormData): {
   const parsed = announcementSchema.safeParse({
     title: getFormValue(formData, "title"),
     content: getFormValue(formData, "content"),
-    createdById: getFormValue(formData, "createdById"),
     imageName: imageFile?.name ?? "",
   });
 
@@ -62,7 +63,6 @@ function validateAnnouncementForm(formData: FormData): {
     data: {
       title: parsed.data.title,
       content: parsed.data.content,
-      createdById: parsed.data.createdById,
       imageFile,
       removeImage,
     },
@@ -72,7 +72,8 @@ function validateAnnouncementForm(formData: FormData): {
 export async function createAnnouncementAction(
   formData: FormData
 ): Promise<AnnouncementMutationResult> {
-  if (!(await hasAdminPermission("announcements", "write"))) {
+  const admin = await getCurrentAdminFromSession();
+  if (!admin || !canAccessResource(admin.role, "announcements", "write")) {
     return { success: false, message: "You do not have permission to create announcements." };
   }
 
@@ -87,18 +88,22 @@ export async function createAnnouncementAction(
   }
 
   try {
-    const official = await prisma.official.findUnique({
-      where: { id: data.createdById },
+    const creator = getAnnouncementCreator(admin.role);
+    const officials = creator ? await prisma.official.findMany({
+      where: {
+        firstName: { equals: creator.firstName, mode: "insensitive" },
+        lastName: { equals: creator.lastName, mode: "insensitive" },
+        isArchive: false,
+        isActive: true,
+      },
       select: { id: true },
-    });
+      take: 2,
+    }) : [];
 
-    if (!official) {
+    if (officials.length !== 1) {
       return {
         success: false,
-        message: "Please correct the highlighted fields.",
-        fieldErrors: {
-          createdById: "Select a valid official.",
-        },
+        message: "The assigned announcement creator is unavailable. Please ask an administrator to check the official record.",
       };
     }
 
@@ -119,7 +124,7 @@ export async function createAnnouncementAction(
         title: data.title,
         content: data.content,
         image: imageUrl,
-        createdById: data.createdById,
+        createdById: officials[0].id,
       },
       select: announcementSelect,
     });
@@ -183,21 +188,6 @@ export async function updateAnnouncementAction(
       };
     }
 
-    const official = await prisma.official.findUnique({
-      where: { id: data.createdById },
-      select: { id: true },
-    });
-
-    if (!official) {
-      return {
-        success: false,
-        message: "Please correct the highlighted fields.",
-        fieldErrors: {
-          createdById: "Select a valid official.",
-        },
-      };
-    }
-
     let imageUrl = existingAnnouncement.image;
 
     if (data.imageFile) {
@@ -218,7 +208,6 @@ export async function updateAnnouncementAction(
         title: data.title,
         content: data.content,
         image: imageUrl,
-        createdById: data.createdById,
       },
       select: announcementSelect,
     });

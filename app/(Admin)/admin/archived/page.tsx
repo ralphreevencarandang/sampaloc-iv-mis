@@ -1,5 +1,6 @@
 'use client'
 
+import { getAnnouncementCreatorName } from '@/lib/announcement-creator'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import React, { useMemo, useState } from 'react'
 import Image from 'next/image'
@@ -788,7 +789,7 @@ export default function ArchivedPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600">
-                        {item.createdBy ? `${item.createdBy.firstName} ${item.createdBy.lastName}` : 'System'}
+                        {item.createdBy ? getAnnouncementCreatorName(item.createdBy) : 'System'}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600">{new Date(item.createdAt).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-center">
