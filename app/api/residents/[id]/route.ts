@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hasAdminPermission } from "@/lib/admin-authorization";
+import { getCurrentAdminFromSession } from "@/lib/admin-session";
 import { getCurrentResidentFromSession } from "@/lib/resident-session";
 
 type RouteContext = {
@@ -57,7 +58,13 @@ export async function GET(_: Request, { params }: RouteContext) {
       );
     }
 
-    return NextResponse.json(resident);
+    const admin = await getCurrentAdminFromSession();
+    const canViewId = admin?.role === "ADMIN" || admin?.role === "CLERK";
+    return NextResponse.json({ ...resident,
+      validIDImage: canViewId && resident.validIDImage
+        ? "/api/residents/" + encodeURIComponent(id) + "/valid-id?image=1"
+        : currentResident?.id === id ? resident.validIDImage : null,
+    }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("Failed to fetch resident:", error);
 
@@ -97,7 +104,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       select: residentSelectFields,
     });
 
-    return NextResponse.json(updatedResident);
+    const admin = await getCurrentAdminFromSession();
+    const canViewId = admin?.role === "ADMIN" || admin?.role === "CLERK";
+    return NextResponse.json({ ...updatedResident,
+      validIDImage: canViewId && updatedResident.validIDImage
+        ? "/api/residents/" + encodeURIComponent(id) + "/valid-id?image=1"
+        : currentResident?.id === id ? updatedResident.validIDImage : null,
+    }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("Failed to update resident:", error);
 

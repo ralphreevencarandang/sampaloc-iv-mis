@@ -78,6 +78,7 @@ This file records project-specific usage for installed libraries that matter to 
 - Patterns:
   - Query keys are local constants such as `['announcements']`, `['inventory']`, and `['pets', 'all']`.
   - Use invalidation/refetch after mutations.
+  - Prefer explicit one-argument Server Action wrappers for a narrow call contract. Correction (2026-11-09): a bare encodeReply test does not model Next.js 16.2.3 transport. The installed server-action-reducer filters unused arguments using server-reference-info and supplies temporaryReferences; a QueryClient second argument alone is not an established cause of registration failure. Tests must include Next argument filtering or the actual Next runtime. POSTing to the current page URL is expected, and HTTP 200 may carry success:false. Treat the decoded action result and committed database row as the outcome.
 - Common mistake: caching data that includes sensitive resident/health data without correct access checks on the API.
 
 ## Cloudinary 2.9.0
@@ -169,3 +170,17 @@ User approved `@sparticuz/chromium-min` 147.0.0 and explicit `puppeteer-core` 24
 `lib/pdf/pdf-browser.ts` uses the verified local pack through Chromium-min on Vercel and extracts runtime browser assets into `/tmp`. It shares the in-flight executable-preparation promise to prevent concurrent extraction races and clears failed preparation for retry. Separate requests still get separate browsers. There is no browser download during a PDF request and no document PDF written to temporary files. Next tracing explicitly includes the pack/templates for PDF API and Admin document routes, including manual document email actions. No new environment variable or schema migration is introduced. Existing database/auth configuration and shared-PDF migration remain prerequisites.
 
 `pdf-diagnostics.ts` reports operation, stage and fixed safe error categories/codes, including browser launch/assets, missing database columns/tables and timeouts. It never logs raw Prisma error text, HTML, resident data, arbitrary URLs or credentials. API responses retain safe existing messages. Actual Vercel deployment and authenticated generation/download checks remain unverified until access is available.
+
+## Resident creation request sizing — 2026-11-09
+
+The Next.js Server Action request limit is 6 MB to accommodate multipart/FormData metadata around the existing maximum 5 MB ID image. The shared file validator still rejects larger images; no upload validation is bypassed. A real React action encoding/Request serialization test measures that a maximum-sized valid image exceeds the old 5 MB request limit and fits the 6 MB request limit. Hosting-provider limits still apply independently. Installed Next serverActions config documentation was read before the change.
+
+## Announcement creator Select — 2026-11-09
+
+Announcement creator follow-up (2026-11-09): the local Select wrappers in components/ui/select.tsx reuse installed @base-ui/react/select (no dependency added). Installed Root/Trigger/Positioner/Item declarations and Next 16 mutating-data guide were consulted. RHF Controller supplies selected value/change/blur/ref. Admin edit defaults to no replacement, preserving the existing Official link; the shared Zod schema requires a canonical allowed name for Admin creation. Server identity checks derive policy from authenticated email plus role, independently of provider presentation state.
+
+## Staff email integration — 2026-11-09
+
+No dependencies added. Local `button.tsx` and `input.tsx` wrap the already-installed Shadcn Base UI primitives; `textarea.tsx` uses the native textarea with matching MIS tokens and React 19 ref props. Installed Base UI input/button declarations, RHF/resolver/Zod declarations and Next.js 16 server-action documentation were read. UUIDs are created only on submit, avoiding hydration differences. A separate pending state/ref keeps controls locked through concurrent RHF submit events.
+
+Nodemailer reuses `lib/nodemailer.ts` and `EmailTemplate`. Staff mail supplies the configured sender and one validated recipient, a plain-text part and escaped HTML. Newlines use `whiteSpace: pre-wrap`; paragraph keys use indexes so duplicate text does not appear in React key warnings. `disableFileAccess` and `disableUrlAccess` are set. Accepted recipients are checked explicitly; SMTP 4xx/5xx rejection permits a later retry, while ambiguous disconnects do not automatically resend. The existing password-reset rate table is reused under purpose-separated HMAC keys. SMTP handshake verification sends no message; local SMTP capture tests do not demonstrate external mailbox delivery.

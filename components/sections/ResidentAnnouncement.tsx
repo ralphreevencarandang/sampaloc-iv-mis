@@ -1,5 +1,6 @@
 'use client'
 
+import { getAnnouncementCreatorName } from '@/lib/announcement-creator'
 import Image from 'next/image'
 import React, { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -22,7 +23,7 @@ async function fetchAnnouncements(): Promise<AnnouncementRecord[]> {
 }
 
 function getOfficialName(announcement: AnnouncementRecord) {
-  return `${announcement.createdBy.firstName} ${announcement.createdBy.lastName}`.trim()
+  return getAnnouncementCreatorName(announcement.createdBy)
 }
 
 const ResidentAnnouncement = () => {

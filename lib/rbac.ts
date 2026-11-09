@@ -12,13 +12,14 @@ export type AdminResource =
   | "vawc"
   | "pets"
   | "inventory"
+  | "email"
   | "archives";
 
 export type AdminAction = "read" | "write";
 
 export type BarangayAdminRole = Exclude<AdminRoleType, typeof AdminRole.HEALTH_WORKER>;
 
-const ALL_ADMIN_RESOURCES: AdminResource[] = [
+const GENERAL_ADMIN_RESOURCES: AdminResource[] = [
   "dashboard",
   "announcements",
   "officials",
@@ -34,16 +35,16 @@ const ALL_ADMIN_RESOURCES: AdminResource[] = [
 ];
 
 const READABLE_RESOURCES_BY_ROLE: Record<BarangayAdminRole, AdminResource[]> = {
-  [AdminRole.ADMIN]: ALL_ADMIN_RESOURCES,
-  [AdminRole.CLERK]: ["announcements", "officials", "residents", "voters", "documents"],
+  [AdminRole.ADMIN]: [...GENERAL_ADMIN_RESOURCES, "email"],
+  [AdminRole.CLERK]: ["announcements", "officials", "residents", "voters", "documents", "email"],
   [AdminRole.PEACE_AND_ORDER]: ["blotter", "vawc"],
-  [AdminRole.PUNONG_BARANGAY]: ALL_ADMIN_RESOURCES,
+  [AdminRole.PUNONG_BARANGAY]: GENERAL_ADMIN_RESOURCES,
   [AdminRole.SK]: ["announcements"],
 };
 
 const WRITABLE_RESOURCES_BY_ROLE: Record<BarangayAdminRole, AdminResource[]> = {
-  [AdminRole.ADMIN]: ALL_ADMIN_RESOURCES,
-  [AdminRole.CLERK]: ["announcements", "officials", "voters", "documents"],
+  [AdminRole.ADMIN]: [...GENERAL_ADMIN_RESOURCES, "email"],
+  [AdminRole.CLERK]: ["announcements", "officials", "voters", "documents", "email"],
   [AdminRole.PEACE_AND_ORDER]: ["blotter", "vawc"],
   [AdminRole.PUNONG_BARANGAY]: [],
   [AdminRole.SK]: ["announcements"],
@@ -99,6 +100,7 @@ export function getResourceForAdminPath(pathname: string): AdminResource | null 
   }
 
   if (pathname.startsWith("/admin/announcements")) return "announcements";
+  if (pathname === "/admin/send-email" || pathname.startsWith("/admin/send-email/")) return "email";
   if (pathname.startsWith("/admin/officials")) return "officials";
   if (pathname.startsWith("/admin/resident")) return "residents";
   if (pathname.startsWith("/admin/voters")) return "voters";

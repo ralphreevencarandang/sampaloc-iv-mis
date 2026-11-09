@@ -1,20 +1,22 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Upload, X } from 'lucide-react'
 import Image from 'next/image'
 import React, { useEffect, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { MAX_VALID_ID_IMAGE_SIZE_BYTES, validateValidIdImageFile } from '@/lib/valid-id-image'
 import {
   createAnnouncementAction,
   updateAnnouncementAction,
 } from '@/server/actions/announcement.actions'
 import { type AnnouncementRecord } from '@/server/announcements/announcements'
-import { type OfficialRecord } from '@/server/officials/officials'
+import { useAdminRbac } from '@/components/providers/admin-rbac-provider'
+import { ANNOUNCEMENT_OFFICIALS, canSelectAnnouncementCreator, getAccountAnnouncementCreator, getAnnouncementCreatorName } from '@/lib/announcement-creator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  announcementSchema,
+  announcementFormSchema,
   type AnnouncementFormInput,
 } from '@/validations/announcement.validation'
 
@@ -28,37 +30,17 @@ type AnnouncementModalFormProps = {
   onSaved?: (announcement: AnnouncementRecord) => void
 }
 
-type OfficialsApiError = {
-  message?: string
-}
-
 const ANNOUNCEMENTS_QUERY_KEY = ['announcements']
 
 const defaultValues: AnnouncementFormInput = {
   title: '',
   content: '',
-  createdById: '',
   imageName: '',
+  creatorName: '',
 }
 
 function RequiredMark() {
   return <span aria-hidden="true" className="ml-1 text-red-500">*</span>
-}
-
-async function fetchOfficials(): Promise<OfficialRecord[]> {
-  const response = await fetch('/api/officials', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
-
-  if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as OfficialsApiError | null
-    throw new Error(error?.message ?? 'Failed to fetch officials.')
-  }
-
-  return (await response.json()) as OfficialRecord[]
 }
 
 export default function AnnouncementModalForm({
@@ -69,6 +51,8 @@ export default function AnnouncementModalForm({
   onSaved,
 }: AnnouncementModalFormProps) {
   const queryClient = useQueryClient()
+  const account = useAdminRbac()
+  const canSelectCreator = canSelectAnnouncementCreator(account)
   const [imagePreview, setImagePreview] = useState<string | null>(() => initialData?.image ?? null)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imageRemoved, setImageRemoved] = useState(false)
@@ -80,32 +64,22 @@ export default function AnnouncementModalForm({
     ? {
         title: initialData.title,
         content: initialData.content,
-        createdById: initialData.createdById,
         imageName: '',
+        creatorName: '',
       }
     : defaultValues
 
   const {
     register,
+    control,
     handleSubmit,
     setError,
     setValue,
     clearErrors,
     formState: { errors },
   } = useForm<AnnouncementFormInput>({
-    resolver: zodResolver(announcementSchema),
+    resolver: zodResolver(announcementFormSchema(canSelectCreator, isEditMode)),
     defaultValues: formDefaultValues,
-  })
-
-  const {
-    data: officials = [],
-    isLoading: isLoadingOfficials,
-    isError: isOfficialsError,
-    error: officialsError,
-  } = useQuery<OfficialRecord[]>({
-    queryKey: ['officials'],
-    queryFn: fetchOfficials,
-    enabled: isOpen,
   })
 
   useEffect(() => {
@@ -121,7 +95,7 @@ export default function AnnouncementModalForm({
       const submission = new FormData()
       submission.set('title', data.title)
       submission.set('content', data.content)
-      submission.set('createdById', data.createdById)
+      if (canSelectCreator && data.creatorName) submission.set('creatorName', data.creatorName)
 
       if (selectedImage) {
         submission.set('image', selectedImage)
@@ -231,7 +205,7 @@ export default function AnnouncementModalForm({
   }
 
   const onSubmit = async (data: AnnouncementFormInput) => {
-    await announcementMutation.mutateAsync(data)
+    try { await announcementMutation.mutateAsync(data) } catch { /* onError presents the safe failure message. */ }
   }
 
   if (!isOpen) return null
@@ -261,29 +235,34 @@ export default function AnnouncementModalForm({
             <label htmlFor="createdById" className="text-sm font-medium text-slate-700">
               Created By<RequiredMark />
             </label>
-            <select
-              id="createdById"
-              {...register('createdById')}
-              disabled={isLoadingOfficials || isOfficialsError}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-slate-700 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100"
+            {canSelectCreator ? <Controller name="creatorName" control={control} render={({ field }) => <Select
+              name={field.name}
+              value={field.value || null}
+              onValueChange={value => field.onChange(value ?? '')}
+              items={[
+                ...(isEditMode && initialData ? [{ value: '', label: `Keep original: ${getAnnouncementCreatorName(initialData.createdBy)}` }] : []),
+                ...ANNOUNCEMENT_OFFICIALS.map(official => ({ value: official.name, label: official.name })),
+              ]}
+              disabled={announcementMutation.isPending}
             >
-              <option value="">
-                {isLoadingOfficials ? 'Loading officials...' : 'Select Official'}
-              </option>
-              {officials.map((official) => (
-                <option key={official.id} value={official.id}>
-                  {official.name} - {official.position}
-                </option>
-              ))}
-            </select>
-            {errors.createdById && (
-              <p className="text-sm text-red-500">{errors.createdById.message}</p>
-            )}
-            {isOfficialsError && (
-              <p className="text-sm text-red-500">
-                {officialsError instanceof Error ? officialsError.message : 'Failed to load officials.'}
-              </p>
-            )}
+              <SelectTrigger id="createdById" ref={field.ref} onBlur={field.onBlur} aria-invalid={Boolean(errors.creatorName)} aria-describedby={errors.creatorName ? 'creator-error creator-help' : 'creator-help'}>
+                <SelectValue placeholder={isEditMode && initialData ? getAnnouncementCreatorName(initialData.createdBy) : 'Select an official'} />
+              </SelectTrigger>
+              <SelectContent>
+                {isEditMode && initialData && <SelectItem value="">Keep original: {getAnnouncementCreatorName(initialData.createdBy)}</SelectItem>}
+                {ANNOUNCEMENT_OFFICIALS.map(official => <SelectItem key={official.name} value={official.name}>{official.name}</SelectItem>)}
+              </SelectContent>
+            </Select>} /> : <input
+              id="createdById"
+              type="text"
+              readOnly
+              value={isEditMode && initialData
+                ? getAnnouncementCreatorName(initialData.createdBy)
+                : getAccountAnnouncementCreator(account)?.name ?? 'No creator assigned'}
+              className="rounded-lg border border-outline bg-surface-muted px-4 py-2 text-content focus:border-primary-500 focus:outline-none"
+            />}
+            {canSelectCreator && <p id="creator-help" className="text-xs text-content-muted">{isEditMode ? 'The original creator is kept unless you select a replacement.' : 'Select the official who should be credited for this announcement.'}</p>}
+            {errors.creatorName && <p id="creator-error" role="alert" className="text-sm text-stock-empty-text">{errors.creatorName.message}</p>}
           </div>
 
           <div className="flex flex-col gap-2">

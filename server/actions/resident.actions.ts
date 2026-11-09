@@ -185,6 +185,7 @@ export async function createResidentAccount(
     };
   }
 
+  let stage = "resident-email-check";
   try {
     const existingResident = await prisma.resident.findUnique({
       where: { email: data.email },
@@ -201,6 +202,7 @@ export async function createResidentAccount(
       };
     }
 
+    stage = "account-duplicate-check";
     const [existingAdmin, existingId] = await Promise.all([
       prisma.admin.findUnique({ where: { email: data.email }, select: { id: true } }),
       data.idNumber
@@ -214,13 +216,16 @@ export async function createResidentAccount(
       return { success: false, message: "A resident with that ID number already exists.", fieldErrors: { idNumber: "ID number is already registered." } };
     }
 
+    stage = "password-hash";
     const hashedPassword = await hashPassword(data.password);
+    stage = "id-upload";
     const uploadResult = await uploadImageToCloudinary(data.validIDImageFile, {
       assetLabel: "Valid ID image",
       folder: "residents/valid-id",
       publicIdPrefix: data.email.replace(/[^a-z0-9]/gi, "-").toLowerCase(),
     });
 
+    stage = "resident-create";
     await prisma.$transaction(async (tx) => {
       await tx.resident.create({
         data: {
@@ -258,6 +263,7 @@ export async function createResidentAccount(
     };
   } catch (error) {
     if (error instanceof CloudinaryUploadError) {
+      console.error("register resident failed", { stage, code: "ID_UPLOAD_FAILED" });
       return {
         success: false,
         message: "Please correct the highlighted fields.",
@@ -267,7 +273,29 @@ export async function createResidentAccount(
       };
     }
 
-    console.error("register resident failed", error);
+    // Database errors can contain submitted resident data. Log fixed stages/codes only.
+    const code = error && typeof error === "object" && "code" in error &&
+      typeof error.code === "string" && /^P\d{4}$/.test(error.code) ? error.code : "UNKNOWN";
+    const errorName = error instanceof Error && ["TypeError", "ReferenceError", "PrismaClientInitializationError", "PrismaClientKnownRequestError"].includes(error.name)
+      ? error.name : "Error";
+    const message = error instanceof Error ? error.message : "";
+    const missingProperty = /^Cannot read properties of (?:undefined|null) \(reading '([^']+)'\)$/.exec(message)?.[1];
+    const property = missingProperty && ["resident", "findUnique", "bind", "connect", "getConnectionInfo", "provider", "adapterName", "kind"].includes(missingProperty)
+      ? missingProperty : undefined;
+    console.error("register resident failed", {
+      stage, code, errorName, property,
+      residentDelegate: Boolean(prisma?.resident),
+      residentLookup: typeof prisma?.resident?.findUnique === "function",
+      frames: error instanceof Error ? error.stack?.split("\n").slice(1)
+        .map(line => line.match(/(?:node_modules|\.next)[^()\s]*:\d+:\d+/)?.[0])
+        .filter(Boolean).slice(0, 3) : [],
+    });
+    if (code === "P2002") {
+      return { success: false, message: "A resident account with these details already exists. Please check the email and ID number." };
+    }
+    if (code === "P1001" || code === "P1002" || code === "P2024") {
+      return { success: false, message: "The resident service is temporarily unavailable. Please try again shortly." };
+    }
 
     return {
       success: false,

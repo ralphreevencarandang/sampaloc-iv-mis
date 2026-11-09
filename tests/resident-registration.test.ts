@@ -74,6 +74,7 @@ test("registration UI redirects only on success and updates disabled voting and 
     "@tanstack/react-query": { useMutation: (options: typeof mutation) => { mutation = options; return { isPending: false }; } },
     "next/navigation": { useRouter: () => ({ replace: (url: string) => navigation.push(url) }) },
     "next/image": {}, "next/link": {}, "@/public/images/sampaloc-logo.png": {},
+    "react-hot-toast": { success: () => {}, error: () => {} },
     "@/server/actions/auth.actions": { registerResidentAction: () => {} },
     "@/lib/valid-id-image": images, "@/validations/resident.validation": validation,
     "@/lib/resident-registration": registration, "@/lib/resident-demographics": demographics,

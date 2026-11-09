@@ -1,5 +1,37 @@
 # Sampaloc IV BMIS UI Registry
 
+### Staff Send Email form
+
+File: `components/ui/Admin/SendEmailForm.tsx`, `app/(Admin)/admin/send-email/page.tsx`. Updated: 2026-11-09.
+
+| Property | Pattern |
+| --- | --- |
+| Background | `bg-surface` |
+| Border/radius/shadow | `border border-outline rounded-lg shadow-sm` |
+| Text | `text-content`; labels `text-sm font-medium`; help `text-xs text-content-muted` |
+| Spacing | form `space-y-5 p-4`; fields `space-y-2`; feedback `p-3`; actions `gap-3` |
+| Errors | `text-stock-empty-text`; summary `border-stock-empty-border bg-stock-empty-surface` |
+| Success | `border-primary-200 bg-primary-50 text-primary-700` |
+| Accent | Lucide `Mail`; existing `primary-*` focus/button tokens |
+
+RHF/Zod field errors have linked descriptions and alerts. The pending fieldset and explicit send lock preserve the draft on failure and prevent concurrent submits; only confirmed SMTP acceptance resets it. Inline feedback accompanies existing toasts. The cooldown is shown beside the action. Narrow layouts stack actions without horizontal overflow. AdminSidebar adds the existing nav pattern with the Mail icon and `email` resource permission. Desktop/mobile browser verification uses synthetic content.
+
+### Base UI form primitives
+
+Files: `components/ui/button.tsx`, `components/ui/input.tsx`, `components/ui/textarea.tsx`. Updated: 2026-11-09.
+
+| Property | Pattern |
+| --- | --- |
+| Input surface/border/radius | `bg-surface border border-outline rounded-lg` |
+| Text | `text-content`; button `text-sm font-semibold text-surface` |
+| Spacing | input/textarea `px-3 py-2`; button `px-4 py-2 gap-2` |
+| Focus | `focus:ring-2 focus:ring-primary-500`; button uses `focus-visible` |
+| Button accent/hover | `bg-primary-600 hover:bg-primary-700` |
+| Disabled | `disabled:cursor-not-allowed disabled:opacity-50` |
+| Shadow | none |
+
+Reuse these small local primitives for matching controls. Button/Input wrap installed Base UI; textarea remains native. Button defaults to `type="button"`; submitting callers set the type explicitly. React 19 refs pass through to RHF. No new color palette, global theme or dependency. The shared email template now preserves message newlines without changing its established branding.
+
 ### Password recovery forms
 
 File: `components/auth/password-reset-forms.tsx`. Updated: 2026-11-04.
@@ -93,12 +125,12 @@ ID controls follow type, conditional Other specification, number, then upload. I
 | --- | --- | --- | --- | --- | --- |
 | `AnnouncementModalForm` | `components/ui/Admin/AnnouncementModalForm.tsx` | Create/edit announcements. | `AnnouncementModalFormProps` | Announcements page | Uploads optional image. |
 | `OfficialModalForm` | `components/ui/Admin/OfficialModalForm.tsx` | Create/edit officials. | `OfficialModalFormProps` | Officials page | Uploads optional profile. |
-| `ResidentFormModal` | `components/ui/Admin/ResidentFormModal.tsx` | Edit resident and verification status. | `ModalProps` | Resident page | Includes approval fields. |
+| `ResidentFormModal` | `components/ui/Admin/ResidentFormModal.tsx` | Edit resident and verification status; read-only database ID preview for Admin/Secretary. | `ModalProps` | Resident page | Includes approval fields. |
 | `CreateResidentModal` | `components/ui/Admin/CreateResidentModal.tsx` | Create residents from admin management using public registration fields, validation, valid ID upload, and account credentials. | `{ isOpen, onClose }` | Resident page | Uses `residentRegistrationSchema`, shared age/voting helpers and the authorized resident creation action; invalidates the resident query after success. |
 
 ### Admin resident creation modal
 
-Last updated: 2026-10-18. Files: `components/ui/Admin/CreateResidentModal.tsx`, `app/(Admin)/admin/resident/page.tsx`.
+Last updated: 2026-11-09. Files: `components/ui/Admin/CreateResidentModal.tsx`, `app/(Admin)/admin/resident/page.tsx`.
 
 | Property | Pattern |
 | --- | --- |
@@ -107,7 +139,11 @@ Last updated: 2026-10-18. Files: `components/ui/Admin/CreateResidentModal.tsx`, 
 | Validation | Shared `residentRegistrationSchema`; shared Manila age/voting helper; shared valid ID image file validator |
 | Account | Password and confirmation use the public registration policy; server hashes before saving |
 | Permissions | Admin and Secretary (`CLERK`) can create; Secretary has resident-list read access; existing resident write controls stay Admin-only |
-| Feedback | Field-level messages and success/error toast; resident query invalidated after success |
+| Feedback | Field messages plus a persistent footer alert with links to invalid controls; success/error toast; resident query invalidated only after successful creation |
+| Error surface | rounded-lg border border-stock-empty-border bg-stock-empty-surface p-4 text-sm text-stock-empty-text; summary font-medium, linked list mt-2 space-y-1 with primary focus ring |
+| Pending | aria-busy form; fieldset, submit, cancel and close disabled; backdrop cannot dismiss during submission |
+| Transport | An explicit mutation wrapper forwards only FormData to the Server Action; TanStack mutation context never crosses the server boundary |
+| Failure state | Values and selected ID are retained. Returned business errors, transport errors and upload-size errors have persistent safe inline feedback |
 | `BlotterModalForm` | `components/ui/Admin/BlotterModalForm.tsx` | Create/edit blotter records. | `BlotterModalFormProps` | Blotter page | Optional image. |
 | `VawcModalForm` | `components/ui/Admin/VawcModalForm.tsx` | Create/edit VAWC records. | `VawcModalFormProps` | VAWC page | Sensitive case data. |
 | `PetsFormModal` | `components/ui/Admin/PetsFormModal.tsx` | Create/edit pet records. | `PetsFormModalProps` | Pets page | Owner dropdown; standardized pet type select with conditional required custom type. Existing unlisted types load through Other for compatibility. |
@@ -294,3 +330,59 @@ File: `components/ui/resident-inputs.tsx`. Updated: 2026-10-26.
 Passwords start hidden with independent Eye/EyeOff toggles and preserve the existing strength/confirmation policy. Phone inputs display a fixed +63, numeric keyboard and at most ten numeric national digits; valid local/international pasted numbers can populate the national input. Server/shared Zod validation requires 9 followed by nine digits and persists +639XXXXXXXXX. Edit prefills recognize existing 09, 639 and +639 formats, including common spacing/separators. Invalid legacy values require correction when saved; no bulk data rewrite occurs.
 
 Both create forms use the existing Zod resolver through React Hook Form with reactive values from their controlled form state. Name validation covers first/middle/last names, Unicode letters/combining marks, spaces, hyphens and straight/curly apostrophes, with NFC normalization and collapsed whitespace. Optional middle names may remain empty; all three fields display validation feedback. No schema or dependency changes.
+
+### Announcement creator control
+
+File: components/ui/Admin/AnnouncementModalForm.tsx. Updated: 2026-11-09.
+
+Created By uses the shared Base UI Select only for the authenticated ADMIN account admin@sampalociv.com. RHF Controller connects its value, blur and trigger ref. Creation requires one of the eleven names in ANNOUNCEMENT_OFFICIALS; editing initially displays the current creator, and a Keep original option clears any replacement. Other accounts see a native read-only input: Secretary creation displays Belen P. Movido, and editing displays the original creator. Existing Clerk/SK assignments remain fixed. AdminRbacProvider supplies session-derived email and role for presentation; the action independently enforces the same identity rules.
+
+| Property | Pattern |
+| --- | --- |
+| Background / text | read-only bg-surface-muted; selector bg-surface; text-content |
+| Border / radius | border border-outline, rounded-lg |
+| Spacing / focus | px-4 py-2, focus:border-primary-500 focus:outline-none |
+| Semantics | Visible associated label; native readOnly input or combobox; linked creator help/error feedback |
+
+The surrounding modal retains its established layout. Recognized creators use canonical names, including the corrected Secretary initial; unknown historical names remain available. Creator replacement is omitted from edit payloads until Admin selects a name. No dependency or theme replacement.
+
+### Base UI Select
+
+File: components/ui/select.tsx. Updated: 2026-11-09.
+
+| Property | Pattern |
+| --- | --- |
+| Background / text | bg-surface, text-content |
+| Border / radius | border border-outline, rounded-lg |
+| Spacing | trigger px-4 py-2 gap-2; list p-1; items px-3 py-2 gap-3 |
+| Focus / highlight | focus-visible:ring-2 focus-visible:ring-primary-500; data-highlighted:bg-primary-50 data-highlighted:text-primary-700 |
+| Popup shadow | shadow-lg |
+| Disabled | disabled:cursor-not-allowed disabled:opacity-50 |
+
+Small local Shadcn-style wrappers reuse installed Base UI Select Root/Trigger/Value/Portal/Positioner/Popup/List/Item primitives with Lucide ChevronDown/Check. The portal sits above existing Admin modals; a bounded scrollable list accommodates officials on mobile. Keyboard navigation, Escape/focus restoration and selected indicators come from Base UI. Trigger refs pass through for RHF error focus. No new library or raw colors.
+
+### ResidentIdPreview and resident modal access
+
+File: components/ui/Admin/ResidentIdPreview.tsx. Updated: 2026-11-09.
+
+ResidentIdPreview({ residentId }) fetches only ID metadata from the protected resident-valid-id query and displays type (including custom Other type), number and a read-only image. It provides loading, retry, no-image and image-load-failure feedback. The thumbnail opens the existing native AppointmentDialog for an enlarged, contained image, Escape dismissal and focus restoration. Images use unoptimized Next Image so the authenticated request reaches the protected route; no upload/replacement/deletion controls or form fields are introduced. Query data has zero retention after unmount and is fetched without HTTP caching.
+
+| Property | Pattern |
+| --- | --- |
+| Surface / border | bg-surface-muted, bg-surface, border-outline |
+| Text | text-content, text-content-muted; error text-stock-empty-text |
+| Radius / spacing | rounded-lg; section p-4 space-y-3, dialog p-6 space-y-4 |
+| Heading / details | text-lg font-semibold; text-sm details; text-xs guidance |
+| Focus / action | focus-visible:ring-2 focus-visible:ring-primary-500; text-primary-700 |
+
+ResidentFormModal renders the preview only for ADMIN/CLERK. Clerk/Secretary can open the same modal from the resident list in view mode; the resident fields are disabled and no save button appears. Existing server write permissions remain unchanged. ID fields are outside editable form state and are ignored by the resident update action.
+
+### VAWC mobile contacts
+
+File: components/ui/Admin/VawcModalForm.tsx. Updated: 2026-11-09.
+
+Victim and respondent contact fields reuse PhilippineMobileInput through RHF Controller. Both have associated labels, fixed +63, numeric keyboard, ten-digit maximum and semantic field-level error feedback. Input styling: w-full rounded-lg border border-outline px-4 py-2 text-content focus:outline-none focus:border-primary-500. Existing local/international phone formats prefill through mobileNationalNumber. The shared create/edit Zod schema permits blank contacts and normalizes valid supplied values to +639XXXXXXXXX on both client and server. Invalid historical numbers require correction or clearing when saved; no bulk rewrite.
+
+### Public registration submission feedback — 2026-11-09
+
+File: app/(Resident)/register/page.tsx. The public form now shows returned business errors and validation errors beside Create Account, plus success/error toasts. The summary uses rounded-lg border border-stock-empty-border bg-stock-empty-surface p-4 text-sm text-stock-empty-text, a font-medium title and linked error list with primary focus ring. Error links focus the matching registered/named/file control. Field-level feedback remains in place. The form has aria-busy; a fieldset and Clear Form are disabled while submission is pending. Values/files are retained after failures; only a confirmed success navigates to Login. Mutation rejections are handled by onError and caught by the submit handler to avoid unhandled rejections. No additional color tokens, dependencies or schema changes.

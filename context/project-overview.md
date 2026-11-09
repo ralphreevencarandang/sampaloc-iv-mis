@@ -149,6 +149,8 @@ The application is implemented as a Next.js App Router project with route groups
 
 ## Features In Scope
 
+Staff Send Email is available at `/admin/send-email` for ADMIN and CLERK, including Secretary accounts using the existing staff roles. It uses the system SMTP sender, server-enforced permissions, persistent attempt limits and safe plain-text composition. Other barangay roles and Residents cannot access or send through this feature.
+
 Verified in code: resident auth and registration, admin auth and RBAC, health-worker auth, resident profile APIs, resident document requests, admin document requests, PDF generation, announcements, officials, residents, voters, pets, blotter, VAWC, inventory, clinic medical records, archives, image uploads, and email helpers.
 
 ## Features Out of Scope
@@ -171,3 +173,7 @@ Clinic appointments are implemented at `/clinic-appointment`, `/clinic/appointme
 ## Medicine selection and early appointment consultations — 2026-10-18
 
 Medicine dispensing now uses a searchable, scrollable Shadcn Base UI chooser, excludes expired stock, disables unavailable items and supports multiple distinct medicines without changing inventory deductions. Authorized staff may start any CONFIRMED appointment regardless of schedule date/time. Original schedule and actual start are retained separately; duplicate starts resume one consultation and only finalized medical-record save marks COMPLETED. Deploy follow-up migration `20261018030000_appointment_consultation_start` before rollout.
+
+## Resident ID review and VAWC contacts — 2026-11-09
+
+Admin/Secretary may view database-backed ID type, number and a read-only/enlargeable image in the resident modal. Secretary/CLERK inspection does not grant resident editing permission. Staff image access uses a dedicated ADMIN/CLERK-only endpoint; existing resident self-service image access is retained. Both optional VAWC contact fields use fixed +63 Philippine mobile inputs and server/client validation with normalized storage and legacy-format edit support. No database migration required.

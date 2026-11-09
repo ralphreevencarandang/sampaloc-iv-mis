@@ -6,6 +6,7 @@ import { canAccessResource, isReadOnlyAdmin, type AdminAction, type AdminResourc
 
 type AdminRbacContextValue = {
   role?: AdminRole | null
+  email?: string | null
   can: (resource: AdminResource, action?: AdminAction) => boolean
   isReadOnly: boolean
 }
@@ -14,9 +15,11 @@ const AdminRbacContext = createContext<AdminRbacContextValue | null>(null)
 
 export function AdminRbacProvider({
   role,
+  email,
   children,
 }: {
   role?: AdminRole | null
+  email?: string | null
   children: React.ReactNode
 }) {
   const readOnly = isReadOnlyAdmin(role)
@@ -83,6 +86,7 @@ export function AdminRbacProvider({
     <AdminRbacContext.Provider
       value={{
         role,
+        email,
         can: (resource, action = 'read') => canAccessResource(role, resource, action),
         isReadOnly: readOnly,
       }}

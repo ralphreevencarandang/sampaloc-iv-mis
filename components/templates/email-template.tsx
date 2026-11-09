@@ -25,8 +25,8 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
     <h1 style={{ color: '#059669' }}>{heading}</h1>
     <p>Hi {firstName},</p>
     <p>{intro}</p>
-    {paragraphs.map((paragraph) => (
-      <p key={paragraph}>{paragraph}</p>
+    {paragraphs.map((paragraph, index) => (
+      <p key={index} style={{ whiteSpace: 'pre-wrap' }}>{paragraph}</p>
     ))}
     {ctaLabel && ctaUrl ? (
       <div style={{ marginTop: '30px', marginBottom: '30px' }}>
