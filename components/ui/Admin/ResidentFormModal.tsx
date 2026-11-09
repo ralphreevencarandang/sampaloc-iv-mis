@@ -7,6 +7,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { updateResidentAction } from '@/server/actions/resident.actions'
 import { adminResidentUpdateSchema, type AdminResidentUpdateInput } from '@/validations/auth.validation'
+import ResidentIdPreview from '@/components/ui/Admin/ResidentIdPreview'
+import { useAdminRbac } from '@/components/providers/admin-rbac-provider'
 import { PhilippineMobileInput } from '@/components/ui/resident-inputs'
 import { mobileNationalNumber } from '@/lib/resident-contact'
 import { calculateAge, PWD_CONDITIONS } from '@/lib/resident-demographics'
@@ -47,6 +49,9 @@ function RequiredMark() {
 
 const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
   const queryClient = useQueryClient()
+  const { role, can } = useAdminRbac()
+  const canEdit = can('residents', 'write')
+  const canViewId = role === 'ADMIN' || role === 'CLERK'
   const [globalError, setGlobalError] = useState('')
 
   const {
@@ -192,10 +197,10 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-xl">
         <div className="sticky top-0 bg-white p-6 border-b border-gray-100 z-10">
           <h2 className="text-2xl font-bold text-slate-900">
-            {initialData ? 'Edit Resident' : 'Add New Resident'}
+            {initialData ? canEdit ? 'Edit Resident' : 'View Resident' : 'Add New Resident'}
           </h2>
           <p className="text-slate-600 mt-1">
-            {initialData ? 'Update the resident information below' : 'Fill in the resident information below'}
+            {initialData ? canEdit ? 'Update the resident information below' : 'Review the resident information and uploaded ID below' : 'Fill in the resident information below'}
           </p>
         </div>
 
@@ -206,7 +211,9 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {initialData && canViewId && <ResidentIdPreview key={initialData.id} residentId={initialData.id} />}
+
+          <fieldset disabled={!canEdit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label htmlFor="firstName" className="text-sm font-medium text-slate-700">
                 First Name<RequiredMark />
@@ -418,7 +425,7 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
               </select>
               {errors.pwdCondition && <span className="text-xs text-red-500">{errors.pwdCondition.message}</span>}
             </div>
-          </div>
+          </fieldset>
 
           <div className="sticky bottom-0 bg-white py-4 border-t border-gray-100 mt-6 flex gap-3">
             <button
@@ -429,13 +436,13 @@ const ResidentFormModal = ({ isOpen, onClose, initialData }: ModalProps) => {
             >
               Cancel
             </button>
-            <button
+            {canEdit && <button
               type="submit"
               disabled={mutation.isPending}
               className="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
             >
               {mutation.isPending ? 'Saving...' : (initialData ? 'Update Resident' : 'Add Resident')}
-            </button>
+            </button>}
           </div>
         </form>
       </div>

@@ -12,11 +12,12 @@ test("registration, Admin create and edit use real RHF validation, accessible to
       import React from 'react';
       import { createRoot } from 'react-dom/client';
       import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+      import { AdminRbacProvider } from './components/providers/admin-rbac-provider';
       import Register from './app/(Resident)/register/page';
       import Create from './components/ui/Admin/CreateResidentModal';
       import Edit from './components/ui/Admin/ResidentFormModal';
       const initialData={id:'synthetic',email:'synthetic@example.invalid',firstName:'Juan',middleName:'',lastName:'Cruz',birthDate:'2000-01-01',gender:'Male',civilStatus:'Single',street:'Test',houseNumber:'1',contactNumber:'09123456789',citizenship:'Filipino',isVoter:false,is4Ps:false,isPwd:false,status:'PENDING'};
-      window.renderForm=mode=>createRoot(document.getElementById('root')).render(<QueryClientProvider client={new QueryClient()}>{mode==='register'?<Register/>:mode==='create'?<Create isOpen onClose={()=>{}}/>:<Edit isOpen onClose={()=>{}} initialData={initialData}/>}</QueryClientProvider>);
+      window.renderForm=mode=>createRoot(document.getElementById('root')).render(<QueryClientProvider client={new QueryClient()}>{mode==='register'?<Register/>:mode==='create'?<Create isOpen onClose={()=>{}}/>:<AdminRbacProvider role="ADMIN"><Edit isOpen onClose={()=>{}} initialData={initialData}/></AdminRbacProvider>}</QueryClientProvider>);
     `, resolveDir: process.cwd(), loader: "tsx", sourcefile: "resident-fixture.tsx" },
     bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic",
     define: { "process.env.NODE_ENV": '"production"' },
@@ -64,7 +65,7 @@ test("registration, Admin create and edit use real RHF validation, accessible to
           await page.$eval(selector, el => (el as HTMLInputElement).focus());
           await page.keyboard.down("Control"); await page.keyboard.press("A"); await page.keyboard.up("Control");
           await page.keyboard.press("Backspace");
-          await page.type(selector, value);
+          await page.type(selector, value, { delay: 15 });
         };
         await replace(phone, "9a!123456789000");
         assert.equal(await page.$eval(phone, el => (el as HTMLInputElement).value), "9123456789");

@@ -93,7 +93,7 @@ ID controls follow type, conditional Other specification, number, then upload. I
 | --- | --- | --- | --- | --- | --- |
 | `AnnouncementModalForm` | `components/ui/Admin/AnnouncementModalForm.tsx` | Create/edit announcements. | `AnnouncementModalFormProps` | Announcements page | Uploads optional image. |
 | `OfficialModalForm` | `components/ui/Admin/OfficialModalForm.tsx` | Create/edit officials. | `OfficialModalFormProps` | Officials page | Uploads optional profile. |
-| `ResidentFormModal` | `components/ui/Admin/ResidentFormModal.tsx` | Edit resident and verification status. | `ModalProps` | Resident page | Includes approval fields. |
+| `ResidentFormModal` | `components/ui/Admin/ResidentFormModal.tsx` | Edit resident and verification status; read-only database ID preview for Admin/Secretary. | `ModalProps` | Resident page | Includes approval fields. |
 | `CreateResidentModal` | `components/ui/Admin/CreateResidentModal.tsx` | Create residents from admin management using public registration fields, validation, valid ID upload, and account credentials. | `{ isOpen, onClose }` | Resident page | Uses `residentRegistrationSchema`, shared age/voting helpers and the authorized resident creation action; invalidates the resident query after success. |
 
 ### Admin resident creation modal
@@ -309,3 +309,25 @@ Created By uses a read-only text input instead of an Official selector. Creation
 | Semantics | Visible associated label; native readOnly text input |
 
 The surrounding modal retains its established layout. Recognized creators use the requested canonical names, including supplied initials; other historical names remain available. No new dependency or theme replacement.
+
+### ResidentIdPreview and resident modal access
+
+File: components/ui/Admin/ResidentIdPreview.tsx. Updated: 2026-11-09.
+
+ResidentIdPreview({ residentId }) fetches only ID metadata from the protected resident-valid-id query and displays type (including custom Other type), number and a read-only image. It provides loading, retry, no-image and image-load-failure feedback. The thumbnail opens the existing native AppointmentDialog for an enlarged, contained image, Escape dismissal and focus restoration. Images use unoptimized Next Image so the authenticated request reaches the protected route; no upload/replacement/deletion controls or form fields are introduced. Query data has zero retention after unmount and is fetched without HTTP caching.
+
+| Property | Pattern |
+| --- | --- |
+| Surface / border | bg-surface-muted, bg-surface, border-outline |
+| Text | text-content, text-content-muted; error text-stock-empty-text |
+| Radius / spacing | rounded-lg; section p-4 space-y-3, dialog p-6 space-y-4 |
+| Heading / details | text-lg font-semibold; text-sm details; text-xs guidance |
+| Focus / action | focus-visible:ring-2 focus-visible:ring-primary-500; text-primary-700 |
+
+ResidentFormModal renders the preview only for ADMIN/CLERK. Clerk/Secretary can open the same modal from the resident list in view mode; the resident fields are disabled and no save button appears. Existing server write permissions remain unchanged. ID fields are outside editable form state and are ignored by the resident update action.
+
+### VAWC mobile contacts
+
+File: components/ui/Admin/VawcModalForm.tsx. Updated: 2026-11-09.
+
+Victim and respondent contact fields reuse PhilippineMobileInput through RHF Controller. Both have associated labels, fixed +63, numeric keyboard, ten-digit maximum and semantic field-level error feedback. Input styling: w-full rounded-lg border border-outline px-4 py-2 text-content focus:outline-none focus:border-primary-500. Existing local/international phone formats prefill through mobileNationalNumber. The shared create/edit Zod schema permits blank contacts and normalizes valid supplied values to +639XXXXXXXXX on both client and server. Invalid historical numbers require correction or clearing when saved; no bulk rewrite.

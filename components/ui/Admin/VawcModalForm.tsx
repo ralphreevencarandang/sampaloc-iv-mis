@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useForm, useWatch, type Resolver, type SubmitHandler } from "react-hook-form";
+import { Controller, useForm, useWatch, type Resolver, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, X, ShieldAlert } from "lucide-react";
@@ -9,6 +9,8 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 
 import { createVawc, updateVawc, type CreateVawcResult, type VawcRecordType } from "@/server/actions/vawc.actions";
+import { PhilippineMobileInput } from "@/components/ui/resident-inputs";
+import { mobileNationalNumber } from "@/lib/resident-contact";
 import { vawcSchema, type VawcFormInput } from "@/validations/vawc.validation";
 
 export interface VawcModalFormProps {
@@ -119,7 +121,7 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
         setValue("victimSex", initialData.victimSex);
         setValue("victimCivilStatus", initialData.victimCivilStatus);
         setValue("victimAddress", initialData.victimAddress);
-        setValue("victimContactNumber", initialData.victimContactNumber || "");
+        setValue("victimContactNumber", mobileNationalNumber(initialData.victimContactNumber || ""));
         setValue("isMinor", initialData.isMinor);
         setValue("guardianName", initialData.guardianName || "");
 
@@ -127,7 +129,7 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
         setValue("respondentAge", initialData.respondentAge);
         setValue("respondentSex", initialData.respondentSex);
         setValue("respondentAddress", initialData.respondentAddress);
-        setValue("respondentContactNumber", initialData.respondentContactNumber || "");
+        setValue("respondentContactNumber", mobileNationalNumber(initialData.respondentContactNumber || ""));
         setValue("respondentOccupation", initialData.respondentOccupation || "");
         setValue("relationshipToVictim", initialData.relationshipToVictim);
 
@@ -326,8 +328,11 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
               {errors.victimCivilStatus && <span className="text-red-500 text-xs">{errors.victimCivilStatus.message}</span>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-700">Contact Number</label>
-              <input type="text" {...register("victimContactNumber")} className={fieldClasses(!!errors.victimContactNumber)} />
+              <label htmlFor="victimContactNumber" className="text-sm font-medium text-slate-700">Contact Number</label>
+              <Controller name="victimContactNumber" control={control} render={({ field }) => (
+                <PhilippineMobileInput {...field} id="victimContactNumber" aria-label="Victim contact number, +63 followed by 10 digits" className="w-full rounded-lg border border-outline px-4 py-2 text-content focus:outline-none focus:border-primary-500" />
+              )} />
+              {errors.victimContactNumber && <span role="alert" className="text-xs text-stock-empty-text">{errors.victimContactNumber.message}</span>}
             </div>
           </div>
 
@@ -394,8 +399,11 @@ const VawcModalForm = ({ isOpen, onClose, initialData }: VawcModalFormProps) => 
               {errors.respondentAddress && <span className="text-red-500 text-xs">{errors.respondentAddress.message}</span>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-slate-700">Contact Number</label>
-              <input type="text" {...register("respondentContactNumber")} className={fieldClasses(!!errors.respondentContactNumber)} />
+              <label htmlFor="respondentContactNumber" className="text-sm font-medium text-slate-700">Contact Number</label>
+              <Controller name="respondentContactNumber" control={control} render={({ field }) => (
+                <PhilippineMobileInput {...field} id="respondentContactNumber" aria-label="Respondent contact number, +63 followed by 10 digits" className="w-full rounded-lg border border-outline px-4 py-2 text-content focus:outline-none focus:border-primary-500" />
+              )} />
+              {errors.respondentContactNumber && <span role="alert" className="text-xs text-stock-empty-text">{errors.respondentContactNumber.message}</span>}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">

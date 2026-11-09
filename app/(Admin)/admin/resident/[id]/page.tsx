@@ -400,6 +400,7 @@ export default function ResidentViewPage() {
                     className="group block overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
                   >
                     <Image
+                      unoptimized
                       src={resident.validIDImage}
                       alt={`Valid ID of ${fullName}`}
                       width={1200}

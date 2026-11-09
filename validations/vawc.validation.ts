@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizePhilippineMobile } from "@/lib/resident-contact";
 
 const trimToUndefined = (value: unknown) => {
   if (value === null || value === undefined) {
@@ -24,6 +25,13 @@ const optionalTrimmedString = z.preprocess(
   z.string().optional()
 );
 
+const optionalMobile = z.preprocess(
+  trimToUndefined,
+  z.string().transform(normalizePhilippineMobile)
+    .refine(value => /^\+639\d{9}$/.test(value), "Enter a valid Philippine mobile number.")
+    .optional()
+);
+
 const requiredNumber = (message: string) =>
   z.preprocess((value) => {
     if (value === "" || value === null || value === undefined) {
@@ -44,7 +52,7 @@ export const vawcSchema = z.object({
   victimSex: requiredString("Victim sex is required."),
   victimCivilStatus: requiredString("Victim civil status is required."),
   victimAddress: requiredString("Victim address is required.", 5),
-  victimContactNumber: optionalTrimmedString,
+  victimContactNumber: optionalMobile,
   isMinor: z.preprocess((val) => val === "true" || val === true, z.boolean()),
   guardianName: optionalTrimmedString,
 
@@ -52,7 +60,7 @@ export const vawcSchema = z.object({
   respondentAge: requiredNumber("Respondent age is required."),
   respondentSex: requiredString("Respondent sex is required."),
   respondentAddress: requiredString("Respondent address is required.", 5),
-  respondentContactNumber: optionalTrimmedString,
+  respondentContactNumber: optionalMobile,
   respondentOccupation: optionalTrimmedString,
   relationshipToVictim: z.enum(["SPOUSE", "FORMER_SPOUSE", "LIVE_IN", "DATING", "FORMER_DATING", "OTHER"]),
 

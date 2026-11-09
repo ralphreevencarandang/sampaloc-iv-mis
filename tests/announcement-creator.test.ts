@@ -64,7 +64,7 @@ test("announcement creation uses the authenticated role and edits cannot replace
   }
   for (const count of [0, 2]) {
     matches = count;
-    const before = writes;
+    const before: number = writes;
     assert.equal((await actions.createAnnouncementAction(form)).success, false);
     assert.equal(writes, before);
   }

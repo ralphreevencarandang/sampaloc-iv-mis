@@ -472,13 +472,13 @@ export default function ResidentPage() {
                               >
                                 <Eye className="h-4 w-4" />
                               </Link>
-                              {canManageResidents && <button
+                              {(canManageResidents || role === 'CLERK') && <button
                                 onClick={() => {
                                   setSelectedResident(resident)
                                   setIsModalOpen(true)
                                 }}
                                 className="rounded-lg p-1.5 text-amber-600 transition-colors hover:bg-amber-50"
-                                title="Edit"
+                                title={canManageResidents ? "Edit" : "View resident ID"}
                               >
                                 <Edit2 className="h-4 w-4" />
                               </button>}
