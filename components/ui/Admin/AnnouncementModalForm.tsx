@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Upload, X } from 'lucide-react'
 import Image from 'next/image'
 import React, { useEffect, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { MAX_VALID_ID_IMAGE_SIZE_BYTES, validateValidIdImageFile } from '@/lib/valid-id-image'
 import {
   createAnnouncementAction,
@@ -13,9 +13,10 @@ import {
 } from '@/server/actions/announcement.actions'
 import { type AnnouncementRecord } from '@/server/announcements/announcements'
 import { useAdminRbac } from '@/components/providers/admin-rbac-provider'
-import { getAnnouncementCreator, getAnnouncementCreatorName } from '@/lib/announcement-creator'
+import { ANNOUNCEMENT_OFFICIALS, canSelectAnnouncementCreator, getAccountAnnouncementCreator, getAnnouncementCreatorName } from '@/lib/announcement-creator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  announcementSchema,
+  announcementFormSchema,
   type AnnouncementFormInput,
 } from '@/validations/announcement.validation'
 
@@ -35,6 +36,7 @@ const defaultValues: AnnouncementFormInput = {
   title: '',
   content: '',
   imageName: '',
+  creatorName: '',
 }
 
 function RequiredMark() {
@@ -49,7 +51,8 @@ export default function AnnouncementModalForm({
   onSaved,
 }: AnnouncementModalFormProps) {
   const queryClient = useQueryClient()
-  const { role } = useAdminRbac()
+  const account = useAdminRbac()
+  const canSelectCreator = canSelectAnnouncementCreator(account)
   const [imagePreview, setImagePreview] = useState<string | null>(() => initialData?.image ?? null)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imageRemoved, setImageRemoved] = useState(false)
@@ -62,18 +65,20 @@ export default function AnnouncementModalForm({
         title: initialData.title,
         content: initialData.content,
         imageName: '',
+        creatorName: '',
       }
     : defaultValues
 
   const {
     register,
+    control,
     handleSubmit,
     setError,
     setValue,
     clearErrors,
     formState: { errors },
   } = useForm<AnnouncementFormInput>({
-    resolver: zodResolver(announcementSchema),
+    resolver: zodResolver(announcementFormSchema(canSelectCreator, isEditMode)),
     defaultValues: formDefaultValues,
   })
 
@@ -90,6 +95,7 @@ export default function AnnouncementModalForm({
       const submission = new FormData()
       submission.set('title', data.title)
       submission.set('content', data.content)
+      if (canSelectCreator && data.creatorName) submission.set('creatorName', data.creatorName)
 
       if (selectedImage) {
         submission.set('image', selectedImage)
@@ -199,7 +205,7 @@ export default function AnnouncementModalForm({
   }
 
   const onSubmit = async (data: AnnouncementFormInput) => {
-    await announcementMutation.mutateAsync(data)
+    try { await announcementMutation.mutateAsync(data) } catch { /* onError presents the safe failure message. */ }
   }
 
   if (!isOpen) return null
@@ -229,15 +235,34 @@ export default function AnnouncementModalForm({
             <label htmlFor="createdById" className="text-sm font-medium text-slate-700">
               Created By<RequiredMark />
             </label>
-            <input
+            {canSelectCreator ? <Controller name="creatorName" control={control} render={({ field }) => <Select
+              name={field.name}
+              value={field.value || null}
+              onValueChange={value => field.onChange(value ?? '')}
+              items={[
+                ...(isEditMode && initialData ? [{ value: '', label: `Keep original: ${getAnnouncementCreatorName(initialData.createdBy)}` }] : []),
+                ...ANNOUNCEMENT_OFFICIALS.map(official => ({ value: official.name, label: official.name })),
+              ]}
+              disabled={announcementMutation.isPending}
+            >
+              <SelectTrigger id="createdById" ref={field.ref} onBlur={field.onBlur} aria-invalid={Boolean(errors.creatorName)} aria-describedby={errors.creatorName ? 'creator-error creator-help' : 'creator-help'}>
+                <SelectValue placeholder={isEditMode && initialData ? getAnnouncementCreatorName(initialData.createdBy) : 'Select an official'} />
+              </SelectTrigger>
+              <SelectContent>
+                {isEditMode && initialData && <SelectItem value="">Keep original: {getAnnouncementCreatorName(initialData.createdBy)}</SelectItem>}
+                {ANNOUNCEMENT_OFFICIALS.map(official => <SelectItem key={official.name} value={official.name}>{official.name}</SelectItem>)}
+              </SelectContent>
+            </Select>} /> : <input
               id="createdById"
               type="text"
               readOnly
               value={isEditMode && initialData
                 ? getAnnouncementCreatorName(initialData.createdBy)
-                : getAnnouncementCreator(role)?.name ?? 'No creator assigned'}
+                : getAccountAnnouncementCreator(account)?.name ?? 'No creator assigned'}
               className="rounded-lg border border-outline bg-surface-muted px-4 py-2 text-content focus:border-primary-500 focus:outline-none"
-            />
+            />}
+            {canSelectCreator && <p id="creator-help" className="text-xs text-content-muted">{isEditMode ? 'The original creator is kept unless you select a replacement.' : 'Select the official who should be credited for this announcement.'}</p>}
+            {errors.creatorName && <p id="creator-error" role="alert" className="text-sm text-stock-empty-text">{errors.creatorName.message}</p>}
           </div>
 
           <div className="flex flex-col gap-2">

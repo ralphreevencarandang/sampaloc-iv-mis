@@ -33,14 +33,23 @@ export default function CreateResidentModal({ isOpen, onClose }: Props) {
   const age = getRegistrationAge(values.birthDate)
   const canVote = age !== null && age >= 15
   const mutation = useMutation({
-    mutationFn: createAdminResidentAction,
+    mutationFn: (data: FormData) => createAdminResidentAction(data),
     onSuccess: (result) => {
-      if (!result.success) { setErrors(result.fieldErrors ?? {}); toast.error(result.message); return }
+      if (!result?.success) {
+        const message = result?.message || 'Unable to create resident. Please try again.'
+        setErrors({ ...result?.fieldErrors, submit: message }); toast.error(message); return
+      }
       toast.success('Resident created successfully. The account is pending approval.')
       void queryClient.invalidateQueries({ queryKey: ['residents'] })
       setValues(empty); setImage(null); setErrors({}); onClose()
     },
-    onError: () => toast.error('Unable to create resident. Please try again.'),
+    onError: (error) => {
+      const message = /body.?size.?limit|payload|request entity too large|413|too large/i.test(error instanceof Error ? error.message : '')
+        ? 'The uploaded ID exceeds the request size limit. Please use a smaller image and try again.'
+        : 'Unable to create resident. Please try again. If the problem continues, contact an administrator.'
+      setErrors(current => ({ ...current, submit: message }))
+      toast.error(message)
+    },
   })
   useEffect(() => {
     if (!isOpen) { setValues(empty); setImage(null); setErrors({}) }
@@ -55,7 +64,8 @@ export default function CreateResidentModal({ isOpen, onClose }: Props) {
   })
   const submit = (parsed: ResidentRegistrationInput) => {
     const validImage = image ? validateValidIdImageFile(image) : 'Valid ID image is required.'
-    if (validImage) { setErrors({ validIDImageName: validImage }); return }
+    if (validImage) { setErrors({ validIDImageName: validImage, submit: 'Please correct the highlighted fields.' }); return }
+    setErrors({})
     const data = new FormData()
     for (const [key, value] of Object.entries(parsed)) data.set(key, value)
     if (image) data.set('validIDImage', image)
@@ -70,22 +80,35 @@ export default function CreateResidentModal({ isOpen, onClose }: Props) {
   </div>
   const select = (name: Field, title: string, options: string[], required = true, disabled = false) => <div key={name}>
     <label className={labelClass} htmlFor={`create-${name}`}>{title}{required && <span className="text-red-600"> *</span>}</label>
-    <select id={`create-${name}`} className={inputClass} value={values[name]} disabled={disabled} onChange={e => set(name, e.target.value)}>
+    <select {...register(name)} id={`create-${name}`} className={inputClass} value={values[name]} disabled={disabled} onChange={e => set(name, e.target.value)}>
       <option value="">Select {title}</option>{options.map(option => <option key={option}>{option}</option>)}
     </select>{errors[name] && <p className="mt-1 text-sm text-red-600">{errors[name]}</p>}
   </div>
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !mutation.isPending) onClose() }}>
     <section role="dialog" aria-modal="true" aria-labelledby="create-resident-title" className="max-h-[95vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white p-5 shadow-xl sm:p-7">
-      <div className="mb-5 flex items-center justify-between"><div><h2 id="create-resident-title" className="text-xl font-semibold text-gray-900">Create Resident</h2><p className="text-sm text-gray-600">Enter the same registration details collected on the resident registration page.</p></div><button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"><X className="h-5 w-5" /></button></div>
+      <div className="mb-5 flex items-center justify-between"><div><h2 id="create-resident-title" className="text-xl font-semibold text-gray-900">Create Resident</h2><p className="text-sm text-gray-600">Enter the same registration details collected on the resident registration page.</p></div><button type="button" onClick={onClose} disabled={mutation.isPending} aria-label="Close" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"><X className="h-5 w-5" /></button></div>
       <form noValidate onSubmit={handleSubmit(submit, fieldErrors => {
-        setErrors(Object.fromEntries(Object.entries(fieldErrors).map(([name, error]) => [name, error?.message ?? 'Invalid value.'])))
-      })} className="space-y-6">
+        setErrors({ ...Object.fromEntries(Object.entries(fieldErrors).map(([name, error]) => [name, error?.message ?? 'Invalid value.'])), submit: 'Please correct the highlighted fields.' })
+      })} aria-busy={mutation.isPending} className="space-y-6">
+        <fieldset disabled={mutation.isPending} className="space-y-6">
         <section><h3 className="mb-3 border-b border-primary-600 pb-2 font-semibold">Account Credentials</h3><div className="grid gap-4 sm:grid-cols-2">{control('email','Email','email',true)}{control('password','Password','password',true)}{control('confirmPassword','Confirm Password','password',true)}</div><p className="mt-2 text-xs text-gray-500">Password must be at least 8 characters and include an uppercase letter, number, and special character.</p></section>
         <section><h3 className="mb-3 border-b border-primary-600 pb-2 font-semibold">Personal Information</h3><div className="grid gap-4 sm:grid-cols-2">{control('firstName','First Name','text',true)}{control('middleName','Middle Name')}{control('lastName','Last Name','text',true)}{control('birthDate','Birth Date','date',true)}{select('gender','Gender',['Male','Female'])}{select('civilStatus','Civil Status',['Single','Married','Widowed','Divorced','Separated','Solo Parent'])}</div></section>
         <section><h3 className="mb-3 border-b border-primary-600 pb-2 font-semibold">Contact & Address</h3><div className="grid gap-4 sm:grid-cols-2">{control('street','Street','text',true)}{control('houseNumber','House Number','text',true)}{control('subdivision','Subdivision')}{control('phase','Phase')}{control('contactNumber','Contact Number','tel',true)}{control('occupation','Occupation')}{control('citizenship','Citizenship','text',true)}{select('isVoter','Eligible to Vote',['Yes','No'],true,!canVote)}{values.isVoter === 'Yes' && control('precinctNumber','Precinct Number','text',true)}{select('is4Ps','4Ps Beneficiary',['Yes','No'])}{select('isPwd','PWD',['Yes','No'])}{values.isPwd === 'Yes' && select('pwdCondition','PWD Condition',[...PWD_CONDITIONS])}</div>{!canVote && <p className="mt-2 text-xs text-gray-500">Voting eligibility is set to No for residents under age 15. Select a valid birth date to enable this field.</p>}</section>
         <section><h3 className="mb-3 border-b border-primary-600 pb-2 font-semibold">Identity Verification</h3><div className="grid gap-4 sm:grid-cols-2">{select('idType','ID Type',[...VALID_ID_TYPES])}{values.idType === 'Other' && control('otherIdType','Specify ID Type','text',true)}{control('idNumber','ID Number','text',true)}<div><label className={labelClass} htmlFor="create-validIDImage">Upload Valid ID <span className="text-red-600">*</span></label><input id="create-validIDImage" type="file" accept="image/jpeg,image/png,image/webp" disabled={!values.idType} className={inputClass} onChange={e => setImage(e.target.files?.[0] ?? null)} />{errors.validIDImageName && <p className="mt-1 text-sm text-red-600">{errors.validIDImageName}</p>}<p className="mt-1 text-xs text-gray-500">JPG, PNG, or WebP up to 5MB.</p></div></div></section>
-        {errors.submit && <p role="alert" className="text-sm text-red-600">{errors.submit}</p>}
-        <div className="flex justify-end gap-3 border-t pt-4"><button type="button" onClick={onClose} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium">Cancel</button><button type="submit" disabled={mutation.isPending} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{mutation.isPending ? 'Creating...' : 'Create Resident'}</button></div>
+        </fieldset>
+        {Object.keys(errors).length > 0 && <div role="alert" className="rounded-lg border border-stock-empty-border bg-stock-empty-surface p-4 text-sm text-stock-empty-text">
+          <p className="font-medium">{errors.submit || 'Please correct the highlighted fields.'}</p>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            {Object.entries(errors).filter(([name]) => name !== 'submit').map(([name, message]) => <li key={name}>
+              <a href={`#create-${name === 'validIDImageName' ? 'validIDImage' : name}`} className="underline focus-visible:ring-2 focus-visible:ring-primary-500" onClick={event => {
+                event.preventDefault()
+                const field = document.getElementById(`create-${name === 'validIDImageName' ? 'validIDImage' : name}`)
+                field?.focus(); field?.scrollIntoView({ block: 'center' })
+              }}>{message}</a>
+            </li>)}
+          </ul>
+        </div>}
+        <div className="flex justify-end gap-3 border-t pt-4"><button type="button" onClick={onClose} disabled={mutation.isPending} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium">Cancel</button><button type="submit" disabled={mutation.isPending} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50">{mutation.isPending ? 'Creating...' : 'Create Resident'}</button></div>
       </form>
     </section>
   </div>

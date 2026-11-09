@@ -9,7 +9,8 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: "5mb",
+      // Allow multipart metadata in addition to the validated 5 MB ID image.
+      bodySizeLimit: "6mb",
     },
   },
   images: {

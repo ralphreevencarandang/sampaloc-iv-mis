@@ -21,6 +21,7 @@ import {
   Archive,
   Venus,
   HeartPulse,
+  Mail,
 } from 'lucide-react';
 import { logoutAdminAction } from '@/server/actions/auth.actions';
 import Image from 'next/image';
@@ -66,6 +67,7 @@ const AdminSidebar = ({ role }: { role?: AdminRole | null }) => {
     { label: 'Resident', href: '/admin/resident', icon: <Home className="w-5 h-5" />, resource: 'residents' },
     { label: 'Voters', href: '/admin/voters', icon: <Vote className="w-5 h-5" />, resource: 'voters' },
     { label: 'Documents', href: '/admin/documents', icon: <FileText className="w-5 h-5" />, resource: 'documents' },
+    { label: 'Send Email', href: '/admin/send-email', icon: <Mail className="w-5 h-5" />, resource: 'email' },
     { label: 'Blotter', href: '/admin/blotter', icon: <BookOpen className="w-5 h-5" />, resource: 'blotter' },
     { label: 'Health', href: '/admin/health', icon: <HeartPulse className="w-5 h-5" />, resource: 'health' },
     { label: 'VAWC', href: '/admin/vawc', icon: <Venus className="w-5 h-5" />, resource: 'vawc' },

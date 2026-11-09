@@ -17,7 +17,7 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <AdminRbacProvider role={currentAdmin.role}>
+      <AdminRbacProvider role={currentAdmin.role} email={currentAdmin.email}>
         <AdminSidebar role={currentAdmin.role} />
         <main className="flex-1 overflow-auto md:ml-0">
           <div className="p-4 md:p-8">

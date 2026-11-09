@@ -315,6 +315,8 @@ Key server actions and route handlers have repeatable tests; build and lint rema
 
 ## Recommended Next Development Task
 
+Staff Send Email (2026-11-09) was explicitly requested and implemented at `/admin/send-email` for ADMIN/CLERK, with a Mail sidebar item, shared RHF/Zod validation, existing SMTP/template reuse, server authorization, persistent rate limits and duplicate-send protection. No new schema or dependency is required. Verification is recorded in progress-tracker.md. No next roadmap feature is authorized automatically.
+
 Run a focused security and authorization audit of all `server/actions/*.ts` and `app/api/**/*.ts`, then patch any direct-call authorization gaps before adding new features.
 
 ## Clinic Appointment & Walk-In Management — 2026-10-18

@@ -50,7 +50,7 @@ test('resident IDs and VAWC contact fields work with real React forms at desktop
       for(const id of ['victimContactNumber','respondentContactNumber']){
         assert.equal(await page.$eval('#'+id,el=>(el as HTMLInputElement).value),'9123456789');
         await replace('#'+id,'9a!123456789000');assert.equal(await page.$eval('#'+id,el=>(el as HTMLInputElement).value),'9123456789');
-        assert.match(await page.$eval('#'+id,el=>el.parentElement?.textContent),/\+63/);
+        assert.match(await page.$eval('#'+id,el=>el.parentElement?.textContent ?? ''),/\+63/);
         await replace('#'+id,'8123456789');
       }
       await page.$eval('form', el => (el as HTMLFormElement).requestSubmit());await page.waitForFunction(()=>document.querySelectorAll('[role="alert"]').length>0);

@@ -149,6 +149,8 @@ The application is implemented as a Next.js App Router project with route groups
 
 ## Features In Scope
 
+Staff Send Email is available at `/admin/send-email` for ADMIN and CLERK, including Secretary accounts using the existing staff roles. It uses the system SMTP sender, server-enforced permissions, persistent attempt limits and safe plain-text composition. Other barangay roles and Residents cannot access or send through this feature.
+
 Verified in code: resident auth and registration, admin auth and RBAC, health-worker auth, resident profile APIs, resident document requests, admin document requests, PDF generation, announcements, officials, residents, voters, pets, blotter, VAWC, inventory, clinic medical records, archives, image uploads, and email helpers.
 
 ## Features Out of Scope

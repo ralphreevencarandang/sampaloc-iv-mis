@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import { registerResidentAction } from "@/server/actions/auth.actions";
 import {
   MAX_VALID_ID_IMAGE_SIZE_BYTES,
@@ -103,30 +104,30 @@ export default function RegisterPage() {
   }, [formData.validIDImagePreview]);
 
   const registerMutation = useMutation({
-    mutationFn: registerResidentAction,
+    mutationFn: (data: FormData) => registerResidentAction(data),
     onSuccess: (result) => {
       if (!result) {
         setErrors({
           submit: "Registration failed. Please try again.",
         });
+        toast.error("Registration failed. Please try again.");
         return;
       }
 
       if (!result.success) {
-        setErrors(result.fieldErrors ?? {});
-
-        if (!result.fieldErrors) {
-          setErrors({ submit: result.message });
-        }
-
+        setErrors({ ...result.fieldErrors, submit: result.message });
+        toast.error(result.message);
         return;
       }
 
       setErrors({});
+      toast.success("Resident account created successfully. The account is pending approval.");
       router.replace("/Login");
     },
     onError: (error) => {
-      setErrors(getSubmissionErrorMessage(error));
+      const feedback = getSubmissionErrorMessage(error);
+      setErrors(feedback);
+      toast.error(feedback.submit);
     },
   });
 
@@ -254,7 +255,12 @@ export default function RegisterPage() {
     submission.set("idNumber", data.idNumber);
     submission.set("otherIdType", data.otherIdType);
 
-    await registerMutation.mutateAsync(submission);
+    setErrors({});
+    try {
+      await registerMutation.mutateAsync(submission);
+    } catch {
+      // The mutation's onError displays the safe message and retains entered data.
+    }
   };
 
   return (
@@ -272,15 +278,11 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {errors.submit && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {errors.submit}
-          </div>
-        )}
-
         <form noValidate onSubmit={validateAndSubmit(handleSubmit, fieldErrors => {
-          setErrors(Object.fromEntries(Object.entries(fieldErrors).map(([name, error]) => [name, error?.message ?? "Invalid value."])));
-        })} className="space-y-8">
+          setErrors({ ...Object.fromEntries(Object.entries(fieldErrors).map(([name, error]) => [name, error?.message ?? "Invalid value."])), submit: "Please correct the highlighted fields." });
+          toast.error("Please correct the highlighted fields.");
+        })} aria-busy={registerMutation.isPending} className="space-y-8">
+          <fieldset disabled={registerMutation.isPending} className="space-y-8">
           <section>
             <h2 className="mb-4 border-b-2 border-primary-600 pb-2 text-lg font-semibold text-gray-900">
               Account Details
@@ -784,6 +786,19 @@ export default function RegisterPage() {
             )}
           </section>
 
+          </fieldset>
+          {Object.values(errors).some(Boolean) && <div role="alert" className="rounded-lg border border-stock-empty-border bg-stock-empty-surface p-4 text-sm text-stock-empty-text">
+            <p className="font-medium">{errors.submit || "Please correct the highlighted fields."}</p>
+            <ul className="mt-2 list-inside list-disc space-y-1">
+              {Object.entries(errors).filter(([name, message]) => name !== "submit" && message).map(([name, message]) => <li key={name}>
+                <a href={`#${name}`} className="underline focus-visible:ring-2 focus-visible:ring-primary-500" onClick={event => {
+                  event.preventDefault();
+                  const field = document.getElementById(`register-${name}`) ?? document.getElementsByName(name).item(0) ?? document.getElementById(name === "validIDImageName" ? "validIDImage" : name);
+                  field?.focus(); field?.scrollIntoView({ block: "center" });
+                }}>{message}</a>
+              </li>)}
+            </ul>
+          </div>}
           <div className="flex gap-4">
             <button
               type="submit"
@@ -794,6 +809,7 @@ export default function RegisterPage() {
             </button>
             <button
               type="button"
+              disabled={registerMutation.isPending}
               onClick={() => {
                 if (formData.validIDImagePreview) {
                   URL.revokeObjectURL(formData.validIDImagePreview);
