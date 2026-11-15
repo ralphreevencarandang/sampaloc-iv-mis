@@ -274,6 +274,39 @@ The document selector remains usable to inspect requirements. The selected docum
 
 After implementing a new reusable component, update this file with the component name, path, purpose, props, usage, dependencies, variants, and verification date.
 
+### HouseholdRegistrationFields
+
+File: `components/ui/HouseholdRegistrationFields.tsx`. Updated: 2026-11-15.
+
+| Property | Pattern |
+| --- | --- |
+| Surface / border | `bg-surface`, `border-outline` |
+| Radius / shadow | `rounded-lg`; no shadow |
+| Text | `text-content`, `text-content-muted`; section title `text-lg font-semibold` |
+| Controls | `rounded-lg border border-outline bg-surface px-3 py-2 text-sm` |
+| Focus / action | `focus:ring-2 focus:ring-primary-500`; actions use `border-primary-600 bg-primary-50 text-primary-700` |
+| Spacing | `space-y-4`, `gap-3`, `p-4`; member cards `p-3` |
+
+`HouseholdRegistrationFields({ value, onChange })` is shared by public Resident Registration and Admin/Secretary Create Resident. Household information is opt-in; family member drafts are addable/removable, carry head designation, and use existing surface/outline/primary tokens. Household fields do not replace account registration. No dependencies added.
+
+`/admin/households` uses token-based bordered panels and responsive overflow tables. Search, link, head reassignment and member removal controls remain server-action authorized; member removal is soft and preserves Resident accounts.
+
+### HouseholdDetailsClient
+
+File: `app/(Admin)/admin/households/[householdId]/household-details-client.tsx`. Updated: 2026-11-15.
+
+| Property | Pattern |
+| --- | --- |
+| Surface / border | `bg-surface`, `border-outline`; summary and member panels use bordered cards |
+| Radius / shadow | `rounded-lg`; no added shadow |
+| Text | `text-content`, `text-content-muted`; `text-2xl font-bold` page title, `font-semibold` sections |
+| Controls | `rounded-lg border border-outline bg-surface px-3 py-2 text-sm` |
+| Focus / action | `focus:ring-2 focus:ring-primary-500`; primary actions use `text-primary-700` or `bg-primary-600` |
+| Spacing | `space-y-6`, card `p-4 sm:p-6`, table cells `p-3` |
+| Head indicator | `rounded-full border border-primary-200 bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700` |
+
+The details route validates staff access and household existence before rendering; its client uses the existing TanStack Query provider, relationship edit controls, authorized server actions and a responsive table. A route-level loading skeleton covers server data loading; the member removal action soft-removes the membership.
+
 ### Clinic appointment components
 
 Files: `components/ui/Clinic/AppointmentHistory.tsx`, `ClinicAppointmentsPage.tsx`, `ResidentAppointmentBooking.tsx`, `AppointmentDialog.tsx`. Last updated: 2026-10-18.

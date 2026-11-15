@@ -1,8 +1,10 @@
 # Sampaloc IV BMIS Progress Tracker
 
-Last updated: 2026-11-09
+Last updated: 2026-11-15
 
 ## Current Status
+
+- Current feature: Household and family member registration, authorized management, resident profile, and household-specific details navigation implemented in source on 2026-11-15. Resident Management now routes by the resident’s active membership household ID; unassigned residents have a disabled indicator. The dynamic details route performs a staff-authorized unique household lookup and returns 404 for invalid/missing IDs. Additive migration `20261115000000_households` is prepared but not applied to application tables. Prisma validation, TypeScript, focused ESLint and production build passed; household schema scenarios confirm individual registration remains optional, non-head applicants can designate a family head, and a missing head is rejected. Full DB-backed membership tests and authenticated browser checks require applying the migration in the target database. Deployment requires applying the migration and restarting with the generated client.
 
 - Current development phase: Existing BMIS implementation with new AI context documentation baseline.
 - Latest feature: Credential-based announcement creator selection for system Admin and fixed Secretary assignment (2026-11-09); see verification below.

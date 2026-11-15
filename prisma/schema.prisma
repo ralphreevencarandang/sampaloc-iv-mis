@@ -144,6 +144,37 @@ model Resident {
   documentRequests DocumentRequest[]      @relation("RequestedByResident")
   medicalRecords   MedicalRecord[]        @relation("Patient")
   clinicAppointments ClinicAppointment[]
+  householdMemberships HouseholdMember[] @relation("ResidentHouseholdMembership")
+}
+
+model Household {
+  id        String @id @default(cuid())
+  number    String @unique
+  createdAt DateTime @default(now())
+  members   HouseholdMember[]
+}
+
+model HouseholdMember {
+  id                   String @id @default(cuid())
+  householdId          String
+  household            Household @relation(fields: [householdId], references: [id], onDelete: Restrict)
+  residentId           String?
+  resident             Resident? @relation("ResidentHouseholdMembership", fields: [residentId], references: [id], onDelete: SetNull)
+  firstName            String
+  middleName           String?
+  lastName             String
+  suffix               String?
+  birthDate            DateTime?
+  sex                  String?
+  relationship         String
+  otherRelationship    String?
+  contactNumber        String?
+  isHead               Boolean @default(false)
+  removedAt            DateTime?
+  createdAt            DateTime @default(now())
+
+  @@index([householdId, removedAt])
+  @@index([firstName, lastName])
 }
 
 // Reset subjects and rate-limit keys are HMACs; no email or plaintext code is stored.

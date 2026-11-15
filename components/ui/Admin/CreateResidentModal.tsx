@@ -12,6 +12,7 @@ import { residentRegistrationSchema, type ResidentRegistrationInput } from '@/va
 import { getRegistrationAge, getRegistrationVotingFields, VALID_ID_TYPES } from '@/lib/resident-registration'
 import { PWD_CONDITIONS } from '@/lib/resident-demographics'
 import { validateValidIdImageFile } from '@/lib/valid-id-image'
+import HouseholdRegistrationFields, { emptyHousehold, type HouseholdDraft } from '@/components/ui/HouseholdRegistrationFields'
 
 type Props = { isOpen: boolean; onClose: () => void }
 type Field = 'email'|'password'|'confirmPassword'|'firstName'|'lastName'|'middleName'|'birthDate'|'gender'|'civilStatus'|'street'|'houseNumber'|'subdivision'|'phase'|'contactNumber'|'occupation'|'citizenship'|'isVoter'|'precinctNumber'|'is4Ps'|'isPwd'|'pwdCondition'|'idType'|'idNumber'|'otherIdType'
@@ -24,6 +25,7 @@ export default function CreateResidentModal({ isOpen, onClose }: Props) {
   const [values, setValues] = useState<Values>(empty)
   const [image, setImage] = useState<File | null>(null)
   const [errors, setErrors] = useState<Record<string,string>>({})
+  const [household, setHousehold] = useState<HouseholdDraft>(emptyHousehold)
   const { handleSubmit, register } = useForm({
     resolver: zodResolver(residentRegistrationSchema),
     values: { ...values, validIDImageName: image?.name ?? '' },
@@ -52,7 +54,7 @@ export default function CreateResidentModal({ isOpen, onClose }: Props) {
     },
   })
   useEffect(() => {
-    if (!isOpen) { setValues(empty); setImage(null); setErrors({}) }
+    if (!isOpen) { setValues(empty); setImage(null); setErrors({}); setHousehold(emptyHousehold) }
   }, [isOpen])
   if (!isOpen) return null
   const set = (name: Field, value: string) => setValues(current => {
@@ -69,6 +71,7 @@ export default function CreateResidentModal({ isOpen, onClose }: Props) {
     const data = new FormData()
     for (const [key, value] of Object.entries(parsed)) data.set(key, value)
     if (image) data.set('validIDImage', image)
+    data.set('householdInfo', JSON.stringify(household))
     mutation.mutate(data)
   }
   const control = (name: Field, title: string, type = 'text', required = false) => <div key={name}>
@@ -91,6 +94,7 @@ export default function CreateResidentModal({ isOpen, onClose }: Props) {
         setErrors({ ...Object.fromEntries(Object.entries(fieldErrors).map(([name, error]) => [name, error?.message ?? 'Invalid value.'])), submit: 'Please correct the highlighted fields.' })
       })} aria-busy={mutation.isPending} className="space-y-6">
         <fieldset disabled={mutation.isPending} className="space-y-6">
+        <HouseholdRegistrationFields value={household} onChange={setHousehold} />
         <section><h3 className="mb-3 border-b border-primary-600 pb-2 font-semibold">Account Credentials</h3><div className="grid gap-4 sm:grid-cols-2">{control('email','Email','email',true)}{control('password','Password','password',true)}{control('confirmPassword','Confirm Password','password',true)}</div><p className="mt-2 text-xs text-gray-500">Password must be at least 8 characters and include an uppercase letter, number, and special character.</p></section>
         <section><h3 className="mb-3 border-b border-primary-600 pb-2 font-semibold">Personal Information</h3><div className="grid gap-4 sm:grid-cols-2">{control('firstName','First Name','text',true)}{control('middleName','Middle Name')}{control('lastName','Last Name','text',true)}{control('birthDate','Birth Date','date',true)}{select('gender','Gender',['Male','Female'])}{select('civilStatus','Civil Status',['Single','Married','Widowed','Divorced','Separated','Solo Parent'])}</div></section>
         <section><h3 className="mb-3 border-b border-primary-600 pb-2 font-semibold">Contact & Address</h3><div className="grid gap-4 sm:grid-cols-2">{control('street','Street','text',true)}{control('houseNumber','House Number','text',true)}{control('subdivision','Subdivision')}{control('phase','Phase')}{control('contactNumber','Contact Number','tel',true)}{control('occupation','Occupation')}{control('citizenship','Citizenship','text',true)}{select('isVoter','Eligible to Vote',['Yes','No'],true,!canVote)}{values.isVoter === 'Yes' && control('precinctNumber','Precinct Number','text',true)}{select('is4Ps','4Ps Beneficiary',['Yes','No'])}{select('isPwd','PWD',['Yes','No'])}{values.isPwd === 'Yes' && select('pwdCondition','PWD Condition',[...PWD_CONDITIONS])}</div>{!canVote && <p className="mt-2 text-xs text-gray-500">Voting eligibility is set to No for residents under age 15. Select a valid birth date to enable this field.</p>}</section>

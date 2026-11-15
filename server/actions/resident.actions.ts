@@ -16,6 +16,8 @@ import { sendResidentApprovalEmail } from "@/lib/nodemailer";
 import { hasAdminPermission } from "@/lib/admin-authorization";
 import { getCurrentAdminFromSession } from "@/lib/admin-session";
 import { AdminRole } from "@/app/generated/prisma/enums";
+import { householdRegistrationSchema } from "@/validations/household.validation";
+import { randomUUID } from "node:crypto";
 
 const prisma = (prismaModule as { default?: typeof prismaModule }).default ?? prismaModule;
 
@@ -157,6 +159,15 @@ function validateResidentRegistration(formData: FormData): {
   };
 }
 
+function parseHousehold(formData: FormData) {
+  const raw = formData.get("householdInfo");
+  if (typeof raw !== "string" || !raw) return null;
+  try {
+    const parsed = householdRegistrationSchema.safeParse(JSON.parse(raw));
+    return parsed.success && parsed.data.enabled ? parsed.data : null;
+  } catch { return null; }
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }
@@ -183,6 +194,19 @@ export async function createResidentAccount(
       message: "Please correct the highlighted fields.",
       fieldErrors,
     };
+  }
+
+  const householdInfo = parseHousehold(formData);
+  if (formData.has("householdInfo")) {
+    let parsedInfo: unknown;
+    try { parsedInfo = JSON.parse(String(formData.get("householdInfo"))); } catch { parsedInfo = null; }
+    const householdValidation = householdRegistrationSchema.safeParse(parsedInfo);
+    if (!householdValidation.success) {
+      return { success: false, message: "Please correct the household information.", fieldErrors: { householdInfo: householdValidation.error.issues[0]?.message ?? "Invalid household information." } };
+    }
+    if (householdValidation.data.enabled && householdValidation.data.householdNumber) {
+      return { success: false, message: "Household numbers are assigned automatically. An authorized staff member can link existing residents through Household Management.", fieldErrors: { householdInfo: "Household numbers are assigned automatically." } };
+    }
   }
 
   let stage = "resident-email-check";
@@ -227,7 +251,7 @@ export async function createResidentAccount(
 
     stage = "resident-create";
     await prisma.$transaction(async (tx) => {
-      await tx.resident.create({
+      const resident = await tx.resident.create({
         data: {
           email: data.email,
           password: hashedPassword,
@@ -255,6 +279,23 @@ export async function createResidentAccount(
           otherIdType: data.otherIdType || null,
         },
       });
+      if (householdInfo) {
+        const household = await tx.household.create({ data: { number: `S4-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}` } });
+        const current = await tx.householdMember.findFirst({ where: { householdId: household.id, residentId: resident.id, removedAt: null } });
+        if (current) throw new Error("DUPLICATE_HOUSEHOLD_MEMBER");
+        if (householdInfo.isHead && await tx.householdMember.findFirst({ where: { householdId: household.id, isHead: true, removedAt: null } })) throw new Error("HOUSEHOLD_HEAD_EXISTS");
+        await tx.householdMember.create({ data: { householdId: household.id, residentId: resident.id, firstName: resident.firstName, middleName: resident.middleName, lastName: resident.lastName, birthDate: resident.birthDate, sex: resident.gender, relationship: householdInfo.isHead ? "Head" : householdInfo.relationship, otherRelationship: householdInfo.otherRelationship || null, contactNumber: resident.contactNumber, isHead: householdInfo.isHead } });
+        for (const member of householdInfo.members) {
+          if (member.residentId) {
+            const linked = await tx.resident.findUnique({ where: { id: member.residentId }, select: { id: true, firstName: true, middleName: true, lastName: true, birthDate: true, gender: true, contactNumber: true } });
+            if (!linked) throw new Error("HOUSEHOLD_RESIDENT_NOT_FOUND");
+            if (await tx.householdMember.findFirst({ where: { residentId: linked.id, removedAt: null } })) throw new Error("DUPLICATE_HOUSEHOLD_MEMBER");
+            await tx.householdMember.create({ data: { householdId: household.id, residentId: linked.id, firstName: linked.firstName, middleName: linked.middleName, lastName: linked.lastName, birthDate: linked.birthDate, sex: linked.gender, contactNumber: linked.contactNumber, relationship: member.isHead ? "Head" : member.relationship, otherRelationship: member.otherRelationship || null, isHead: member.isHead } });
+          } else await tx.householdMember.create({ data: { householdId: household.id, firstName: member.firstName, middleName: member.middleName || null, lastName: member.lastName, suffix: member.suffix || null, birthDate: member.birthDate ? new Date(member.birthDate) : null, sex: member.sex || null, relationship: member.isHead ? "Head" : member.relationship, otherRelationship: member.otherRelationship || null, contactNumber: member.contactNumber || null, isHead: member.isHead } });
+        }
+        const headCount = await tx.householdMember.count({ where: { householdId: household.id, isHead: true, removedAt: null } });
+        if (headCount !== 1) throw new Error("HOUSEHOLD_HEAD_REQUIRED");
+      }
     });
 
     return {

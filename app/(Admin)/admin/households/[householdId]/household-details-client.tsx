@@ -1,0 +1,49 @@
+"use client";
+import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import { ArrowLeft, ChevronRight, Home, Pencil, Trash2, UserRound } from "lucide-react";
+import { assignHouseholdHeadAction, getHouseholdDetailsAction, removeHouseholdMemberAction, updateHouseholdMemberAction } from "@/server/actions/household.actions";
+import { householdRelationships } from "@/validations/household.validation";
+
+type HouseholdData = Extract<Awaited<ReturnType<typeof getHouseholdDetailsAction>>, {success:true}>["household"];
+const control = "rounded-lg border border-outline bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-primary-500";
+function ageAt(birthDate: Date | string | null) {
+ if(!birthDate)return "—"; const birth=new Date(birthDate); const now=new Date(); let age=now.getFullYear()-birth.getFullYear(); if(now.getMonth()<birth.getMonth()||(now.getMonth()===birth.getMonth()&&now.getDate()<birth.getDate()))age--; return age>=0?String(age):"—";
+}
+function dateLabel(value:Date|string|null){return value?new Date(value).toLocaleDateString("en-PH",{year:"numeric",month:"long",day:"numeric"}):"—";}
+function fullName(person:{firstName:string;middleName:string|null;lastName:string;suffix:string|null}){return [person.firstName,person.middleName,person.lastName,person.suffix].filter(Boolean).join(" ");}
+
+export default function HouseholdDetailsClient({household:initialHousehold}:{household:HouseholdData}){
+ const queryClient=useQueryClient(); const [editingId,setEditingId]=useState<string|null>(null); const [relationship,setRelationship]=useState<typeof householdRelationships[number]>("Spouse"); const [otherRelationship,setOtherRelationship]=useState(""); const [saving,setSaving]=useState(false);
+ const {data,isLoading,isError,refetch}=useQuery({queryKey:["household",initialHousehold.id],queryFn:()=>getHouseholdDetailsAction(initialHousehold.id),initialData:{success:true as const,household:initialHousehold},staleTime:30_000});
+ const household=data?.success?data.household:initialHousehold; const members=[...household.members].sort((a,b)=>Number(b.isHead)-Number(a.isHead)||a.createdAt.getTime()-b.createdAt.getTime());
+ const addressSource=members.find(member=>member.resident)?.resident;
+ const address=addressSource?[addressSource.houseNumber,addressSource.street,addressSource.subdivision,addressSource.phase].filter(Boolean).join(", "):"Not recorded";
+ const refresh=async()=>{await queryClient.invalidateQueries({queryKey:["households"]});await queryClient.invalidateQueries({queryKey:["household",household.id]});await refetch();};
+ const run=async(action:()=>Promise<{success:boolean;message:string}>)=>{setSaving(true);try{const result=await action();if(result.success){toast.success(result.message);setEditingId(null);await refresh()}else toast.error(result.message)}catch{toast.error("Unable to update household. Please try again.")}finally{setSaving(false)}};
+ const beginEdit=(member:{id:string;relationship:string;otherRelationship:string|null})=>{setEditingId(member.id);setRelationship((member.relationship as typeof relationship)||"Other");setOtherRelationship(member.otherRelationship??"")};
+ const remove=(member:{id:string;isHead:boolean})=>{if(member.isHead){toast.error("Assign another member as household head first.");return}if(window.confirm("Remove this member from the household? Their resident account will be preserved."))void run(()=>removeHouseholdMemberAction(member.id))};
+ return <main className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
+  <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-content-muted"><Link href="/admin" className="hover:text-primary-700">Dashboard</Link><ChevronRight className="h-4 w-4"/><Link href="/admin/households" className="hover:text-primary-700">Households</Link><ChevronRight className="h-4 w-4"/><span aria-current="page" className="font-medium text-content">{household.number}</span></nav>
+  <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold text-content">Household {household.number}</h1><p className="mt-1 text-sm text-content-muted">Household details and current members</p></div><Link href="/admin/households" className="inline-flex items-center gap-2 rounded-lg border border-outline bg-surface px-3 py-2 text-sm font-semibold text-content hover:bg-surface-muted"><ArrowLeft className="h-4 w-4"/>Back to Households</Link></div>
+  {isError&&<div role="alert" className="rounded-lg border border-stock-empty-border bg-stock-empty-surface p-4 text-sm text-stock-empty-text">Could not refresh this household. Showing the last loaded information. <button className="ml-2 font-semibold underline" onClick={()=>void refetch()}>Retry</button></div>}
+  {isLoading?<div className="h-24 animate-pulse rounded-lg bg-surface-muted"/>:<section className="grid gap-4 rounded-lg border border-outline bg-surface p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-4">
+   <div><p className="text-xs font-semibold uppercase tracking-wide text-content-muted">Household Number</p><p className="mt-1 font-semibold text-content">{household.number}</p></div>
+   <div><p className="text-xs font-semibold uppercase tracking-wide text-content-muted">Household Head</p><p className="mt-1 font-semibold text-content">{members.find(member=>member.isHead)?fullName(members.find(member=>member.isHead)!):"Not assigned"}</p></div>
+   <div className="sm:col-span-2"><p className="text-xs font-semibold uppercase tracking-wide text-content-muted">Complete Household Address</p><p className="mt-1 text-content">{address}</p></div>
+   <div><p className="text-xs font-semibold uppercase tracking-wide text-content-muted">Total Members</p><p className="mt-1 font-semibold text-content">{members.length}</p></div>
+   <div><p className="text-xs font-semibold uppercase tracking-wide text-content-muted">Date Created</p><p className="mt-1 text-content">{dateLabel(household.createdAt)}</p></div>
+  </section>}
+  <section className="overflow-hidden rounded-lg border border-outline bg-surface"><div className="flex items-center gap-2 border-b border-outline p-4 sm:p-5"><Home className="h-5 w-5 text-primary-700"/><div><h2 className="font-semibold text-content">Household Members</h2><p className="text-sm text-content-muted">{members.length} current {members.length===1?"member":"members"}</p></div></div>
+   {members.length===0?<div className="p-8 text-center text-sm text-content-muted">This household has no current members.</div>:<div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-surface-muted text-xs uppercase text-content-muted"><tr><th className="p-3">Full Name</th><th className="p-3">Relationship to Household Head</th><th className="p-3">Sex</th><th className="p-3">Birthdate</th><th className="p-3">Age</th><th className="p-3">Contact Number</th><th className="p-3">Actions</th></tr></thead><tbody>{members.map(member=><tr key={member.id} className={`border-t border-outline ${member.isHead?"bg-primary-50/60":""}`}>
+    <td className="p-3 font-medium text-content">{fullName(member)} {member.isHead&&<span className="ml-2 inline-flex rounded-full border border-primary-200 bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700">Household Head</span>}</td>
+    <td className="p-3">{editingId===member.id&&!member.isHead?<div className="flex flex-wrap gap-2"><select className={control} value={relationship} onChange={e=>setRelationship(e.target.value as typeof relationship)}>{householdRelationships.filter(value=>value!=="Head").map(value=><option key={value}>{value}</option>)}</select>{relationship==="Other"&&<input className={control} aria-label="Specify relationship" value={otherRelationship} onChange={e=>setOtherRelationship(e.target.value)} placeholder="Specify relationship"/>}</div>:member.relationship==="Other"?member.otherRelationship||"Other":member.relationship}</td>
+    <td className="p-3">{member.sex??"—"}</td><td className="p-3">{dateLabel(member.birthDate)}</td><td className="p-3">{ageAt(member.birthDate)}</td><td className="p-3">{member.resident?.contactNumber??member.contactNumber??"—"}</td>
+    <td className="p-3"><div className="flex flex-wrap items-center gap-2">{member.residentId?<Link href={`/admin/resident/${encodeURIComponent(member.residentId)}`} className="inline-flex items-center gap-1 text-primary-700 underline"><UserRound className="h-4 w-4"/>View Resident</Link>:<span className="text-xs text-content-muted">No account</span>}{editingId===member.id?<><button type="button" disabled={saving} onClick={()=>void run(()=>updateHouseholdMemberAction({memberId:member.id,relationship,otherRelationship}))} className="font-semibold text-primary-700 underline disabled:opacity-50">Save</button><button type="button" onClick={()=>setEditingId(null)} className="text-content-muted underline">Cancel</button></>:!member.isHead&&<button type="button" onClick={()=>beginEdit(member)} aria-label={`Edit relationship for ${fullName(member)}`} className="rounded p-1 text-primary-700 hover:bg-primary-50"><Pencil className="h-4 w-4"/></button>}{!member.isHead&&<button type="button" disabled={saving} onClick={()=>remove(member)} aria-label={`Remove ${fullName(member)} from household`} className="rounded p-1 text-stock-empty-text hover:bg-stock-empty-surface disabled:opacity-50"><Trash2 className="h-4 w-4"/></button>}</div>{!member.isHead&&<button type="button" disabled={saving} onClick={()=>void run(()=>assignHouseholdHeadAction({householdId:household.id,memberId:member.id}))} className="mt-1 text-xs text-primary-700 underline disabled:opacity-50">Make household head</button>}</td>
+   </tr>)}</tbody></table></div>}
+  </section>
+ </main>;
+}
+

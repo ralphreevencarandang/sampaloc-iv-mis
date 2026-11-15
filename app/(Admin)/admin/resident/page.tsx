@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Edit2, Eye, Archive, RotateCcw, Search, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Edit2, Eye, Archive, RotateCcw, Search, Plus, Home } from 'lucide-react'
 import Link from 'next/link'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -42,6 +42,8 @@ export interface ResidentRecord {
   isArchived: boolean
   status: 'PENDING' | 'APPROVED' | 'DECLINED'
   createdAt?: string
+  householdId: string | null
+  householdNumber: string | null
 }
 
 async function fetchResidents(): Promise<ResidentRecord[]> {
@@ -472,6 +474,7 @@ export default function ResidentPage() {
                               >
                                 <Eye className="h-4 w-4" />
                               </Link>
+                              {resident.householdId ? <Link href={`/admin/households/${encodeURIComponent(resident.householdId)}`} className="rounded-lg p-1.5 text-primary-700 transition-colors hover:bg-primary-50" title={`View Household ${resident.householdNumber ?? ""}`} aria-label={`View household ${resident.householdNumber ?? ""} for ${resident.firstName} ${resident.lastName}`}><Home className="h-4 w-4" /></Link> : <span className="rounded-lg p-1.5 text-content-muted" title="No household assigned" aria-label="No household assigned"><Home className="h-4 w-4 opacity-40" /></span>}
                               {(canManageResidents || role === 'CLERK') && <button
                                 onClick={() => {
                                   setSelectedResident(resident)
