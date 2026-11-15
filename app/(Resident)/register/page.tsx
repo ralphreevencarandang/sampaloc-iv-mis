@@ -21,6 +21,7 @@ import {
 import { PWD_CONDITIONS } from "@/lib/resident-demographics";
 import { getRegistrationAge, getRegistrationVotingFields, VALID_ID_TYPES } from "@/lib/resident-registration";
 import logo from '@/public/images/sampaloc-logo.png'
+import HouseholdRegistrationFields, { emptyHousehold, type HouseholdDraft } from '@/components/ui/HouseholdRegistrationFields'
 
 
 type RegisterFormState = Omit<ResidentRegistrationInput, "validIDImageName" | "idType"> & {
@@ -86,6 +87,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<RegisterFormState>(initialFormState);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [household, setHousehold] = useState<HouseholdDraft>(emptyHousehold);
   const { handleSubmit: validateAndSubmit, register } = useForm({
     resolver: zodResolver(residentRegistrationSchema),
     values: formData,
@@ -254,6 +256,7 @@ export default function RegisterPage() {
     submission.set("idType", data.idType);
     submission.set("idNumber", data.idNumber);
     submission.set("otherIdType", data.otherIdType);
+    submission.set("householdInfo", JSON.stringify(household));
 
     setErrors({});
     try {
@@ -283,6 +286,7 @@ export default function RegisterPage() {
           toast.error("Please correct the highlighted fields.");
         })} aria-busy={registerMutation.isPending} className="space-y-8">
           <fieldset disabled={registerMutation.isPending} className="space-y-8">
+          <HouseholdRegistrationFields value={household} onChange={setHousehold} />
           <section>
             <h2 className="mb-4 border-b-2 border-primary-600 pb-2 text-lg font-semibold text-gray-900">
               Account Details

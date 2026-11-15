@@ -59,8 +59,22 @@ export async function GET(_: Request, { params }: RouteContext) {
     }
 
     const admin = await getCurrentAdminFromSession();
+    const householdMembership = await prisma.householdMember.findFirst({
+      where: { residentId: id, removedAt: null },
+      include: {
+        household: {
+          include: {
+            members: {
+              where: { removedAt: null },
+              include: { resident: { select: { houseNumber: true, street: true, subdivision: true, phase: true } } },
+              orderBy: { createdAt: "asc" },
+            },
+          },
+        },
+      },
+    });
     const canViewId = admin?.role === "ADMIN" || admin?.role === "CLERK";
-    return NextResponse.json({ ...resident,
+    return NextResponse.json({ ...resident, householdMembership,
       validIDImage: canViewId && resident.validIDImage
         ? "/api/residents/" + encodeURIComponent(id) + "/valid-id?image=1"
         : currentResident?.id === id ? resident.validIDImage : null,

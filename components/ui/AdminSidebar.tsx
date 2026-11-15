@@ -65,6 +65,7 @@ const AdminSidebar = ({ role }: { role?: AdminRole | null }) => {
     { label: 'Announcement', href: '/admin/announcements', icon: <Megaphone className="w-5 h-5" />, resource: 'announcements' },
     { label: 'Barangay Officials', href: '/admin/officials', icon: <Users className="w-5 h-5" />, resource: 'officials' },
     { label: 'Resident', href: '/admin/resident', icon: <Home className="w-5 h-5" />, resource: 'residents' },
+    { label: 'Households', href: '/admin/households', icon: <Users className="w-5 h-5" />, resource: 'residents' },
     { label: 'Voters', href: '/admin/voters', icon: <Vote className="w-5 h-5" />, resource: 'voters' },
     { label: 'Documents', href: '/admin/documents', icon: <FileText className="w-5 h-5" />, resource: 'documents' },
     { label: 'Send Email', href: '/admin/send-email', icon: <Mail className="w-5 h-5" />, resource: 'email' },
@@ -76,7 +77,7 @@ const AdminSidebar = ({ role }: { role?: AdminRole | null }) => {
     { label: 'Archived', href: '/admin/archived', icon: <Archive className="w-5 h-5" />, resource: 'archives' },
   ] satisfies NavItem[];
 
-  const visibleNavItems = role ? navItems.filter((item) => canAccessResource(role, item.resource)) : [];
+  const visibleNavItems = role ? navItems.filter((item) => item.href === '/admin/households' ? role === 'ADMIN' || role === 'CLERK' : canAccessResource(role, item.resource)) : [];
 
   const isActive = (href: string) => {
     if (href === '/admin') {

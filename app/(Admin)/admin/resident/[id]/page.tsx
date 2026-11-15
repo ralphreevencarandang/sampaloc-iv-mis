@@ -46,6 +46,7 @@ type ResidentDetail = {
   validIDImage: string | null
   status: ResidentStatus
   createdAt: string
+  householdMembership?: { household: { id:string; number:string; members:{id:string;firstName:string;middleName:string|null;lastName:string;suffix:string|null;relationship:string;otherRelationship:string|null;isHead:boolean;resident:{houseNumber:string;street:string;subdivision:string|null;phase:string|null}|null}[] } } | null
 }
 
 function formatDate(value: string) {
@@ -294,6 +295,11 @@ export default function ResidentViewPage() {
                 </div>
               </div>
             </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900"><House className="h-5 w-5 text-primary-600" />Household &amp; Family Information</h2>
+            {resident.householdMembership ? <><p className="mt-3 text-sm">Household Number: <strong>{resident.householdMembership.household.number}</strong></p><p className="text-sm">Complete Household Address: {resident.householdMembership.household.members.find(m=>m.resident)?.resident ? [resident.householdMembership.household.members.find(m=>m.resident)!.resident!.houseNumber,resident.householdMembership.household.members.find(m=>m.resident)!.resident!.street,resident.householdMembership.household.members.find(m=>m.resident)!.resident!.subdivision,resident.householdMembership.household.members.find(m=>m.resident)!.resident!.phase].filter(Boolean).join(", ") : "Not recorded"}</p><p className="text-sm">Total Family Members: {resident.householdMembership.household.members.length}</p><ul className="mt-3 space-y-2">{resident.householdMembership.household.members.map(m=><li key={m.id} className="text-sm">{m.firstName} {m.middleName} {m.lastName}{m.suffix} — {m.isHead?"Head":m.relationship==="Other"?m.otherRelationship:m.relationship}{m.isHead?" (Household Head)":""}</li>)}</ul><Link href={`/admin/households/${encodeURIComponent(resident.householdMembership.household.id)}`} className="mt-4 inline-block font-semibold text-primary-700 underline">View Household</Link></> : <p className="mt-3 text-sm text-slate-600">No household information recorded.</p>}
           </section>
 
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

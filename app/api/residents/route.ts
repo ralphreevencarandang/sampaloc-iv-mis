@@ -38,9 +38,18 @@ export async function GET(request: Request) {
         pwdCondition: true,
         isArchived: true,
         status: true,
+        householdMemberships: {
+          where: { removedAt: null },
+          take: 1,
+          select: { householdId: true, household: { select: { number: true } } },
+        },
       },
     });
-    return NextResponse.json(residents);
+    return NextResponse.json(residents.map(({ householdMemberships, ...resident }) => ({
+      ...resident,
+      householdId: householdMemberships[0]?.householdId ?? null,
+      householdNumber: householdMemberships[0]?.household.number ?? null,
+    })));
   } catch (error) {
     console.error("Failed to fetch residents:", error);
     return NextResponse.json(
